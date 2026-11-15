@@ -1,0 +1,68 @@
+{
+  "name": "rotorlab",
+  "version": "0.1.0",
+  "description": "Rotorlab - diagnoza i naprawa dronow FPV z Betaflight, z asystentem AI",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "Rotorlab",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "dev:electron": "node scripts/dev-electron.mjs",
+    "build": "tsc --noEmit -p app/tsconfig.json && vite build --config vite.config.ts",
+    "build:electron": "npm run build && node scripts/build-electron.mjs",
+    "dist:win": "npm run build:electron && electron-builder --win nsis --publish never",
+    "preview": "vite preview --config vite.config.ts",
+    "icons": "node scripts/make-icons.mjs",
+    "typecheck": "tsc --noEmit -p app/tsconfig.json && tsc --noEmit -p electron/tsconfig.json"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@types/node": "^26.6.6",
+    "@types/w3c-web-serial": "^1.0.9",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "png-to-ico": "^3.0.2",
+    "polygon-clipping": "^0.15.7",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  },
+  "build": {
+    "appId": "app.rotorlab",
+    "productName": "Rotorlab",
+    "copyright": "MIT",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json",
+      "assets/icon.png"
+    ],
+    "artifactName": "Rotorlab-Setup.${ext}",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Rotorlab"
+    }
+  }
+}

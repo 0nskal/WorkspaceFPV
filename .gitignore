@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-electron/
+release/
+out/
+design/
+site/app/
+.wrangler/
+.taste-skill/
+*.log
+.env
+.env.*

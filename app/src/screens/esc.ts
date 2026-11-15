@@ -1,0 +1,540 @@
+import type { AppContext, ScreenMount } from '../context';
+import { PART_LABEL } from '../fc/diagnose';
+import { isDshot, motorPct, protocolName } from '../fc/state';
+import { hasWebSerial } from '../serial/port';
+import { MSP } from '../serial/msp';
+import { escapeHtml, plDate } from '../ui/dom';
+import { icon } from '../ui/icons';
+
+/** Protokoly do wyboru: nazwa w CLI i enum Betaflight. */
+const PROTOCOLS: Array<{ id: number; name: string; label: string }> = [
+  { id: 0, name: 'PWM', label: 'PWM' },
+  { id: 1, name: 'ONESHOT125', label: 'ONESHOT125' },
+  { id: 3, name: 'MULTISHOT', label: 'MULTISHOT' },
+  { id: 5, name: 'DSHOT150', label: 'DSHOT150' },
+  { id: 6, name: 'DSHOT300', label: 'DSHOT300' },
+  { id: 7, name: 'DSHOT600', label: 'DSHOT600' },
+];
+
+const SAFE_MAX = 30;
+const TICK_MS = 100;
+
+/* ---------- rysunek drona z gory (styl Rentgen) ---------- */
+const VB_W = 600;
+const VB_H = 620;
+const CX = 300;
+const CY = 320;
+const INK = '#DCEFF8';
+const HOT = '#FF4A2E';
+const MOTORS = [
+  { n: 1, x: CX + 175, y: CY + 165, out: 45 }, // M1 tyl-prawy
+  { n: 2, x: CX + 175, y: CY - 165, out: -45 }, // M2 przod-prawy
+  { n: 3, x: CX - 175, y: CY + 165, out: 135 }, // M3 tyl-lewy
+  { n: 4, x: CX - 175, y: CY - 165, out: -135 }, // M4 przod-lewy
+];
+const f = (n: number) => +n.toFixed(2);
+
+/** Kierunek obrotu: true = CW (patrzac z gory). Props in = domyslne ustawienie Betaflight. */
+function spinsCw(motor: number, propsOut: boolean): boolean {
+  const cwIn = motor === 2 || motor === 3;
+  return propsOut ? !cwIn : cwIn;
+}
+
+function spinArrow(m: (typeof MOTORS)[number], cw: boolean): string {
+  const r = 72;
+  const a0 = ((m.out - 55) * Math.PI) / 180;
+  const a1 = ((m.out + 55) * Math.PI) / 180;
+  const p = (a: number): [number, number] => [m.x + r * Math.cos(a), m.y + r * Math.sin(a)];
+  const [sx, sy] = p(cw ? a0 : a1);
+  const [ex, ey] = p(cw ? a1 : a0);
+  const sweep = cw ? 1 : 0;
+  const end = cw ? a1 : a0;
+  const dir = cw ? 1 : -1;
+  const tx = -Math.sin(end) * dir;
+  const ty = Math.cos(end) * dir;
+  const rx = Math.cos(end);
+  const ry = Math.sin(end);
+  const tip = [ex + tx * 9, ey + ty * 9];
+  const b1 = [ex + rx * 5.5, ey + ry * 5.5];
+  const b2 = [ex - rx * 5.5, ey - ry * 5.5];
+  const lbl = p(cw ? a0 - 0.2 : a1 + 0.2);
+  return (
+    `<path d="M${f(sx)} ${f(sy)} A${r} ${r} 0 0 ${sweep} ${f(ex)} ${f(ey)}" fill="none" stroke="${INK}" stroke-width="1.4" opacity=".85"/>` +
+    `<polygon points="${f(tip[0])},${f(tip[1])} ${f(b1[0])},${f(b1[1])} ${f(b2[0])},${f(b2[1])}" fill="${INK}"/>` +
+    `<text x="${f(lbl[0])}" y="${f(lbl[1] + 4)}" text-anchor="middle" class="esc-dirlbl">${cw ? 'CW' : 'CCW'}</text>`
+  );
+}
+
+function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string; film: string }): string {
+  const { hot, propsOut } = opts;
+  const arms = MOTORS.map((m) => {
+    const ang = (Math.atan2(m.y - CY, m.x - CX) * 180) / Math.PI;
+    const len = Math.hypot(m.x - CX, m.y - CY);
+    return `<g transform="translate(${CX} ${CY}) rotate(${f(ang)})"><rect x="40" y="-9" width="${f(len - 40)}" height="18" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".9"/><path d="M52 -3H${f(len - 28)}M52 3H${f(len - 28)}" stroke="${INK}" stroke-width=".6" opacity=".4"/></g>`;
+  }).join('');
+  const props = MOTORS.map((m) => {
+    const cw = spinsCw(m.n, propsOut);
+    return (
+      `<g data-m="${m.n - 1}">` +
+      `<circle class="esc-disc" cx="${m.x}" cy="${m.y}" r="105" fill="rgba(207,230,242,.07)" stroke="${INK}" stroke-width=".9" stroke-dasharray="4 5" opacity="1"/>` +
+      `<g transform="rotate(${m.n * 37} ${m.x} ${m.y})" opacity=".55"><ellipse cx="${m.x + 52}" cy="${m.y}" rx="50" ry="9" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".7" transform="rotate(14 ${m.x + 52} ${m.y})"/><ellipse cx="${m.x - 52}" cy="${m.y}" rx="50" ry="9" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".7" transform="rotate(14 ${m.x - 52} ${m.y})"/></g>` +
+      spinArrow(m, cw) +
+      `<circle class="esc-hub" cx="${m.x}" cy="${m.y}" r="26" fill="#0B1016" stroke="${INK}" stroke-width="1.2"/>` +
+      `<text x="${m.x}" y="${m.y + 5}" text-anchor="middle" class="esc-mid">M${m.n}</text>` +
+      `<text x="${m.x}" y="${m.y + 48}" text-anchor="middle" class="esc-pct" data-pct="${m.n - 1}">--</text>` +
+      `</g>`
+    );
+  }).join('');
+  const body = `<polygon points="248,250 352,250 366,266 366,374 352,390 248,390 234,374 234,266" fill="rgba(207,230,242,.1)" stroke="${INK}" stroke-width="1" filter="url(#esc-glow)"/>`;
+  const board = hot
+    ? `<rect x="266" y="288" width="68" height="64" fill="rgba(255,74,46,.5)" stroke="${HOT}" stroke-width="1.6" filter="url(#esc-hotglow)"/>` +
+      `<circle cx="300" cy="320" r="11" fill="#0B1016" stroke="${HOT}" stroke-width="1.4"/>` +
+      `<circle cx="300" cy="320" r="46" fill="url(#esc-focus)"/>`
+    : `<rect x="266" y="288" width="68" height="64" fill="rgba(207,230,242,.2)" stroke="${INK}" stroke-width="1.2"/>` +
+      `<circle cx="300" cy="320" r="11" fill="#0B1016" stroke="${INK}" stroke-width="1.2"/>`;
+  const pads = [276, 292, 308, 324]
+    .map((x) => `<rect x="${x}" y="296" width="8" height="10" fill="none" stroke="${hot ? HOT : INK}" stroke-width=".8"/><rect x="${x}" y="334" width="8" height="10" fill="none" stroke="${hot ? HOT : INK}" stroke-width=".8"/>`)
+    .join('');
+  const leader = hot
+    ? `<line x1="266" y1="320" x2="22" y2="320" stroke="${HOT}" stroke-width="1"/><circle cx="266" cy="320" r="3" fill="${HOT}"/>` +
+      `<rect x="22" y="283" width="7" height="7" fill="${HOT}"/><text x="36" y="290" class="esc-hotlbl">ESC</text>` +
+      `<text x="22" y="312" class="esc-hottxt">${escapeHtml(opts.hotText)}</text>`
+    : `<text x="300" y="418" text-anchor="middle" class="esc-sub">płytka ESC</text>`;
+  return `<svg class="esc-svg" viewBox="0 0 ${VB_W} ${VB_H}" role="img" aria-label="Widok drona z góry z numeracją silników M1 do M4">
+    <defs>
+      <filter id="esc-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="esc-hotglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <radialGradient id="esc-focus"><stop offset="0" stop-color="${HOT}" stop-opacity=".45"/><stop offset="1" stop-color="${HOT}" stop-opacity="0"/></radialGradient>
+    </defs>
+    <g class="esc-film">
+      <line x1="${CX}" y1="62" x2="${CX}" y2="${VB_H - 14}" stroke="${INK}" stroke-width=".6" stroke-dasharray="3 7" opacity=".28"/>
+      <line x1="12" y1="${CY}" x2="${VB_W - 12}" y2="${CY}" stroke="${INK}" stroke-width=".6" stroke-dasharray="3 7" opacity=".2"/>
+      <path d="M${CX} 44V12M${CX - 6} 22l6-8 6 8" fill="none" stroke="${INK}" stroke-width="1" opacity=".8"/>
+      <text x="${CX + 14}" y="24" class="esc-film-t">PRZÓD</text>
+      <text x="14" y="16" class="esc-film-t">L</text>
+      <text x="14" y="${VB_H - 8}" class="esc-film-t">${escapeHtml(opts.film)}</text>
+      <text x="${VB_W - 14}" y="${VB_H - 8}" text-anchor="end" class="esc-film-t">kV 60 · mAs 2</text>
+    </g>
+    ${arms}${body}${board}${pads}${props}${leader}
+  </svg>`;
+}
+
+/* ---------- ekran ---------- */
+export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
+  let view: 'empty' | 'main' | '' = '';
+  let propsOut = false;
+  let selProto = -1;
+  let selBidir = false;
+  let cfgKey = '';
+  let droneKey = '';
+  // test silnikow
+  let propsOff = false; // zawsze odznaczone przy wejsciu
+  let unlock = false;
+  const vals = [0, 0, 0, 0];
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let inflight = false;
+  let applying = false;
+
+  const q = <T extends Element = HTMLElement>(sel: string): T | null => el.querySelector<T>(sel);
+  const maxPct = () => (unlock ? 100 : SAFE_MAX);
+  const anyActive = () => vals.some((v) => v > 0);
+
+  /* ----- test: wysylanie ----- */
+  function payload(): Uint8Array {
+    const b = new Uint8Array(16);
+    const dv = new DataView(b.buffer);
+    for (let i = 0; i < 8; i++) dv.setUint16(i * 2, i < 4 ? 1000 + vals[i] * 10 : 1000, true);
+    return b;
+  }
+
+  function sendNow(): void {
+    const link = ctx.link();
+    if (!link || link.busy) return;
+    if (ctx.state.get().mode === 'demo') return; // demo: symulacja po stronie UI
+    if (inflight) return;
+    inflight = true;
+    link
+      .request(MSP.SET_MOTOR, payload(), 400)
+      .catch(() => undefined)
+      .finally(() => {
+        inflight = false;
+      });
+  }
+
+  function startLoop(): void {
+    if (timer) return;
+    sendNow();
+    timer = setInterval(() => {
+      if (!propsOff || !anyActive()) {
+        stopTest();
+        return;
+      }
+      sendNow();
+    }, TICK_MS);
+  }
+
+  function sendZeros(): void {
+    const link = ctx.link();
+    if (!link || link.busy || ctx.state.get().mode === 'demo') return;
+    const zeros = new Uint8Array(16);
+    const dv = new DataView(zeros.buffer);
+    for (let i = 0; i < 8; i++) dv.setUint16(i * 2, 1000, true);
+    for (let i = 0; i < 2; i++) link.request(MSP.SET_MOTOR, zeros, 400).catch(() => undefined);
+  }
+
+  function stopTest(): void {
+    const was = anyActive() || timer !== null;
+    if (timer) clearInterval(timer);
+    timer = null;
+    vals.fill(0);
+    if (was) sendZeros();
+    paintTest();
+    paintMotors();
+  }
+
+  /* ----- malowanie ----- */
+  function currentPct(): Array<number | null> {
+    const s = ctx.state.get();
+    if (s.mode === 'demo' && anyActive()) return vals.slice();
+    const t = s.telemetry;
+    return t ? t.motors.slice(0, 4).map(motorPct) : [null, null, null, null];
+  }
+
+  function paintMotors(): void {
+    const pcts = currentPct();
+    for (let i = 0; i < 4; i++) {
+      const txt = q<SVGTextElement>(`[data-pct="${i}"]`);
+      const g = q<SVGGElement>(`g[data-m="${i}"]`);
+      const p = pcts[i];
+      if (txt) txt.textContent = p === null ? '--' : `${p}%`;
+      if (g) {
+        const disc = g.querySelector<SVGElement>('.esc-disc');
+        const hub = g.querySelector<SVGElement>('.esc-hub');
+        const on = (p ?? 0) > 0;
+        const test = vals[i] > 0;
+        disc?.setAttribute('fill', `rgba(${test ? '255,110,80' : '207,230,242'},${(0.06 + ((p ?? 0) / 100) * (test ? 0.3 : 0.12)).toFixed(3)})`);
+        hub?.setAttribute('stroke', vals[i] > 0 ? HOT : INK);
+        txt?.classList.toggle('on', test && on);
+      }
+    }
+  }
+
+  function paintTest(): void {
+    const status = q('.esc-test-state');
+    if (status) {
+      status.textContent = !propsOff ? 'zablokowany' : anyActive() ? 'AKTYWNY' : 'gotowy';
+      status.classList.toggle('live', propsOff && anyActive());
+    }
+    const warn = q('.esc-warn');
+    if (warn) {
+      warn.innerHTML = `${icon('alert', 18)}<span>${propsOff ? 'Silniki mogą się rozpędzić. Trzymaj ręce z dala od wirników.' : 'Zdejmij śmigła przed testem'}</span>`;
+    }
+    const max = maxPct();
+    el.querySelectorAll<HTMLInputElement>('input.esc-range').forEach((r) => {
+      const idx = r.dataset.m;
+      r.disabled = !propsOff;
+      r.max = String(max);
+      const v = idx === 'all' ? Math.max(...vals) : vals[Number(idx)];
+      r.value = String(v);
+      const out = r.parentElement?.querySelector('.esc-val');
+      if (out) out.textContent = `${v}%`;
+      r.parentElement?.classList.toggle('dis', !propsOff);
+      r.parentElement?.classList.toggle('live', v > 0);
+    });
+    const un = q<HTMLInputElement>('#esc-unlock');
+    if (un) un.disabled = !propsOff;
+    const stop = q<HTMLButtonElement>('.esc-stop');
+    if (stop) stop.classList.toggle('armed', propsOff && anyActive());
+  }
+
+  function paintProto(): void {
+    const s = ctx.state.get();
+    const cur = s.config?.motorPwmProtocol ?? -1;
+    const seg = q('.esc-seg');
+    if (seg) {
+      seg.innerHTML = PROTOCOLS.map((p) => {
+        const isCur = p.id === cur;
+        const isSel = p.id === selProto;
+        const tag = isCur ? 'OBECNY' : isSel ? 'NOWY' : '';
+        return `<button type="button" class="esc-seg-b${isSel ? ' sel' : ''}${isCur && !isSel ? ' cur' : ''}" role="radio" aria-checked="${isSel}" data-proto="${p.id}"><span class="${isCur && !isSel ? 'strike' : ''}">${p.label}</span><small>${tag || '&nbsp;'}</small></button>`;
+      }).join('');
+    }
+    const sw = q<HTMLButtonElement>('.esc-sw');
+    const dshot = isDshot(selProto);
+    if (sw) {
+      sw.setAttribute('aria-checked', String(selBidir));
+      sw.classList.toggle('on', selBidir);
+      sw.disabled = !dshot;
+      const lbl = sw.querySelector('.esc-sw-t');
+      if (lbl) lbl.textContent = selBidir ? 'ON' : 'OFF';
+    }
+    const bnote = q('.esc-bidir-note');
+    if (bnote) bnote.hidden = dshot;
+    const cmds = changedCommands();
+    const save = q<HTMLButtonElement>('.esc-save');
+    if (save) save.disabled = cmds.length === 0 || applying || s.conn !== 'connected';
+    const cmdBox = q('.esc-cmds');
+    if (cmdBox) cmdBox.textContent = cmds.length ? cmds.join('\n') : 'Brak zmian do zapisania.';
+  }
+
+  function changedCommands(): string[] {
+    const cfg = ctx.state.get().config;
+    if (!cfg) return [];
+    const cmds: string[] = [];
+    if (selProto !== cfg.motorPwmProtocol) {
+      const p = PROTOCOLS.find((x) => x.id === selProto);
+      if (p) cmds.push(`set motor_pwm_protocol = ${p.name}`);
+    }
+    if (selBidir !== cfg.bidir) cmds.push(`set dshot_bidir = ${selBidir ? 'ON' : 'OFF'}`);
+    return cmds;
+  }
+
+  function paintDrone(): void {
+    const s = ctx.state.get();
+    const d = ctx.diagnosis();
+    const hot = d.focus === 'esc';
+    let hotText = '';
+    if (hot && s.config) {
+      const bidirOff = isDshot(s.config.motorPwmProtocol) && !s.config.bidir ? ' · bidir OFF' : '';
+      hotText = `${PART_LABEL.esc} · ${protocolName(s.config.motorPwmProtocol).replace(/^DSHOT/, 'DShot')}${bidirOff}`;
+    }
+    const film = `ROTORLAB · ${(s.info?.craftName ?? 'DRON').toUpperCase()} · ${plDate()}`;
+    const key = JSON.stringify([hot, hotText, propsOut, film]);
+    if (key === droneKey) return;
+    droneKey = key;
+    const box = q('.esc-art');
+    if (box) box.innerHTML = renderDroneSvg({ hot, propsOut, hotText, film });
+    paintMotors();
+  }
+
+  function paintOverlay(): void {
+    const ov = q('.esc-overlay');
+    if (ov) ov.hidden = ctx.state.get().conn !== 'reconnecting';
+  }
+
+  function paintPropsToggle(): void {
+    el.querySelectorAll<HTMLButtonElement>('[data-props]').forEach((b) => {
+      const on = (b.dataset.props === 'out') === propsOut;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  /* ----- widoki ----- */
+  function buildEmpty(): void {
+    const s = ctx.state.get();
+    const busy = s.conn === 'connecting';
+    const noSerial = !hasWebSerial();
+    el.innerHTML = `
+      <div class="esc-empty">
+        <div class="esc-empty-card">
+          <div class="esc-empty-t mono">ESC · brak połączenia</div>
+          <h1>Podłącz drona, żeby ustawić ESC</h1>
+          <p>Protokół silników, Bidirectional DShot i test silników wymagają połączenia z płytką FC. Bez drona możesz obejrzeć ekran w trybie demo.</p>
+          <div class="start-btns">
+            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? 'Łączenie…' : 'Połącz'}</button>
+            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}Tryb demo</button>
+          </div>
+          ${noSerial ? `<div class="start-msg warn">Ta przeglądarka nie obsługuje WebSerial. Użyj Chrome/Edge albo aplikacji na Windows.</div>` : ''}
+          ${s.error ? `<div class="start-msg err" role="alert">${escapeHtml(s.error)}</div>` : ''}
+        </div>
+      </div>`;
+    view = 'empty';
+    droneKey = '';
+    cfgKey = '';
+  }
+
+  function buildMain(): void {
+    propsOff = false;
+    unlock = false;
+    vals.fill(0);
+    droneKey = '';
+    cfgKey = '';
+    const diff = ctx.state.get().diff ?? '';
+    propsOut = /set\s+yaw_motors_reversed\s*=\s*ON/i.test(diff);
+    const rows = [0, 1, 2, 3]
+      .map(
+        (i) =>
+          `<label class="esc-slider dis"><span class="esc-sl-n mono">M${i + 1}</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="${i}" disabled aria-label="Moc silnika M${i + 1}"><span class="esc-val mono">0%</span></label>`,
+      )
+      .join('');
+    el.innerHTML = `
+      <div class="esc">
+        <div class="esc-left">
+          <div class="esc-art"></div>
+          <div class="esc-info">
+            <div><small class="mono">WIDOK</small><b>z góry · przód u góry</b></div>
+            <div><small class="mono">ŚMIGŁA · podgląd</small>
+              <span class="esc-tog"><button type="button" data-props="in" aria-pressed="true">props in</button><button type="button" data-props="out" aria-pressed="false">props out</button></span></div>
+            <div><small class="mono">NUMERACJA</small><b>Betaflight M1–M4</b></div>
+          </div>
+        </div>
+        <div class="esc-side">
+          <section class="esc-panel">
+            <header><span class="mono">PROTOKÓŁ ESC</span><span class="mono esc-key">motor_pwm_protocol</span></header>
+            <div class="esc-seg" role="radiogroup" aria-label="Protokół ESC"></div>
+            <div class="esc-bidir">
+              <div><b>Bidirectional DShot (RPM)</b><small class="mono">dshot_bidir</small></div>
+              <button type="button" class="esc-sw" role="switch" aria-checked="false" aria-label="Bidirectional DShot"><span class="esc-sw-t mono">OFF</span><i></i></button>
+            </div>
+            <p class="esc-note mono">Bidir wymaga ESC z Bluejay, BLHeli_32 lub AM32 (nie działa na gołym BLHeli_S).</p>
+            <p class="esc-note esc-bidir-note mono" hidden>Bidir działa tylko z DSHOT. Wybierz DSHOT150/300/600.</p>
+            <pre class="esc-cmds mono"></pre>
+            <div class="esc-actions"><button type="button" class="btn light esc-save">${icon('check', 16)}Zapisz w FC</button></div>
+          </section>
+          <section class="esc-panel">
+            <header><span class="mono">TEST SILNIKÓW</span><span class="mono esc-test-state">zablokowany</span></header>
+            <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>Śmigła zdjęte</span></label>
+            <div class="esc-warn" role="alert"></div>
+            ${rows}
+            <label class="esc-slider all dis"><span class="esc-sl-n">Wszystkie</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="all" disabled aria-label="Moc wszystkich silników"><span class="esc-val mono">0%</span></label>
+            <label class="esc-check small"><input type="checkbox" id="esc-unlock" disabled><span>Odblokuj zakres do 100% (domyślnie maks. ${SAFE_MAX}%)</span></label>
+            <button type="button" class="esc-stop">${icon('stop', 20)}<span>STOP</span><kbd class="mono">Spacja</kbd></button>
+          </section>
+        </div>
+        <div class="esc-overlay" hidden><div class="mono">FC się restartuje. Łączę ponownie…</div></div>
+      </div>`;
+    view = 'main';
+    paintTest();
+  }
+
+  function sync(): void {
+    const cfg = ctx.state.get().config;
+    const key = cfg ? `${cfg.motorPwmProtocol}|${cfg.bidir}` : '';
+    if (key !== cfgKey) {
+      cfgKey = key;
+      if (cfg) {
+        selProto = cfg.motorPwmProtocol;
+        selBidir = cfg.bidir;
+      }
+    }
+    paintProto();
+    paintDrone();
+    paintPropsToggle();
+    paintOverlay();
+    paintMotors();
+  }
+
+  function render(): void {
+    const s = ctx.state.get();
+    if (s.conn !== 'connected' && s.conn !== 'reconnecting') {
+      stopTest();
+      if (view !== 'empty' || s.conn === 'connecting' || s.error) buildEmpty();
+      return;
+    }
+    if (s.conn === 'reconnecting') stopTest();
+    if (view !== 'main') buildMain();
+    sync();
+  }
+
+  /* ----- zdarzenia ----- */
+  function setAll(v: number): void {
+    vals.fill(v);
+  }
+
+  el.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
+    if (act === 'connect') return void ctx.connect();
+    if (act === 'demo') return void ctx.connectDemo();
+    const proto = t.closest<HTMLElement>('[data-proto]');
+    if (proto) {
+      selProto = Number(proto.dataset.proto);
+      if (!isDshot(selProto)) selBidir = false;
+      paintProto();
+      return;
+    }
+    const pv = t.closest<HTMLElement>('[data-props]');
+    if (pv) {
+      propsOut = pv.dataset.props === 'out';
+      paintPropsToggle();
+      paintDrone();
+      return;
+    }
+    if (t.closest('.esc-sw')) {
+      if (isDshot(selProto)) {
+        selBidir = !selBidir;
+        paintProto();
+      }
+      return;
+    }
+    if (t.closest('.esc-stop')) return stopTest();
+    if (t.closest('.esc-save')) {
+      const cmds = changedCommands();
+      if (!cmds.length || applying) return;
+      stopTest();
+      applying = true;
+      paintProto();
+      void ctx
+        .applyCommands(cmds, { title: 'Zapis ustawień ESC' })
+        .catch(() => false)
+        .finally(() => {
+          applying = false;
+          // po udanym zapisie FC sie restartuje i konfiguracja wczyta sie na nowo; przy anulowaniu zostaje wybor
+          cfgKey = '';
+          sync();
+        });
+    }
+  });
+
+  el.addEventListener('change', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.id === 'esc-propsoff') {
+      propsOff = t.checked;
+      if (!propsOff) {
+        stopTest();
+        unlock = false;
+        const un = q<HTMLInputElement>('#esc-unlock');
+        if (un) un.checked = false;
+      }
+      paintTest();
+    } else if (t.id === 'esc-unlock') {
+      unlock = t.checked;
+      if (!unlock) {
+        for (let i = 0; i < 4; i++) vals[i] = Math.min(vals[i], SAFE_MAX);
+      }
+      paintTest();
+    }
+  });
+
+  el.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (!t.classList.contains('esc-range') || !propsOff) return;
+    const v = Math.max(0, Math.min(maxPct(), Math.round(Number(t.value))));
+    if (t.dataset.m === 'all') setAll(v);
+    else vals[Number(t.dataset.m)] = v;
+    paintTest();
+    paintMotors();
+    if (anyActive()) startLoop();
+    else stopTest();
+  });
+
+  const onKey = (e: KeyboardEvent) => {
+    if ((e.code === 'Space' || e.key === ' ') && (anyActive() || timer)) {
+      e.preventDefault();
+      stopTest();
+    }
+  };
+  const onBlur = () => stopTest();
+  const onVis = () => {
+    if (document.hidden) stopTest();
+  };
+  window.addEventListener('keydown', onKey, true);
+  window.addEventListener('blur', onBlur);
+  document.addEventListener('visibilitychange', onVis);
+
+  const off = ctx.state.subscribe(render);
+  const offT = ctx.state.subscribeTelemetry(() => {
+    if (view === 'main') paintMotors();
+  });
+  render();
+
+  return () => {
+    stopTest();
+    off();
+    offT();
+    window.removeEventListener('keydown', onKey, true);
+    window.removeEventListener('blur', onBlur);
+    document.removeEventListener('visibilitychange', onVis);
+  };
+};

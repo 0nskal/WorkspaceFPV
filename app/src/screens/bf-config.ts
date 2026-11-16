@@ -10,32 +10,6 @@ import { protocolName } from '../fc/state';
 /** Features shown here (receiver features belong to the Receiver tab). Order = display order. */
 const FEATURES: Array<keyof typeof D.FEATURE> = ['MOTOR_STOP', 'AIRMODE', 'ANTI_GRAVITY', 'TELEMETRY', 'ESC_SENSOR', 'LED_STRIP', 'OSD', 'SOFTSERIAL', 'GPS', 'RANGEFINDER', 'THREE_D', 'TRANSPONDER', 'CHANNEL_FORWARDING', 'RSSI_ADC', 'INFLIGHT_ACC_CAL', 'DASHBOARD'];
 
-/** Beeper conditions: [disabled-mask bit, name]. Bit = condition number - 1 (silence has no bit). */
-const BEEPERS: Array<[number, string]> = [
-  [0, 'GYRO_CALIBRATED'],
-  [1, 'RX_LOST'],
-  [2, 'RX_LOST_LANDING'],
-  [3, 'DISARMING'],
-  [4, 'ARMING'],
-  [5, 'ARMING_GPS_FIX'],
-  [6, 'BAT_CRIT_LOW'],
-  [7, 'BAT_LOW'],
-  [8, 'GPS_STATUS'],
-  [9, 'RX_SET'],
-  [10, 'ACC_CALIBRATION'],
-  [11, 'ACC_CALIBRATION_FAIL'],
-  [12, 'READY_BEEP'],
-  [14, 'DISARM_REPEAT'],
-  [15, 'ARMED'],
-  [16, 'SYSTEM_INIT'],
-  [17, 'USB'],
-  [18, 'BLACKBOX_ERASE'],
-  [19, 'CRASH_FLIP_MODE'],
-  [20, 'CAM_CONNECTION_OPEN'],
-  [21, 'CAM_CONNECTION_CLOSE'],
-  [22, 'RC_SMOOTHING_INIT_FAIL'],
-];
-
 const K = (k: string) => `bfConfig.${k}` as Key;
 
 function toDraft(bf: BfData): Draft {
@@ -55,7 +29,7 @@ function toDraft(bf: BfData): Draft {
   }
   if (bf.advanced) d.pidDenom = bf.advanced.pidProcessDenom;
   if (bf.features !== null) for (const f of FEATURES) d[`f.${f}`] = D.hasFeature(bf.features, D.FEATURE[f]);
-  if (bf.beeper) for (const [bit, name] of BEEPERS) d[`b.${name}`] = ((bf.beeper.disabledMask >>> bit) & 1) === 0;
+  if (bf.beeper) for (const [bit, name] of D.beeperTable(bf.api)) d[`b.${name}`] = ((bf.beeper.disabledMask >>> bit) & 1) === 0;
   if (bf.arming) {
     d.autoDisarm = bf.arming.autoDisarmDelay;
     d.smallAngle = bf.arming.smallAngle;
@@ -124,7 +98,7 @@ function groups(bf: BfData, draft: Draft): Group[] {
       title: t(K('gBeeper')),
       hint: t(K('gBeeperHint')),
       wide: true,
-      fields: BEEPERS.map(([, name]) => ({ key: `b.${name}`, type: 'check' as const, label: t(K(`beeper.${name}`)) })),
+      fields: D.beeperTable(bf.api).map(([, name]) => ({ key: `b.${name}`, type: 'check' as const, label: t(K(`beeper.${name}`)) })),
     });
   }
   if (bf.arming) {
@@ -167,7 +141,7 @@ function toWrites(draft: Draft, bf: BfData): MspWrite[] {
   }
   if (bf.beeper && !sameKeys(draft, base, (k) => k.startsWith('b.'))) {
     let mask = bf.beeper.disabledMask >>> 0;
-    for (const [bit, name] of BEEPERS) mask = draft[`b.${name}`] ? (mask & ~(1 << bit)) >>> 0 : (mask | (1 << bit)) >>> 0;
+    for (const [bit, name] of D.beeperTable(bf.api)) mask = draft[`b.${name}`] ? (mask & ~(1 << bit)) >>> 0 : (mask | (1 << bit)) >>> 0;
     w.push({ code: C.SET_BEEPER_CONFIG, label: 'SET_BEEPER_CONFIG', payload: D.encodeBeeper({ disabledMask: mask, dshotBeaconTone: bf.beeper.dshotBeaconTone }, bf.raw.get('beeper')) });
   }
   if (bf.arming && !only('autoDisarm', 'smallAngle', 'gyroCal')) {

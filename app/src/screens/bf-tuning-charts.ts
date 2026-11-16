@@ -59,12 +59,13 @@ export const maxRatesOf = (v: Values): [number, number, number] => {
   return [0, 1, 2].map((a) => Math.round(Math.abs(rateAt(ty, axisRatesFromValues(v, a as 0 | 1 | 2), 1)))) as [number, number, number];
 };
 
-export function throttleChart(cur: Values, orig: Values): string {
+/** Throttle curve chart; `api` selects the firmware curve (4.5 table or the 2025.12 Bezier through thr_hover). */
+export function throttleChart(cur: Values, orig: Values, api = 46): string {
   const c = frame(260, 250, 34, 12, 12, 30);
   const x = (u: number) => c.l + u * c.pw;
   const y = (u: number) => c.t + (1 - u) * c.ph;
   const N = 40;
-  const line = (mid: number, expo: number) => Array.from({ length: N + 1 }, (_, i) => `${i ? 'L' : 'M'}${f1(x(i / N))} ${f1(y(throttleCurve(mid, expo, i / N)))}`).join('');
+  const line = (mid: number, expo: number, hover?: number) => Array.from({ length: N + 1 }, (_, i) => `${i ? 'L' : 'M'}${f1(x(i / N))} ${f1(y(throttleCurve(mid, expo, i / N, { hover, api })))}`).join('');
   let g = '';
   for (let p = 0; p <= 100; p += 25) {
     g += `<line x1="${c.l}" x2="${c.l + c.pw}" y1="${f1(y(p / 100))}" y2="${f1(y(p / 100))}" stroke="${INK}" stroke-opacity="${p === 0 ? 0.5 : 0.09}"/>`;
@@ -73,9 +74,9 @@ export function throttleChart(cur: Values, orig: Values): string {
     g += `<text x="${f1(x(p / 100))}" y="${c.t + c.ph + 15}" text-anchor="middle" class="bf-tuning-tick">${p}</text>`;
   }
   g += `<text x="${c.l + c.pw}" y="${c.t + c.ph + 27}" text-anchor="end" class="bf-tuning-tick">${t('bfTuning.rates.thrX')}</text>`;
-  const changed = cur.throttleMid !== orig.throttleMid || cur.throttleExpo !== orig.throttleExpo;
-  if (changed) g += `<path d="${line(orig.throttleMid ?? 50, orig.throttleExpo ?? 0)}" fill="none" stroke="${SUB}" stroke-width="1.2" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>`;
-  g += `<path d="${line(cur.throttleMid ?? 50, cur.throttleExpo ?? 0)}" fill="none" stroke="${changed ? HOT : INK}" stroke-width="2"/>`;
+  const changed = cur.throttleMid !== orig.throttleMid || cur.throttleExpo !== orig.throttleExpo || (api >= 47 && cur.throttleHover !== orig.throttleHover);
+  if (changed) g += `<path d="${line(orig.throttleMid ?? 50, orig.throttleExpo ?? 0, orig.throttleHover)}" fill="none" stroke="${SUB}" stroke-width="1.2" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>`;
+  g += `<path d="${line(cur.throttleMid ?? 50, cur.throttleExpo ?? 0, cur.throttleHover)}" fill="none" stroke="${changed ? HOT : INK}" stroke-width="2"/>`;
   const hov = cur.throttleHover;
   if (hov !== undefined) g += `<line x1="${c.l}" x2="${c.l + c.pw}" y1="${f1(y(hov / 100))}" y2="${f1(y(hov / 100))}" stroke="${INK}" stroke-opacity=".45" stroke-dasharray="3 4"/><text x="${c.l + 4}" y="${f1(y(hov / 100) - 4)}" class="bf-tuning-tick">${t('bfTuning.rates.hover')} ${hov}%</text>`;
   return `<svg class="bf-tuning-svg" viewBox="0 0 ${c.W} ${c.H}" role="img" aria-label="${t('bfTuning.rates.throttleAria')}">${g}</svg>`;

@@ -373,6 +373,38 @@ export function encodeArming(v: ArmingConfig, raw?: Uint8Array): Uint8Array {
   return o;
 }
 
+/**
+ * Beeper conditions as [disabled-mask bit, name] (beeperMode_e, io/beeper.h; mask bit = mode - 1, SILENCE has no bit,
+ * bit 13 MULTI_BEEPS is internal). 4.5 (API 1.46): 22 RC_SMOOTHING_INIT_FAIL, 23 ARMING_GPS_NO_FIX.
+ * 2025.12+ (API 1.47): RC_SMOOTHING_INIT_FAIL removed, ARMING_GPS_NO_FIX moved to 22.
+ */
+export function beeperTable(apiMinor: number): Array<[number, string]> {
+  const base: Array<[number, string]> = [
+    [0, 'GYRO_CALIBRATED'],
+    [1, 'RX_LOST'],
+    [2, 'RX_LOST_LANDING'],
+    [3, 'DISARMING'],
+    [4, 'ARMING'],
+    [5, 'ARMING_GPS_FIX'],
+    [6, 'BAT_CRIT_LOW'],
+    [7, 'BAT_LOW'],
+    [8, 'GPS_STATUS'],
+    [9, 'RX_SET'],
+    [10, 'ACC_CALIBRATION'],
+    [11, 'ACC_CALIBRATION_FAIL'],
+    [12, 'READY_BEEP'],
+    [14, 'DISARM_REPEAT'],
+    [15, 'ARMED'],
+    [16, 'SYSTEM_INIT'],
+    [17, 'USB'],
+    [18, 'BLACKBOX_ERASE'],
+    [19, 'CRASH_FLIP_MODE'],
+    [20, 'CAM_CONNECTION_OPEN'],
+    [21, 'CAM_CONNECTION_CLOSE'],
+  ];
+  return apiMinor >= API.BF2025_12 ? [...base, [22, 'ARMING_GPS_NO_FIX']] : [...base, [22, 'RC_SMOOTHING_INIT_FAIL'], [23, 'ARMING_GPS_NO_FIX']];
+}
+
 export interface BeeperConfig {
   /** Bit n set = beeper condition n is DISABLED. */
   disabledMask: number;
@@ -536,8 +568,14 @@ export function encodeSerialConfig(cfg: SerialConfig): Uint8Array {
 }
 
 /** Human name of a serial port identifier (4.3 to 2026.6 numbering). */
+/**
+ * serialPortIdentifier_e (io/serial.h). Up to 4.5: UART1..10 = 0..9. From 2025.12 (API 1.47): UART0/UART1..15 = 50/51..65,
+ * PIOUART0..9 = 70..79. VCP 20, SOFTSERIAL1/2 30/31 and LPUART1 40 never changed. The ranges do not overlap.
+ */
 export function serialPortName(id: number): string {
   if (id >= 0 && id <= 9) return `UART${id + 1}`;
+  if (id >= 50 && id <= 65) return `UART${id - 50}`;
+  if (id >= 70 && id <= 79) return `PIOUART${id - 70}`;
   if (id === 20) return 'USB VCP';
   if (id === 30 || id === 31) return `SOFTSERIAL${id - 29}`;
   if (id === 40) return 'LPUART1';

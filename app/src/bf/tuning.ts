@@ -156,16 +156,16 @@ export interface AxisRates {
 }
 
 const p3 = (x: number) => x * x * x;
-const p4 = (x: number) => x * x * x * x;
+const p5 = (x: number) => x * x * x * x * x;
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
 
 /**
  * Setpoint in deg/s for a stick position x in -1..1, per rates type. Raw values are the bytes in MSP_RC_TUNING
- * (rcRate, expo and superRate all as stored: percent x100 for Betaflight etc.). Formulas follow the published
- * rate definitions of each type; the result is clamped to the profile rate limit.
+ * (rcRate, expo and superRate as stored). Ported from the firmware (src/main/fc/rc.c, apply*Rates, checked against
+ * 4.5-maintenance and master); the result is clamped to the profile rate limit (firmware: rate_limit, max 1998).
+ * Quick rates: the firmware's default `quick_rates_rc_expo = 0` branch (the setting is CLI-only, not in MSP).
  */
 export function rateAt(type: RatesType, r: AxisRates, x: number): number {
-  const sgn = x < 0 ? -1 : 1;
   const a = Math.abs(x);
   let rate: number;
   switch (type) {
@@ -184,26 +184,29 @@ export function rateAt(type: RatesType, r: AxisRates, x: number): number {
       break;
     }
     case 'kiss': {
+      // kissRcCommandf = (x^3*e + x*(1-e)) * rcRate/1000; angle = 2000 * superFactor * kissRcCommandf
       const e = r.expo / 100;
       const c = (p3(x) * e + x * (1 - e)) * (r.rcRate / 1000);
-      rate = 10 * c * (1 / clamp(1 - a * (r.superRate / 100), 0.01, 1));
+      rate = 2000 * c * (1 / clamp(1 - a * (r.superRate / 100), 0.01, 1));
       break;
     }
     case 'actual': {
+      // expof = |x| * (x^5*e + x*(1-e)); angle = x*center + max(0, max - center)*expof (odd in x, no abs)
       const e = r.expo / 100;
-      const curve = a * (p4(x) * e + x * (1 - e));
+      const curve = a * (p5(x) * e + x * (1 - e));
       const center = r.rcRate * 10;
       const move = Math.max(0, r.superRate * 10 - center);
-      rate = x * center + sgn * move * Math.abs(curve);
+      rate = x * center + move * curve;
       break;
     }
     case 'quick': {
+      // quick_rates_rc_expo = 0: curve = |x|^3*e + |x|*(1-e); angle = x * rcRate * 1/clamp(1 - curve*sfc)
       const rc = r.rcRate * 2;
       const maxDps = Math.max(r.superRate * 10, rc);
       const e = r.expo / 100;
-      const sf = maxDps > 0 ? (maxDps - rc) / maxDps : 0;
-      const c = p3(x) * e + x * (1 - e);
-      rate = c * rc * (1 / clamp(1 - a * sf, 0.01, 1));
+      const sfc = maxDps > 0 ? (maxDps - rc) / maxDps : 0;
+      const curve = p3(a) * e + a * (1 - e);
+      rate = x * rc * (1 / clamp(1 - curve * sfc, 0.01, 1));
       break;
     }
   }
@@ -214,13 +217,87 @@ export function rateAt(type: RatesType, r: AxisRates, x: number): number {
 /** Maximum deg/s (stick fully deflected). */
 export const maxRate = (type: RatesType, r: AxisRates): number => Math.abs(rateAt(type, r, 1));
 
-/** Throttle curve (mid/expo, as in the firmware's 0..1000 lookup). x and result in 0..1. */
-export function throttleCurve(mid: number, expo: number, x: number): number {
-  const tmp = x * 100 - mid;
-  const y = tmp > 0 ? 100 - mid : tmp < 0 ? mid : 1;
-  if (y === 0) return clamp(x, 0, 1);
-  const out = 10 * mid + (tmp * (100 - expo + (expo * tmp * tmp) / (y * y))) / 10;
-  return clamp(out / 1000, 0, 1);
+const THR_LOOKUP = 12; // THROTTLE_LOOKUP_LENGTH
+
+/** Firmware <= 4.5 (API <= 1.46): integer mid/expo table (rc.c generateThrottleCurve), PWM 1000..2000 per 10 % step. */
+function throttleTable45(mid: number, expo: number): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < THR_LOOKUP; i++) {
+    const tmp = 10 * i - mid;
+    const y = tmp > 0 ? 100 - mid : tmp < 0 ? mid : 1;
+    const v = 10 * mid + Math.trunc((tmp * (100 - expo + Math.trunc((expo * tmp * tmp) / (y * y || 1)))) / 10);
+    out.push(1000 + v);
+  }
+  return out;
+}
+
+/** Quadratic Bezier y for a given x (rc.c quadraticBezier). */
+function bezierY(x: number, p0x: number, p1x: number, p2x: number, p0y: number, p1y: number, p2y: number): number {
+  const a = p0x - 2 * p1x + p2x;
+  const b = 2 * p1x - 2 * p0x;
+  const c = p0x - x;
+  let t = 0;
+  if (Math.abs(a) < 1e-6) {
+    if (Math.abs(b) > 1e-6) t = -c / b;
+  } else {
+    const d = b * b - 4 * a * c;
+    if (d >= 0) {
+      const s = Math.sqrt(d);
+      const t1 = (-b + s) / (2 * a);
+      const t2 = (-b - s) / (2 * a);
+      t = t1 >= 0 && t1 <= 1 ? t1 : t2;
+    }
+  }
+  t = clamp(t, 0, 1);
+  return (1 - t) * (1 - t) * p0y + 2 * (1 - t) * t * p1y + t * t * p2y;
+}
+
+/** Firmware 2025.12+ (API >= 1.47): two quadratic Bezier segments through (mid, hover), rounded into the PWM table. */
+function throttleTableBezier(mid: number, expo: number, hover: number): number[] {
+  const m = mid / 100;
+  const e = expo / 100;
+  const h = hover / 100;
+  const cp1x = m * 0.5;
+  const cp1y = h * 0.5 * (1 + e);
+  const cp2x = (1 + m) * 0.5;
+  const cp2y = 1 + (h - 1) * 0.5 * (1 + e);
+  const out: number[] = [];
+  for (let i = 0; i < THR_LOOKUP; i++) {
+    const x = i / (THR_LOOKUP - 1);
+    const y = x <= m ? bezierY(x, 0, cp1x, m, 0, cp1y, h) : bezierY(x, m, cp2x, 1, h, cp2y, 1);
+    out.push(Math.round(1000 + 1000 * y));
+  }
+  return out;
+}
+
+export interface ThrottleOpts {
+  /** thr_hover (MSP_RC_TUNING byte 23, API >= 1.47); 50 when unknown. */
+  hover?: number;
+  /** MSP API minor; selects the 4.5 table (<= 46) or the 2025.12 Bezier curve (>= 47). Default 46. */
+  api?: number;
+}
+
+/**
+ * Throttle output for a stick position, exactly as the firmware computes it (lookup table + interpolation in PWM
+ * microseconds). x and result in 0..1 (= (PWM - 1000) / 1000). mid/expo/hover are the raw 0..100 bytes.
+ */
+export function throttleCurve(mid: number, expo: number, x: number, opts: ThrottleOpts = {}): number {
+  const api = opts.api ?? 46;
+  const stick = Math.round(clamp(x, 0, 1) * 1000); // rcData[THROTTLE] - PWM_RANGE_MIN
+  let pwm: number;
+  if (api >= 47) {
+    const lk = throttleTableBezier(mid, expo, opts.hover ?? 50);
+    const steps = THR_LOOKUP - 1;
+    const scaled = stick * steps;
+    const idx = Math.trunc(scaled / 1000);
+    const rem = scaled % 1000;
+    pwm = idx >= steps ? lk[steps]! : Math.round(lk[idx]! + (rem * (lk[idx + 1]! - lk[idx]!)) / 1000);
+  } else {
+    const lk = throttleTable45(mid, expo);
+    const i = Math.trunc(stick / 100);
+    pwm = lk[i]! + Math.trunc(((stick - i * 100) * (lk[i + 1]! - lk[i]!)) / 100);
+  }
+  return clamp((pwm - 1000) / 1000, 0, 1);
 }
 
 export function axisRatesFromValues(v: Values, axis: 0 | 1 | 2): AxisRates {

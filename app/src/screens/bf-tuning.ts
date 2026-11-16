@@ -27,7 +27,7 @@ const dKey = (k: string) => `bfTuning.${k}` as Key;
 const RATE_UI: Record<(typeof RATES_TYPES)[number], { rc: { scale: number; unit: string; key: string }; sr: { scale: number; max: number; unit: string; key: string }; ex: string }> = {
   betaflight: { rc: { scale: 0.01, unit: '', key: 'rcRate' }, sr: { scale: 0.01, max: 99, unit: '', key: 'superRate' }, ex: 'expo' },
   raceflight: { rc: { scale: 10, unit: '°/s', key: 'rate' }, sr: { scale: 0.01, max: 255, unit: '', key: 'acroPlus' }, ex: 'expo' },
-  kiss: { rc: { scale: 0.001, unit: '', key: 'rcRate' }, sr: { scale: 0.01, max: 99, unit: '', key: 'rate' }, ex: 'rcCurve' },
+  kiss: { rc: { scale: 0.01, unit: '', key: 'rcRate' }, sr: { scale: 0.01, max: 99, unit: '', key: 'rate' }, ex: 'rcCurve' },
   actual: { rc: { scale: 10, unit: '°/s', key: 'center' }, sr: { scale: 10, max: 255, unit: '°/s', key: 'maxRate' }, ex: 'expo' },
   quick: { rc: { scale: 2, unit: '°/s', key: 'center' }, sr: { scale: 10, max: 255, unit: '°/s', key: 'maxRate' }, ex: 'expo' },
 };
@@ -325,7 +325,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       </div>
       <div class="bf-tuning-rcol">
         ${sectionHtml(t('bfTuning.rates.curveCap'), `<div class="bf-tuning-plot" data-chart="rates">${ratesChart(form.cur.rc ?? {}, form.orig.rc ?? {})}</div><div data-legend>${ratesLegend()}</div>`, t('bfTuning.rates.curveNote'))}
-        ${sectionHtml(t('bfTuning.rates.thrCurve'), `<div class="bf-tuning-plot narrow" data-chart="thr">${throttleChart(form.cur.rc ?? {}, form.orig.rc ?? {})}</div>`)}
+        ${sectionHtml(t('bfTuning.rates.thrCurve'), `<div class="bf-tuning-plot narrow" data-chart="thr">${throttleChart(form.cur.rc ?? {}, form.orig.rc ?? {}, api())}</div>`)}
       </div>
     </div>`;
   }
@@ -383,7 +383,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       const a = root.querySelector('[data-chart="rates"]');
       if (a) a.innerHTML = ratesChart(rc, o);
       const tc = root.querySelector('[data-chart="thr"]');
-      if (tc) tc.innerHTML = throttleChart(rc, o);
+      if (tc) tc.innerHTML = throttleChart(rc, o, api());
       const lg = root.querySelector('[data-legend]');
       if (lg) lg.innerHTML = ratesLegend();
     } else if (g === 'filter') {

@@ -97,5 +97,6 @@ export const enBfConfig = {
     CAM_CONNECTION_OPEN: 'Camera connection: open',
     CAM_CONNECTION_CLOSE: 'Camera connection: close',
     RC_SMOOTHING_INIT_FAIL: 'RC smoothing init failed',
+    ARMING_GPS_NO_FIX: 'Arming without GPS fix',
   },
 };

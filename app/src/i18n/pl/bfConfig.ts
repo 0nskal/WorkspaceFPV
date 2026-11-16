@@ -99,5 +99,6 @@ export const plBfConfig: typeof enBfConfig = {
     CAM_CONNECTION_OPEN: 'Połączenie z kamerą: otwarte',
     CAM_CONNECTION_CLOSE: 'Połączenie z kamerą: zamknięte',
     RC_SMOOTHING_INIT_FAIL: 'Błąd inicjalizacji RC smoothing',
+    ARMING_GPS_NO_FIX: 'Uzbrojenie bez fixa GPS',
   },
 };

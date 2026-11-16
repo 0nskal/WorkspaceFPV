@@ -1,7 +1,8 @@
 /**
  * Arming-disable flag tables (spec 3.12). Bits 0-19 and 21-24 never changed from 4.3 to master;
  * bit 20 = RPMFILTER on 4.3/4.4 and DSHOT_TELEM on 4.5+; bit 25 = ARM_SWITCH up to 4.5 but CRASHFLIP on 2025.12+;
- * on master 26 ALTHOLD, 27 POSHOLD, 28 AUTOPILOT. ARM_SWITCH is always the LAST flag (index = flag count - 1).
+ * 26 ALTHOLD, 27 POSHOLD on 2025.12+, 28 AUTOPILOT on master. ARM_SWITCH is always the LAST flag (index = flag count - 1):
+ * 25 on 4.5 (count 26), 28 on 2025.12 (count 29), 29 on master (count 30). Checked against runtime_config.h.
  */
 import { API } from './codes';
 
@@ -51,7 +52,7 @@ export function armingTable(apiMinor: number, flagCount = 0): ArmFlag[] {
     return t;
   }
   t.push({ bit: 25, name: 'CRASHFLIP' });
-  const last = flagCount > 26 ? flagCount - 1 : apiMinor >= API.MASTER ? 29 : 26;
+  const last = flagCount > 26 ? flagCount - 1 : apiMinor >= API.MASTER ? 29 : 28; // 2025.12 (1.47): ARM_SWITCH = 28; master (1.49): AUTOPILOT 28, ARM_SWITCH 29
   const masterExtra = ['ALTHOLD', 'POSHOLD', 'AUTOPILOT'];
   for (let bit = 26; bit < last; bit++) t.push({ bit, name: masterExtra[bit - 26] ?? `FLAG_${bit}` });
   t.push({ bit: last, name: 'ARM_SWITCH' });

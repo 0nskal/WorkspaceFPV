@@ -96,8 +96,8 @@ const near = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
   check('actual curve at 0.1', near(rateAt('actual', { rcRate: 20, expo: 0, superRate: 70 }, 0.1), 0.1 * 200 + 500 * 0.01));
   // quick: max = superRate*10 (when above rcRate*2)
   check('quick max', near(maxRate('quick', { rcRate: 30, expo: 0, superRate: 80, limit: 1998 }), 800));
-  // kiss: rate = 10*rcRate/1000*... at x=1 with super
-  check('kiss max', near(maxRate('kiss', { rcRate: 100, expo: 0, superRate: 70 }), 10 * 0.1 * (1 / 0.3), 0.01));
+  // kiss (rc.c applyKissRates): 2000 * superFactor * (rcRate/1000) at x=1 -> 2000 * 0.1 / 0.3
+  check('kiss max', near(maxRate('kiss', { rcRate: 100, expo: 0, superRate: 70 }), 2000 * 0.1 * (1 / 0.3), 0.01));
   check('raceflight max', near(maxRate('raceflight', { rcRate: 80, expo: 0, superRate: 50 }), 10 * 80 * 1 * 1.5, 0.01));
   check('limit clamps', maxRate('betaflight', { rcRate: 100, expo: 0, superRate: 90, limit: 500 }) === 500);
 }

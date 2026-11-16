@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, dialog, session, shell } from 'electron';
 import path from 'node:path';
+import { setupUpdater } from './updater';
 
 /** VID STM32 (Betaflight FC zwykle uzywaja 0x0483). */
 const STM32_VID = 0x0483;
@@ -108,6 +109,7 @@ if (!gotLock) {
     Menu.setApplicationMenu(null);
     setupSerial();
     createWindow();
+    setupUpdater(() => win);
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });

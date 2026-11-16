@@ -89,9 +89,15 @@ npm run build && node scripts/build-site.mjs && npx wrangler pages deploy site -
 
 Skrypt `scripts/build-site.mjs` kopiuje `dist/` do `site/app/`, dzięki czemu appka w przeglądarce działa pod `/app/`.
 
+## Aktualizacje
+
+Wersja Windows aktualizuje się z poziomu appki: **Ustawienia → Aktualizacje** (przycisk „Sprawdź aktualizacje”, pobieranie z paskiem postępu, „Zainstaluj i uruchom ponownie”). Domyślnie Rotorlab sprawdza nowe wersje ~5 s po starcie (można wyłączyć tym samym miejscu) i pokazuje dyskretną informację. Pobrana aktualizacja instaluje się też sama po zamknięciu appki. Dotyczy to wersji od 0.2.0; 0.1.0 trzeba raz pobrać ręcznie. Wersja w przeglądarce aktualizuje się sama po odświeżeniu strony.
+
 ## Wydania
 
-Wypchnięcie tagu `v*` (np. `git tag v0.1.0 && git push --tags`) uruchamia GitHub Actions: build na Windows, upload `Rotorlab-Setup.exe` do GitHub Release z automatycznymi notatkami. Workflow CI buduje projekt przy każdym pushu i pull requeście.
+Proces: podbij `version` w `package.json` (np. `0.2.0`), zacommituj, `git tag v0.2.0 && git push --tags`, a resztę robi GitHub Actions. Workflow sprawdza, że tag zgadza się z wersją w `package.json` (inaczej kończy się błędem), buduje na Windows i wgrywa do GitHub Release `Rotorlab-Setup.exe`, `Rotorlab-Setup.exe.blockmap` oraz `latest.yml` (z tego pliku korzysta mechanizm aktualizacji).
+
+Wypchnięcie tagu `v*` uruchamia GitHub Actions z automatycznymi notatkami wydania. Workflow CI buduje projekt przy każdym pushu i pull requeście.
 
 ## Roadmap
 

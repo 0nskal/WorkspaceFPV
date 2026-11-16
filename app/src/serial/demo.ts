@@ -1,8 +1,10 @@
 import { MSP } from './msp';
 import { DemoBf } from './demo-bf';
+import { C } from '../bf/codes';
 import { sleep } from './port';
 import { DemoRawDevice } from './demo-escelrs';
 import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink, RawIo } from './types';
+import { demoStatusModes, demoTuning } from './demo-tuning';
 import { t as tr } from '../i18n';
 
 /** Symulowany dron (SpeedyBee F405 V4, BF 4.5.1) z danymi z makiet. Odpowiada prawdziwymi ladunkami MSP. */
@@ -35,13 +37,16 @@ export class DemoLink implements FcLink {
   busy = false;
   private cfg: DemoConfig = { protocol: 6, bidir: false, pidDenom: 1, poles: 14 };
   private t0 = Date.now();
-  private bf = new DemoBf(() => this.cfg);
+  private bf = new DemoBf(() => this.cfg, demoStatusModes);
   private closeCbs = new Set<(r: CloseReason) => void>();
 
   async request(cmd: number, payload?: Uint8Array): Promise<Uint8Array> {
     await sleep(4); // opoznienie "linii"
     if (this.busy) throw new Error(tr('serial.mspSuspended'));
     const t = (Date.now() - this.t0) / 1000;
+    // Tuning / receiver / modes tabs own their commands (demo-tuning.ts); STATUS_EX and EEPROM_WRITE stay with the core.
+    const tuned = cmd === C.STATUS_EX || cmd === 250 ? null : demoTuning(cmd, payload, t);
+    if (tuned) return tuned;
     const bfReply = this.bf.handle(cmd, payload, t); // Betaflight core tabs (serial/demo-bf.ts)
     if (bfReply) return bfReply;
     switch (cmd) {

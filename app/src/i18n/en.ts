@@ -11,6 +11,9 @@ import { enBfPorts } from './en/bfPorts';
 import { enBfPower } from './en/bfPower';
 import { enBfSetup } from './en/bfSetup';
 import { enBfInfo } from './en/esc-elrs';
+import { enBfTuning } from './en/tuning';
+import { enBfReceiver } from './en/receiver';
+import { enBfModes } from './en/modes';
 
 export const en = {
   lang: {
@@ -444,6 +447,9 @@ export const en = {
   bfPower: enBfPower,
   bfFailsafe: enBfFailsafe,
   bfInfo: enBfInfo,
+  bfTuning: enBfTuning,
+  bfReceiver: enBfReceiver,
+  bfModes: enBfModes,
 };
 
 export type Dict = typeof en;

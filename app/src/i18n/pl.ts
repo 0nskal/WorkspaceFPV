@@ -7,6 +7,9 @@ import { plBfPorts } from './pl/bfPorts';
 import { plBfPower } from './pl/bfPower';
 import { plBfSetup } from './pl/bfSetup';
 import { plBfInfo } from './pl/esc-elrs';
+import { plBfTuning } from './pl/tuning';
+import { plBfReceiver } from './pl/receiver';
+import { plBfModes } from './pl/modes';
 
 export const pl: Dict = {
   lang: {
@@ -434,4 +437,7 @@ export const pl: Dict = {
   bfPower: plBfPower,
   bfFailsafe: plBfFailsafe,
   bfInfo: plBfInfo,
+  bfTuning: plBfTuning,
+  bfReceiver: plBfReceiver,
+  bfModes: plBfModes,
 };

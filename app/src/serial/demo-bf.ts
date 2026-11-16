@@ -36,7 +36,11 @@ export class DemoBf {
   private craft = '5" Freestyle';
   private pilot = 'OSKAR';
 
-  constructor(private cfg: () => DemoCfgRef) {
+  constructor(
+    private cfg: () => DemoCfgRef,
+    /** Optional source of active modes and profile indices (the tuning/modes demo state). */
+    private modes?: (t: number) => { modeFlags: number; pidProfile: number; rateProfile: number },
+  ) {
     this.defaults();
   }
 
@@ -107,15 +111,16 @@ export class DemoBf {
 
   private statusEx(t: number): Uint8Array {
     const flags = this.armDisabled ? bit(16) | bit(25) : 0; // MSP + ARM_SWITCH (bit 25 on API 1.46)
+    const m = this.modes?.(t) ?? { modeFlags: 0, pidProfile: 0, rateProfile: 0 };
     return new Wr()
       .u16(125) // cycle time us (8 kHz)
       .u16(0) // i2c errors
       .u16(0b100011) // ACC, BARO, GYRO
-      .u32(0) // mode flags: disarmed
-      .u8(0) // PID profile
+      .u32(m.modeFlags) // active flight modes (first 32 boxes)
+      .u8(m.pidProfile) // PID profile
       .u16(14 + Math.round(Math.sin(t) * 2)) // CPU load
       .u8(3) // PID profile count
-      .u8(0) // rate profile
+      .u8(m.rateProfile) // rate profile
       .u8(0) // extra flight-mode bytes
       .u8(26) // arming flag count
       .u32(flags >>> 0)

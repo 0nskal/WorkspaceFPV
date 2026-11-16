@@ -10,6 +10,10 @@ import { plBfInfo } from './pl/esc-elrs';
 import { plBfTuning } from './pl/tuning';
 import { plBfReceiver } from './pl/receiver';
 import { plBfModes } from './pl/modes';
+import { plBfMotors } from './pl/motors';
+import { plBfBlackbox } from './pl/blackbox';
+import { plBfCli } from './pl/cli';
+import { plBfOsd } from './pl/osd';
 
 export const pl: Dict = {
   lang: {
@@ -289,17 +293,17 @@ export const pl: Dict = {
   at: {
     film: 'ROTORLAB · AUTOTUNE PID',
     dropTitle: 'Analiza logu blackbox',
-    dropLead: 'Przeciągnij tu plik <span class="mono">.csv</span> z blackbox_decode albo Blackbox Explorera. Rotorlab policzy widmo szumu gyro i odpowiedź skokową PID, a potem zaproponuje zmiany.',
-    pick: 'Wybierz plik CSV',
+    dropLead: 'Przeciągnij tu log <span class="mono">.bbl</span> (czytany natywnie) albo <span class="mono">.csv</span> z Blackbox Explorera. Rotorlab policzy widmo szumu gyro i odpowiedź skokową PID, a potem zaproponuje zmiany.',
+    pick: 'Wybierz plik logu',
     pickOther: 'Wybierz inny plik',
     sample: 'Wczytaj przykładowy log',
-    how: 'Nie masz CSV? Blackbox Explorer: File → Export CSV. Albo w terminalu: <span class="at-code">blackbox_decode LOG.BBL</span>',
+    how: 'Brak logu? Pobierz go na zakładce Blackbox. Nieczytelny .bbl: Blackbox Explorer: File → Export CSV. Albo w terminalu: <span class="at-code">blackbox_decode LOG.BBL</span>',
     busyNote: 'Liczę w tle, interfejs nie zawiesza się.',
     analysing: 'Analizuję {name}…',
     generating: 'Generuję przykładowy log…',
     sampleName: 'przykładowy log (syntetyczny)',
     binaryTitle: 'To jest binarny log blackbox',
-    binaryLead: '<span class="mono">{name}</span> nie jest plikiem CSV. Wersja 0.1 czyta tylko CSV. Wyeksportuj log jednym ze sposobów:',
+    binaryLead: '<span class="mono">{name}</span> nie udało się wczytać jako log Blackbox ani CSV. Wyeksportuj log jednym ze sposobów:',
     binaryStep1: '<b>Blackbox Explorer:</b> otwórz plik .bbl/.bfl, potem <span class="mono">File → Export CSV</span>.',
     binaryStep2: '<b>blackbox_decode</b> (z paczki blackbox-tools): <span class="at-code">blackbox_decode LOG.BBL</span> utworzy plik <span class="mono">LOG.01.csv</span>.',
     errorTitle: 'Nie udało się wczytać logu',
@@ -440,4 +444,8 @@ export const pl: Dict = {
   bfTuning: plBfTuning,
   bfReceiver: plBfReceiver,
   bfModes: plBfModes,
+  bfMotors: plBfMotors,
+  bfBlackbox: plBfBlackbox,
+  bfCli: plBfCli,
+  bfOsd: plBfOsd,
 };

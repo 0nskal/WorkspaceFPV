@@ -2,6 +2,7 @@ import type { AppContext, ScreenMount } from '../context';
 import { recommend, summarize, type AxisRec, type Pid3, type Recommendation } from '../analysis/recommend';
 import { RunError, runAnalysis } from '../analysis/run';
 import type { AnalysisResult } from '../analysis/types';
+import { takePendingLog } from '../bf/log-handoff';
 import { copyText, escapeHtml } from '../ui/dom';
 import { fmtNum, t, tn, type Key } from '../i18n';
 import { icon } from '../ui/icons';
@@ -254,6 +255,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   });
 
   render();
+  // a log downloaded in the Blackbox tab ("Analyse in Autotune") starts analysing right away
+  const handed = takePendingLog();
+  if (handed) pickFile(handed);
   // ?demo=1#autotune od razu pokazuje przykladowa analize
   if (!cache && new URLSearchParams(location.search).get('demo') === '1') void load({ kind: 'demo' }, t('at.generating'));
 

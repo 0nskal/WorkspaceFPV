@@ -3,6 +3,7 @@ import { DemoBf } from './demo-bf';
 import { C } from '../bf/codes';
 import { sleep } from './port';
 import { DemoRawDevice } from './demo-escelrs';
+import { demoCli, demoMsp } from './demo-motors';
 import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink, RawIo } from './types';
 import { demoStatusModes, demoTuning } from './demo-tuning';
 import { t as tr } from '../i18n';
@@ -44,9 +45,11 @@ export class DemoLink implements FcLink {
     await sleep(4); // opoznienie "linii"
     if (this.busy) throw new Error(tr('serial.mspSuspended'));
     const t = (Date.now() - this.t0) / 1000;
-    // Tuning / receiver / modes tabs own their commands (demo-tuning.ts); STATUS_EX and EEPROM_WRITE stay with the core.
-    const tuned = cmd === C.STATUS_EX || cmd === 250 ? null : demoTuning(cmd, payload, t);
+    // Each tab group answers its own commands; MSP_STATUS_EX stays with the core (it merges modes/profiles itself).
+    const tuned = cmd === C.STATUS_EX || cmd === C.EEPROM_WRITE ? null : demoTuning(cmd, payload, t); // tuning / receiver / modes (demo-tuning.ts)
     if (tuned) return tuned;
+    const own = demoMsp(cmd, payload, this.cfg, t); // Motors / Blackbox / OSD tabs (demo-motors.ts)
+    if (own) return own;
     const bfReply = this.bf.handle(cmd, payload, t); // Betaflight core tabs (serial/demo-bf.ts)
     if (bfReply) return bfReply;
     switch (cmd) {
@@ -104,7 +107,10 @@ export class DemoLink implements FcLink {
         await sleep(120);
         const entry: CliEntry = { command: cmd, output: '', error: false };
         const m = /^set\s+([a-z_0-9]+)\s*=\s*(\S+)$/i.exec(cmd);
-        if (/^diff(\s+all)?$/i.test(cmd)) {
+        const extra = /^(diff|set)(\s|$)/i.test(cmd) ? null : demoCli(cmd, this.cfg); // get / dump / status / version / help (demo-motors.ts)
+        if (extra !== null) {
+          entry.output = extra;
+        } else if (/^diff(\s+all)?$/i.test(cmd)) {
           entry.output = this.diffAll(this.cfg);
         } else if (m) {
           const [, name, raw] = m;

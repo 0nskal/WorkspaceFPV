@@ -1,7 +1,7 @@
 export const enBfSetup = {
   tab: 'Setup',
   title: 'Setup',
-  notBtfl: 'This firmware is not Betaflight (or its MSP API is older than 1.44). Rotorlab only offers the CLI-based features for it.',
+  notBtfl: 'This firmware is not Betaflight (or its MSP API is older than 1.44). WorkspaceFPV only offers the CLI-based features for it.',
   gAttitude: 'Attitude',
   roll: 'Roll',
   pitch: 'Pitch',
@@ -40,7 +40,7 @@ export const enBfSetup = {
   gArming: 'Arming status',
   armOk: 'Nothing blocks arming.',
   armNormal: 'normal while connected',
-  armRotorlab: 'Rotorlab disables arming while it is connected (see Settings).',
+  armWorkspaceFPV: 'WorkspaceFPV disables arming while it is connected (see Settings).',
   rebootReq: 'The FC reports that a reboot is required.',
   gCal: 'Calibration',
   accBtn: 'Calibrate accelerometer',

@@ -7,7 +7,7 @@ import { t } from '../i18n';
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
-/** Komendy, ktorych Rotorlab nie wysyla do FC (zbyt ryzykowne bez osobnej decyzji uzytkownika). */
+/** Komendy, ktorych WorkspaceFPV nie wysyla do FC (zbyt ryzykowne bez osobnej decyzji uzytkownika). */
 export const BLOCKED_CLI = /^(defaults|bl|dfu|bootloader|msc|flash_erase|flash_write|exit|save)(\s|$)/i;
 
 /** Prompt CLI Betaflight to "# " na poczatku linii na koncu bufora. */

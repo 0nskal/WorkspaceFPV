@@ -39,7 +39,7 @@ export const en = {
     none: 'none',
   },
   shell: {
-    brand: 'Rotorlab',
+    brand: 'WorkspaceFPV',
     tabsAria: 'Tabs',
     settings: 'Settings',
     drawerToggle: 'Show/hide assistant',
@@ -69,7 +69,7 @@ export const en = {
     connectFirst: 'Connect to the FC first.',
   },
   backup: {
-    filePrefix: 'rotorlab-backup',
+    filePrefix: 'workspacefpv-backup',
     fetching: 'Fetching the configuration (diff all). The FC reboots when CLI exits.',
     fetchFail: 'Could not fetch the configuration: {msg}',
     none: 'No backup yet. Connect to the FC and apply a change, or read the configuration.',
@@ -80,9 +80,9 @@ export const en = {
     intro: 'Commands I will send to the FC:',
     // trusted HTML
     backupNote:
-      '<strong>I will save a backup of your settings first</strong> (<code>diff all</code>) and download it as a file. Then I apply the commands and save the configuration (<code>save</code>). The FC reboots and Rotorlab reconnects.',
+      '<strong>I will save a backup of your settings first</strong> (<code>diff all</code>) and download it as a file. Then I apply the commands and save the configuration (<code>save</code>). The FC reboots and WorkspaceFPV reconnects.',
     propsWarn: 'Remove the props before changing anything in the powertrain.',
-    blocked: 'Rotorlab does not send these commands: {cmds}. Run them manually in the CLI if you know what you are doing.',
+    blocked: 'WorkspaceFPV does not send these commands: {cmds}. Run them manually in the CLI if you know what you are doing.',
     working: 'Saving a backup and applying changes…',
     rejected: 'The FC rejected the command "{cmd}"{detail}. Changes were not saved.',
     saved: 'Saved to the FC. Rebooting and reconnecting…',
@@ -109,7 +109,7 @@ export const en = {
   },
   start: {
     title: 'Diagnose and fix your FPV drone',
-    lead: 'Plug in the FC board over USB. Rotorlab reads the Betaflight configuration, checks it against a set of rules and helps you fix the problem with an AI assistant.',
+    lead: 'Plug in the FC board over USB. WorkspaceFPV reads the Betaflight configuration, checks it against a set of rules and helps you fix the problem with an AI assistant.',
     connect: 'Connect to FC',
     demo: 'Demo mode',
     noSerial: 'This browser does not support WebSerial. Use Chrome/Edge or the Windows app.',
@@ -274,7 +274,7 @@ export const en = {
       '<li>Connect the FC over USB (no battery, no props).</li><li>In the Web Flasher pick the receiver target, version and regulatory domain.</li><li>Choose "Betaflight passthrough" as the method, select the FC port and flash.</li>',
     openFlasher: 'Open ELRS Web Flasher',
     askAi: 'Ask AI',
-    plan: 'Flashing straight from Rotorlab: planned.',
+    plan: 'Flashing straight from WorkspaceFPV: planned.',
     receiver: 'receiver',
     compatUnknown: 'enter both versions',
     compatOk: 'same branch {a}.x',
@@ -298,9 +298,9 @@ export const en = {
     },
   },
   at: {
-    film: 'ROTORLAB · PID AUTOTUNE',
+    film: 'WORKSPACEFPV · PID AUTOTUNE',
     dropTitle: 'Blackbox log analysis',
-    dropLead: 'Drop a <span class="mono">.bbl</span> log (read natively) or a <span class="mono">.csv</span> from Blackbox Explorer here. Rotorlab computes the gyro noise spectrum and the PID step response, then suggests changes.',
+    dropLead: 'Drop a <span class="mono">.bbl</span> log (read natively) or a <span class="mono">.csv</span> from Blackbox Explorer here. WorkspaceFPV computes the gyro noise spectrum and the PID step response, then suggests changes.',
     pick: 'Choose log file',
     pickOther: 'Choose another file',
     sample: 'Load sample log',
@@ -407,7 +407,7 @@ export const en = {
     demo: 'Demo mode',
     backup: 'Download settings backup',
     fetch: 'Read configuration from FC',
-    dataNote: 'The backup is the last saved <code>diff all</code> result. Rotorlab saves it automatically before every change to the FC. Reading from the FC reboots the board (Betaflight CLI ends with a reboot).',
+    dataNote: 'The backup is the last saved <code>diff all</code> result. WorkspaceFPV saves it automatically before every change to the FC. Reading from the FC reboots the board (Betaflight CLI ends with a reboot).',
     noBackup: 'No backup yet. Connect to the FC and apply a change, or read the configuration.',
     updHead: 'Updates',
     updVersion: 'Version:',
@@ -426,7 +426,7 @@ export const en = {
     updDownloaded: 'Version {version} is downloaded. It also installs automatically when you close the app.',
     updError: 'Could not check for updates: {msg}',
     about: 'About',
-    aboutText: 'Rotorlab {version} · MIT · the app runs locally, and drone data does not leave your computer except in questions to the AI assistant.',
+    aboutText: 'WorkspaceFPV {version} · MIT · the app runs locally, and drone data does not leave your computer except in questions to the AI assistant.',
     mb: '{n} MB',
   },
   serial: {

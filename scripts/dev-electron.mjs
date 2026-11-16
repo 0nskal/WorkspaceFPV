@@ -18,5 +18,5 @@ await server.listen();
 const url = server.resolvedUrls?.local[0] ?? 'http://localhost:5173/';
 console.log('Vite:', url);
 
-const child = spawn(electronPath, ['.'], { stdio: 'inherit', env: { ...process.env, ROTORLAB_DEV_URL: url } });
+const child = spawn(electronPath, ['.'], { stdio: 'inherit', env: { ...process.env, WORKSPACEFPV_DEV_URL: url } });
 child.on('exit', async () => { await server.close(); process.exit(0); });

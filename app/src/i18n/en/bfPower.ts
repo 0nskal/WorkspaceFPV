@@ -15,7 +15,7 @@ export const enBfPower = {
   state3: 'No battery',
   state4: 'Starting',
   calHead: 'Calibrate the voltage reading',
-  calText: 'Measure the pack with a multimeter and enter the value. Rotorlab works out a new scale; you still have to press Save.',
+  calText: 'Measure the pack with a multimeter and enter the value. WorkspaceFPV works out a new scale; you still have to press Save.',
   calMeasured: 'Measured voltage',
   calApply: 'Calculate scale',
   calNeedBattery: 'Connect a battery and use the on-board ADC as voltage source first.',

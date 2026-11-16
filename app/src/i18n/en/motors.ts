@@ -30,7 +30,7 @@ export const enBfMotors = {
   aiSummary: 'ESC tab: motor protocol {protocol}, bidirectional DShot {bidir}, idle {idle} %, {poles} motor poles, {dir}. What should I check or change?',
   confirmTitle: 'Save motor settings',
   confirmIntro: 'These values will be written to the flight controller:',
-  confirmReboot: 'The protocol or bidirectional DShot changed, so the FC reboots after saving and Rotorlab reconnects.',
+  confirmReboot: 'The protocol or bidirectional DShot changed, so the FC reboots after saving and WorkspaceFPV reconnects.',
   saved: 'Motor settings saved.',
   savedReboot: 'Saved. The FC is rebooting…',
   saveFail: 'Could not save: {msg}',

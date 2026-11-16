@@ -3,7 +3,7 @@ export const enBfOsd = {
   tab: 'OSD',
   title: 'OSD layout',
   head: 'OSD ELEMENTS',
-  emptyTag: 'ROTORLAB · OSD',
+  emptyTag: 'WORKSPACEFPV · OSD',
   emptyTitle: 'On-screen display',
   emptyLead: 'Connect the flight controller to choose which elements the OSD shows and drag them to the right place.',
   loading: 'Reading the OSD configuration…',

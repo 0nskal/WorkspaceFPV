@@ -1,4 +1,4 @@
-/** MSP command codes used by the Betaflight tabs (numbers from the Rotorlab parity spec). Codes above 254 are MSP v2. */
+/** MSP command codes used by the Betaflight tabs (numbers from the WorkspaceFPV parity spec). Codes above 254 are MSP v2. */
 export const C = {
   API_VERSION: 1,
   FC_VARIANT: 2,

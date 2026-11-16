@@ -10,7 +10,7 @@ type Pt = [number, number];
 type Pal = [top: string, sideF: string, sideL: string];
 
 export interface XrayLabels {
-  /** Gorny srodkowy napis kliszy, np. `ROTORLAB · 5" FREESTYLE · 15.11.2026`. */
+  /** Gorny srodkowy napis kliszy, np. `WORKSPACEFPV · 5" FREESTYLE · 15.11.2026`. */
   filmTop: string;
   filmBottom: string;
   fcTitle: string; // np. "SpeedyBee F405 V4"

@@ -77,7 +77,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const flags = decodeArmFlags(st.armingFlags, bf.api, st.armingFlagCount);
     const real = flags.filter((f) => !BENIGN_ARM_FLAGS.has(f.name));
     const items = flags.map((f) => `<li class="${BENIGN_ARM_FLAGS.has(f.name) ? 'benign' : 'block'}"><b class="mono">${escapeHtml(f.name)}</b><span>${escapeHtml(armingDesc(f.name))}</span>${BENIGN_ARM_FLAGS.has(f.name) ? `<em>${escapeHtml(t(K('armNormal')))}</em>` : ''}</li>`).join('');
-    return `${real.length === 0 ? `<p class="bf-su-ok">${escapeHtml(t(K('armOk')))}</p>` : ''}${items ? `<ul class="bf-su-flags">${items}</ul>` : ''}${st.rebootRequired ? `<p class="bf-note">${escapeHtml(t(K('rebootReq')))}</p>` : ''}<p class="bf-su-small">${escapeHtml(t(K('armRotorlab')))}</p>`;
+    return `${real.length === 0 ? `<p class="bf-su-ok">${escapeHtml(t(K('armOk')))}</p>` : ''}${items ? `<ul class="bf-su-flags">${items}</ul>` : ''}${st.rebootRequired ? `<p class="bf-note">${escapeHtml(t(K('rebootReq')))}</p>` : ''}<p class="bf-su-small">${escapeHtml(t(K('armWorkspaceFPV')))}</p>`;
   }
 
   function render(): void {

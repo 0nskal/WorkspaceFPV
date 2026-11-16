@@ -5,7 +5,7 @@ export const plBfOsd: typeof enBfOsd = {
   tab: 'OSD',
   title: 'Układ OSD',
   head: 'ELEMENTY OSD',
-  emptyTag: 'ROTORLAB · OSD',
+  emptyTag: 'WORKSPACEFPV · OSD',
   emptyTitle: 'Wyświetlacz OSD',
   emptyLead: 'Połącz kontroler lotu, żeby wybrać elementy pokazywane na OSD i przeciągnąć je na właściwe miejsce.',
   loading: 'Odczyt konfiguracji OSD…',

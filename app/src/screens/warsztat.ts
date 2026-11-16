@@ -26,7 +26,7 @@ function buildLabels(s: Readonly<FcState>, d: Diagnosis, bf: Readonly<BfData>): 
     hotText = [partLabel(d.focus), extra, bidirOff, d.focus !== 'esc' ? focusCheck?.label : ''].filter(Boolean).join(' · ');
   }
   return {
-    filmTop: `ROTORLAB · ${craft} · ${fmtDate()}`,
+    filmTop: `WORKSPACEFPV · ${craft} · ${fmtDate()}`,
     filmBottom: 'kV 60 · mAs 2',
     fcTitle: boardDisplayName(s.info),
     fcSub: firmwareName(s.info) + (s.info ? ` · API ${s.info.apiVersion.major}.${s.info.apiVersion.minor}` : ''),
@@ -72,7 +72,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       <div class="start">
         <div class="start-art" aria-hidden="true">${renderDrone({ highlight: null, bare: true, labels: emptyLabels() })}</div>
         <div class="start-card">
-          <div class="start-brand">${logo(28)}<span>Rotorlab</span></div>
+          <div class="start-brand">${logo(28)}<span>WorkspaceFPV</span></div>
           <h1>${t('start.title')}</h1>
           <p>${t('start.lead')}</p>
           ${busy ? `<div class="bf-progress mono" role="status"><span>${progressText()}</span><i><b style="width:${progressPct()}%"></b></i></div>` : ''}

@@ -13,7 +13,7 @@ import { icon } from '../ui/icons';
 
 const COMMANDS = ['adjrange', 'aux', 'beeper', 'bl', 'defaults', 'diff', 'dump', 'dshotprog', 'exit', 'feature', 'flash_info', 'get', 'help', 'map', 'mixer', 'motor', 'name', 'profile', 'rateprofile', 'resource', 'save', 'serial', 'set', 'status', 'tasks', 'version'];
 const RISKY = /^(defaults|bl|dfu|flash_erase|flash_write|msc|resource|dshotprog|motor)(\s|$)/i;
-const CACHE_KEY = 'rotorlab.cli.names';
+const CACHE_KEY = 'workspacefpv.cli.names';
 
 let namesCache: string[] = (() => {
   try {

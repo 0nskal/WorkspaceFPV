@@ -1,4 +1,4 @@
-# Rotorlab architecture: the Betaflight core
+# WorkspaceFPV architecture: the Betaflight core
 
 This document describes the shared Betaflight layer (`app/src/bf/`, `app/src/serial/`) that every FC-related tab builds on. Betaflight Configurator is GPL-3.0; nothing here is copied from it. Layouts are implemented from our own spec (`design/BETAFLIGHT-PARITY.md`).
 
@@ -66,7 +66,7 @@ Order: refuse while armed -> every SET (sequential, 2 attempts) -> 100 ms -> `MS
 
 Other session actions: `rebootTo('bootloader' | 'flashBootloader' | 'msc' | 'firmware')`, `resetConfig()` (MSP_RESET_CONF, caller must ask for typed confirmation, see `ConfirmOptions.requireText`), `setArmingDisabled(on)`.
 
-Arming disable: with the setting `armingDisable` (default on) Rotorlab sends `MSP_SET_ARMING_DISABLED [1]` after the snapshot and `[0]` on a clean disconnect (like the Configurator).
+Arming disable: with the setting `armingDisable` (default on) WorkspaceFPV sends `MSP_SET_ARMING_DISABLED [1]` after the snapshot and `[0]` on a clean disconnect (like the Configurator).
 
 Demo mode: `DemoBf` applies SET commands to its in-memory payloads, so save + re-read shows the edit; the simulated reboot skips the disconnect.
 

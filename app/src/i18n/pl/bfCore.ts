@@ -29,7 +29,7 @@ export const plBfCore: typeof enBfCore = {
   errMax: 'Maksimum {n}',
   errLen: 'Maksymalnie {n} znaków',
   armDisableSetting: 'Blokuj uzbrojenie po połączeniu (zalecane)',
-  armDisableNote: 'Tak jak Betaflight Configurator, Rotorlab mówi FC, żeby się nie uzbrajał, dopóki jest połączony, i zwalnia blokadę przy zwykłym rozłączeniu.',
+  armDisableNote: 'Tak jak Betaflight Configurator, WorkspaceFPV mówi FC, żeby się nie uzbrajał, dopóki jest połączony, i zwalnia blokadę przy zwykłym rozłączeniu.',
   arm: {
     NO_GYRO: 'Nie wykryto żyroskopu',
     FAILSAFE: 'Failsafe jest aktywny',

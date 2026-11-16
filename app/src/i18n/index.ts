@@ -15,7 +15,7 @@ export type PluralKey = PluralPaths<Dict>;
 export type Params = Record<string, string | number>;
 
 const dicts: Record<Lang, Dict> = { en, pl };
-const STORAGE_KEY = 'rotorlab.lang';
+const STORAGE_KEY = 'workspacefpv.lang';
 const LOCALE: Record<Lang, string> = { en: 'en-GB', pl: 'pl-PL' };
 
 function detect(): Lang {

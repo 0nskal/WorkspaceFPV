@@ -1,8 +1,8 @@
-# Rotorlab – specyfikacja v0.1
+# WorkspaceFPV – specyfikacja v0.1
 
-Rotorlab to darmowa, open-source appka (MIT) do diagnozy i naprawy drona FPV z Betaflight, z asystentem AI.
-Działa jako **aplikacja na Windows** (Electron, instalator `Rotorlab-Setup.exe` z GitHub Releases) i jako **appka w przeglądarce**
-(Chrome/Edge, WebSerial) pod `https://rotorlab.pages.dev/app/`. Język UI: polski. Repo: `github.com/0nskal/rotorlab`.
+WorkspaceFPV to darmowa, open-source appka (MIT) do diagnozy i naprawy drona FPV z Betaflight, z asystentem AI.
+Działa jako **aplikacja na Windows** (Electron, instalator `WorkspaceFPV-Setup.exe` z GitHub Releases) i jako **appka w przeglądarce**
+(Chrome/Edge, WebSerial) pod `https://workspacefpv.pages.dev/app/`. Język UI: polski. Repo: `github.com/0nskal/WorkspaceFPV`.
 
 ## Układ repo
 ```
@@ -18,7 +18,7 @@ app/                 aplikacja (Vite + TypeScript, bez frameworka UI albo z Prea
 electron/            main.ts (okno, obsługa wyboru portu szeregowego), preload.ts
 site/                strona produktu (statyczna, Cloudflare Pages), app/ budowana do site/app przy deployu
 docs/                SPEC.md, screenshot.png, icon.png
-.github/workflows/   release.yml (tag v* -> build Windows -> Release z Rotorlab-Setup.exe)
+.github/workflows/   release.yml (tag v* -> build Windows -> Release z WorkspaceFPV-Setup.exe)
 README.md, LICENSE (MIT)
 ```
 `design/` (makiety) jest w `.gitignore`.
@@ -26,7 +26,7 @@ README.md, LICENSE (MIT)
 ## Styl (obowiązkowy): „Rentgen”
 Wzór 1:1: `design/html/H-s5-rentgen.html` + `design/mockups/H-s5-rentgen.png`, generator rysunku `design/html/src-h/gen-H-rentgen.js`.
 - Scena: klisza #070B10 z poświatą od środka (radial do #0F1A24) i ziarnem; rozkład drona prześwietlony (fill #CFE6F2 opacity 0.08–0.25, kontury #DCEFF8 z glow).
-  Problem = czerwone „ognisko” #FF4A2E na części. Oznaczenia kliszy w mono (L, „ROTORLAB · <nazwa> · <data>”, „kV 60 · mAs 2”).
+  Problem = czerwone „ognisko” #FF4A2E na części. Oznaczenia kliszy w mono (L, „WORKSPACEFPV · <nazwa> · <data>”, „kV 60 · mAs 2”).
 - Górny pasek #0B1016: logo, status połączenia, nazwa drona, zakładki Warsztat/ESC/Autotune PID/ELRS, mini gyro + LQ/RSSI.
 - Szuflada AI z prawej 440px: jasna „karta pacjenta” #F2F5F7, tekst #0B1016, CLI na #0B1016, przycisk główny ciemny.
 - Fonty IBM Plex Sans + IBM Plex Mono (pakiety `@fontsource/ibm-plex-sans`, `@fontsource/ibm-plex-mono` – lokalnie, appka ma działać offline). Rogi 0, bez cieni (poza glow na kliszy), ikony inline SVG (Lucide-style).

@@ -10,7 +10,7 @@ const LANGUAGE_NAME: Record<Lang, string> = { en: 'English', pl: 'Polish' };
 
 /** System prompt (cached per language). English instructions; the reply language follows the app's selected language. */
 export function systemPrompt(lang: Lang): string {
-  return `You are the Rotorlab assistant: an expert in FPV drones, Betaflight, ELRS (ExpressLRS), ESCs running Bluejay/BLHeli/AM32 and PID tuning.
+  return `You are the WorkspaceFPV assistant: an expert in FPV drones, Betaflight, ELRS (ExpressLRS), ESCs running Bluejay/BLHeli/AM32 and PID tuning.
 Always answer in ${LANGUAGE_NAME[lang]} (the language the user selected in the app), regardless of the language of the context data below. Be short and concrete, skip introductions and do not explain basics unless asked.
 
 Rules:

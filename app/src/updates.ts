@@ -1,4 +1,4 @@
-/** Aktualizacje: typy wspolne z procesem glownym Electrona oraz dostep do mostu `window.rotorlab.updates`. */
+/** Aktualizacje: typy wspolne z procesem glownym Electrona oraz dostep do mostu `window.workspacefpv.updates`. */
 
 export type UpdateStatus =
   | { state: 'dev' }
@@ -22,7 +22,7 @@ export interface UpdatesApi {
 
 declare global {
   interface Window {
-    rotorlab?: { isElectron?: boolean; platform?: string; updates?: UpdatesApi; setLanguage?: (lang: string) => void };
+    workspacefpv?: { isElectron?: boolean; platform?: string; updates?: UpdatesApi; setLanguage?: (lang: string) => void };
   }
   const __APP_VERSION__: string;
 }
@@ -72,7 +72,7 @@ function fakeUpdates(mode: string): UpdatesApi {
 let fake: UpdatesApi | null = null;
 
 export const updatesApi = (): UpdatesApi | null => {
-  if (window.rotorlab?.updates) return window.rotorlab.updates;
+  if (window.workspacefpv?.updates) return window.workspacefpv.updates;
   const mode = new URLSearchParams(location.search).get('fakeUpdates');
   if (mode) return (fake ??= fakeUpdates(mode));
   return null;

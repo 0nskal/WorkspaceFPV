@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 type Status = { state: string; [k: string]: unknown };
 
-contextBridge.exposeInMainWorld('rotorlab', {
+contextBridge.exposeInMainWorld('workspacefpv', {
   isElectron: true,
   platform: process.platform,
   /** Tells the main process which language the UI uses (for native dialogs). */

@@ -17,7 +17,7 @@ export const plBfPower: typeof enBfPower = {
   state3: 'Brak baterii',
   state4: 'Start',
   calHead: 'Kalibracja odczytu napięcia',
-  calText: 'Zmierz pakiet multimetrem i wpisz wynik. Rotorlab wyliczy nową skalę; i tak musisz kliknąć Zapisz.',
+  calText: 'Zmierz pakiet multimetrem i wpisz wynik. WorkspaceFPV wyliczy nową skalę; i tak musisz kliknąć Zapisz.',
   calMeasured: 'Zmierzone napięcie',
   calApply: 'Policz skalę',
   calNeedBattery: 'Podłącz baterię i ustaw wbudowany ADC jako źródło napięcia.',

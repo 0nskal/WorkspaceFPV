@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
 import { setupUpdater } from './updater';
 
@@ -43,7 +44,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 1280,
     minHeight: 800,
-    title: 'Rotorlab',
+    title: 'WorkspaceFPV',
     backgroundColor: '#070B10',
     autoHideMenuBar: true,
     icon: iconPath(),
@@ -56,7 +57,7 @@ function createWindow(): void {
     },
   });
   win.once('ready-to-show', () => win?.show());
-  win.on('page-title-updated', (e) => e.preventDefault()); // tytul zawsze "Rotorlab"
+  win.on('page-title-updated', (e) => e.preventDefault()); // tytul zawsze "WorkspaceFPV"
   win.on('closed', () => (win = null));
 
   // Linki zewnetrzne otwieraj w przegladarce systemowej.
@@ -65,7 +66,7 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  const devUrl = process.env.ROTORLAB_DEV_URL;
+  const devUrl = process.env.WORKSPACEFPV_DEV_URL;
   if (devUrl) void win.loadURL(devUrl);
   else void win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
@@ -82,7 +83,7 @@ function setupSerial(): void {
         if (win) {
           await dialog.showMessageBox(win, {
             type: 'info',
-            title: 'Rotorlab',
+            title: 'WorkspaceFPV',
             message: tr().noPortMessage,
             detail: tr().noPortDetail,
             buttons: ['OK'],
@@ -115,6 +116,27 @@ function setupSerial(): void {
   ses.setDevicePermissionHandler((details) => details.deviceType === 'serial');
   ses.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'serial' || permission === 'clipboard-sanitized-write'));
 }
+
+/**
+ * Rename migration (Rotorlab -> WorkspaceFPV). electron-builder's productName also names the userData folder, so the
+ * renamed app would start with %APPDATA%\WorkspaceFPV and lose the settings, API key and update prefs stored in
+ * %APPDATA%\Rotorlab (Local Storage, updates.json, ...). On first start, if the new folder has no data yet and the old
+ * one exists, copy the old contents over. Runs before the single-instance lock and before the window/session exist.
+ * Chromium runtime files (locks, caches) are skipped. The old folder is left untouched.
+ */
+function migrateLegacyUserData(): void {
+  try {
+    const dest = app.getPath('userData');
+    const src = path.join(app.getPath('appData'), 'Rotorlab');
+    if (src.toLowerCase() === dest.toLowerCase() || !fs.existsSync(src)) return;
+    if (fs.existsSync(path.join(dest, 'Local Storage')) || fs.existsSync(path.join(dest, 'updates.json'))) return;
+    const skip = new Set(['Cache', 'Code Cache', 'GPUCache', 'DawnGraphiteCache', 'DawnWebGPUCache', 'Crashpad', 'blob_storage', 'Singleton', 'SingletonLock', 'SingletonCookie', 'SingletonSocket', 'lockfile', 'logs']);
+    fs.cpSync(src, dest, { recursive: true, filter: (p) => !skip.has(path.basename(p)) });
+  } catch {
+    /* best effort: the app still starts with fresh settings */
+  }
+}
+migrateLegacyUserData();
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {

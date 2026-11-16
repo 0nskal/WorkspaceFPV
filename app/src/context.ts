@@ -14,6 +14,7 @@
  * Zmiany w FC robimy WYLACZNIE przez ctx.applyCommands (potwierdzenie + kopia + save + ponowne polaczenie).
  */
 import type { Assistant } from './ai/assistant';
+import type { BfSession } from './bf/store';
 import type { Diagnosis } from './fc/diagnose';
 import type { FcStore } from './fc/state';
 import type { FcLink } from './serial/types';
@@ -35,6 +36,8 @@ export interface AppContext {
   readonly state: FcStore;
   readonly settings: SettingsStore;
   readonly ai: Assistant;
+  /** Betaflight configuration store + session: typed FC data read on connect, refresh(area), saveSettings(). See docs/ARCHITECTURE.md. */
+  readonly bf: BfSession;
 
   /** Aktywne polaczenie MSP/CLI (prawdziwe albo demo) lub null. */
   link(): FcLink | null;

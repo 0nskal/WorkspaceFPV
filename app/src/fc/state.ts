@@ -37,8 +37,10 @@ export interface FcStatus {
   sensors: number;
   flightModeFlags: number;
   cpuLoad: number;
-  /** Maska flag blokady uzbrojenia (arming disable flags). */
+  /** Arming-disable flag mask (STATUS_EX); decode with bf/arming.ts. */
   armingDisableFlags: number;
+  /** Number of arming-disable flags the firmware reports (selects the flag table). */
+  armingFlagCount: number;
   /** Czy FC jest uzbrojony (bit 0 flightModeFlags = ARM). */
   armed: boolean;
 }

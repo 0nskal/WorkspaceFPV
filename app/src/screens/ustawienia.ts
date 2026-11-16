@@ -61,6 +61,8 @@ export const mount: ScreenMount = (el, ctx) => {
           <button class="btn s" type="button" data-act="fetch" ${connected() ? '' : 'disabled'}>${t('settings.fetch')}</button>
         </div>
         <small>${t('settings.dataNote')}</small>
+        <label class="upd-chk"><input type="checkbox" name="armDisable" ${s.armingDisable ? 'checked' : ''} /><span>${t('bfCore.armDisableSetting')}</span></label>
+        <small>${t('bfCore.armDisableNote')}</small>
       </section>
 
       <section class="card" id="upd">
@@ -152,6 +154,10 @@ export const mount: ScreenMount = (el, ctx) => {
       void upd.setAutoCheck(on);
     });
   }
+
+  el.querySelector<HTMLInputElement>('input[name="armDisable"]')?.addEventListener('change', (e) => {
+    ctx.settings.set({ armingDisable: (e.target as HTMLInputElement).checked });
+  });
 
   // Language switches instantly: the shell and this screen are re-mounted by the app (onLanguageChange).
   el.querySelector<HTMLSelectElement>('select[name="lang"]')?.addEventListener('change', (e) => {

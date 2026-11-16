@@ -4,6 +4,13 @@
  * Strings may contain {name} placeholders (see t()) and, where noted, trusted HTML.
  * Plural entries use { one, few, many } (English only needs one + many, `few` repeats `many`).
  */
+import { enBfConfig } from './en/bfConfig';
+import { enBfCore } from './en/bfCore';
+import { enBfFailsafe } from './en/bfFailsafe';
+import { enBfPorts } from './en/bfPorts';
+import { enBfPower } from './en/bfPower';
+import { enBfSetup } from './en/bfSetup';
+
 export const en = {
   lang: {
     en: 'English',
@@ -137,32 +144,6 @@ export const en = {
     i2cDetail: 'Check the barometer/magnetometer connections.',
     summaryOk: 'The rules found no problems.',
     summaryProblems: 'The rules found problems: {n}. The biggest one concerns: {part}.',
-  },
-  arm: {
-    NOGYRO: 'No gyro detected',
-    FAILSAFE: 'Failsafe is active',
-    RXLOSS: 'No signal from the receiver',
-    BADRX: 'The receiver is sending bad data',
-    BOXFAILSAFE: 'The failsafe switch is on',
-    THROTTLE: 'Throttle is not at minimum',
-    ANGLE: 'The drone is tilted too far',
-    BOOTGRACE: 'Boot grace time is running (wait a moment)',
-    NOPREARM: 'The prearm switch is required',
-    LOAD: 'CPU load is too high',
-    CALIB: 'Sensor calibration in progress',
-    CLI: 'CLI mode is active',
-    CMS: 'The OSD menu (CMS) is open',
-    BST: 'BST is active (Black Box / telemetry)',
-    MSP: 'A tool is connected over MSP',
-    PARALYZE: 'Paralyze mode',
-    GPS: 'No GPS fix',
-    RESCUE_SW: 'The GPS Rescue switch is on',
-    RPMFILTER: 'RPM filter is on, but there is no RPM telemetry from the ESC',
-    REBOOT_REQD: 'An FC reboot is required',
-    DSHOT_BBANG: 'Bidirectional DShot needs a different timer/protocol',
-    NO_ACC_CAL: 'Accelerometer is not calibrated',
-    MOTOR_PROTO: 'Invalid motor protocol',
-    ARMSWITCH: 'The arm switch is on (turn it off and on again)',
   },
   drawer: {
     title: 'Assistant',
@@ -462,6 +443,13 @@ export const en = {
     cliNoReply: 'No reply from the FC to: {cmd}',
     demoUnsupported: 'Demo: unsupported MSP command {cmd}',
   },
+  bfCore: enBfCore,
+  bfSetup: enBfSetup,
+  bfPorts: enBfPorts,
+  bfConfig: enBfConfig,
+  bfPower: enBfPower,
+  bfFailsafe: enBfFailsafe,
 };
 
 export type Dict = typeof en;
+// (Betaflight tab dictionaries live in ./en/bf*.ts and are attached at the end of `en`.)

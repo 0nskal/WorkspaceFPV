@@ -7,6 +7,11 @@ import type { ScreenMount } from '../context';
 import type { Key } from '../i18n';
 import type { IconName } from '../ui/icons';
 import * as autotune from './autotune';
+import * as bfConfig from './bf-config';
+import * as bfFailsafe from './bf-failsafe';
+import * as bfPorts from './bf-ports';
+import * as bfPower from './bf-power';
+import * as bfSetup from './bf-setup';
 import * as elrs from './elrs';
 import * as esc from './esc';
 import * as ustawienia from './ustawienia';
@@ -26,6 +31,11 @@ export interface ScreenDef {
 
 export const SCREENS: ScreenDef[] = [
   { id: 'warsztat', titleKey: 'tabs.warsztat', icon: 'chip', mount: warsztat.mount, requiresConnection: false },
+  { id: 'setup', titleKey: 'bfSetup.tab', icon: 'chip', mount: bfSetup.mount, requiresConnection: true },
+  { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true },
+  { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true },
+  { id: 'power', titleKey: 'bfPower.tab', icon: 'chart', mount: bfPower.mount, requiresConnection: true },
+  { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'alert', mount: bfFailsafe.mount, requiresConnection: true },
   { id: 'esc', titleKey: 'tabs.esc', icon: 'plug', mount: esc.mount, requiresConnection: true },
   { id: 'autotune', titleKey: 'tabs.autotune', icon: 'sliders', mount: autotune.mount, requiresConnection: false },
   { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false },

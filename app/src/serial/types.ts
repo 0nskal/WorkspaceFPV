@@ -33,8 +33,16 @@ export interface FcLink {
   readonly label: string;
   /** Prawda w trakcie sesji CLI (telemetria MSP wstrzymana). */
   readonly busy: boolean;
-  /** Zapytanie MSP v1; zwraca payload odpowiedzi. Kolejkowane, timeout domyslnie 1 s. */
-  request(cmd: number, payload?: Uint8Array, timeoutMs?: number): Promise<Uint8Array>;
+  /**
+   * MSP request; returns the reply payload. Queued (one in flight), default timeout 1 s, `attempts` = tries
+   * on timeout (default 1). Codes above 254 go out as MSP v2 automatically. Rejects with MspError.
+   */
+  request(cmd: number, payload?: Uint8Array, timeoutMs?: number, attempts?: number): Promise<Uint8Array>;
+  /**
+   * Call right before MSP_REBOOT: tells the link how to treat the coming disconnect.
+   * 'reconnect' = normal reboot, the app re-opens the port and re-reads; 'leave' = bootloader/MSC, no reconnect.
+   */
+  expectReboot(kind: 'reconnect' | 'leave'): void;
   /** Wchodzi w tryb CLI, wykonuje komendy, konczy `save` albo `exit`. FC po tym sie restartuje. */
   cli(commands: string[], options?: CliOptions): Promise<CliResult>;
   onClose(cb: (reason: CloseReason) => void): () => void;

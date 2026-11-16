@@ -1,12 +1,14 @@
 /** Dane i logika ekranu ELRS: protokol RX, zgodnosc wersji, trwale pola checklisty. */
 
+import { t } from '../i18n';
+
 export const FLASHER_URL = 'https://expresslrs.github.io/web-flasher/';
 
 const PROVIDERS = ['SPEKTRUM1024', 'SPEKTRUM2048', 'SBUS', 'SUMD', 'SUMH', 'XBUS_MODE_B', 'XBUS_MODE_B_RJ01', 'IBUS', 'JETIEXBUS', 'CRSF', 'SRXL', 'CUSTOM', 'FPORT', 'SRXL2', 'GHST'];
 
 export function providerLabel(p: number): { text: string; elrs: boolean } {
   if (p === 9) return { text: 'CRSF (ExpressLRS)', elrs: true };
-  return { text: PROVIDERS[p] ?? `nieznany (#${p})`, elrs: false };
+  return { text: PROVIDERS[p] ?? t('elrs.providerUnknown', { p }), elrs: false };
 }
 
 /** Glowna wersja z "3.4.3" -> 3; null gdy nie da sie odczytac. */
@@ -20,9 +22,9 @@ export type Compat = { kind: 'unknown' | 'ok' | 'warn'; text: string };
 export function compat(rx: string, tx: string): Compat {
   const a = majorOf(rx);
   const b = majorOf(tx);
-  if (a === null || b === null) return { kind: 'unknown', text: 'wpisz obie wersje' };
-  if (a === b) return { kind: 'ok', text: `ta sama gałąź ${a}.x` };
-  return { kind: 'warn', text: `różne gałęzie: odbiornik ${a}.x, nadajnik ${b}.x. Obie strony muszą mieć tę samą główną wersję` };
+  if (a === null || b === null) return { kind: 'unknown', text: t('elrs.compatUnknown') };
+  if (a === b) return { kind: 'ok', text: t('elrs.compatOk', { a }) };
+  return { kind: 'warn', text: t('elrs.compatWarn', { a, b }) };
 }
 
 export type Region = 'LBT' | 'FCC' | '';

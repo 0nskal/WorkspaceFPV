@@ -2,50 +2,55 @@ import type { Diagnosis } from '../fc/diagnose';
 import { decodeArmingFlags } from '../fc/diagnose';
 import { firmwareName, boardDisplayName } from '../fc/board';
 import { protocolName, rssiPct, type FcState } from '../fc/state';
+import type { Lang } from '../i18n';
 
-/** Stały prompt systemowy (cache'owany). */
-export const SYSTEM_PROMPT = `Jesteś asystentem Rotorlab: ekspertem od dronów FPV, Betaflight, ELRS (ExpressLRS), ESC z Bluejay/BLHeli/AM32 i strojenia PID.
-Odpowiadasz po polsku, krótko i konkretnie, bez wstępów i bez tłumaczenia podstaw, chyba że użytkownik o to poprosi.
+const LANGUAGE_NAME: Record<Lang, string> = { en: 'English', pl: 'Polish' };
 
-Zasady:
-- Propozycje zmian w FC podawaj WYŁĄCZNIE jako blok kodu \`\`\`cli z prawdziwymi komendami CLI Betaflight (jedna komenda na linię, np. "set motor_pwm_protocol = DSHOT600"). Nie dodawaj "save" ani "exit" - aplikacja zrobi to sama po potwierdzeniu użytkownika.
-- Nigdy nie proponuj komendy "defaults" ani flashowania/bootloadera bez wyraźnego ostrzeżenia, że to kasuje konfigurację, i bez zaznaczenia, że aplikacja takich komend nie wyśle.
-- Przy każdej sugestii dotyczącej silników przypomnij o zdjęciu śmigieł podczas testów.
-- Opieraj się na danych z kontekstu poniżej (FC, wynik reguł, diff all). Jeśli brakuje danych, powiedz czego brakuje, zamiast zgadywać.
-- Jeśli nie jesteś pewien nazwy parametru w danej wersji Betaflight, zaznacz to i podaj, jak sprawdzić ("get <fragment>").
-- Nie wymyślaj wersji firmware ESC/ELRS, których nie ma w kontekście.`;
+/** System prompt (cached per language). English instructions; the reply language follows the app's selected language. */
+export function systemPrompt(lang: Lang): string {
+  return `You are the Rotorlab assistant: an expert in FPV drones, Betaflight, ELRS (ExpressLRS), ESCs running Bluejay/BLHeli/AM32 and PID tuning.
+Always answer in ${LANGUAGE_NAME[lang]} (the language the user selected in the app), regardless of the language of the context data below. Be short and concrete, skip introductions and do not explain basics unless asked.
 
-/** Kontekst o aktualnym dronie (stały w obrębie rozmowy, cache'owany; pytanie użytkownika idzie na końcu). */
+Rules:
+- Propose FC changes ONLY as a \`\`\`cli code block with real Betaflight CLI commands (one command per line, e.g. "set motor_pwm_protocol = DSHOT600"). Do not add "save" or "exit": the app does that itself after the user confirms.
+- Never propose the "defaults" command or flashing/bootloader without an explicit warning that it wipes the configuration, and without stating that the app will not send such commands.
+- With every motor-related suggestion, remind the user to remove the props while testing.
+- Base your answers on the context data below (FC, rule results, diff all). If data is missing, say what is missing instead of guessing.
+- If you are not sure about a parameter name in a given Betaflight version, say so and explain how to check ("get <fragment>").
+- Do not invent ESC/ELRS firmware versions that are not in the context.`;
+}
+
+/** Context about the current drone (stable within a conversation, cached; the user's question goes last). */
 export function buildContext(state: Readonly<FcState>, diag: Diagnosis | null): string {
   if (!state.info || !state.config) {
-    return 'KONTEKST: brak połączenia z FC. Odpowiadaj ogólnie i zaproponuj użytkownikowi połączenie z dronem.';
+    return 'CONTEXT: not connected to an FC. Answer in general terms and suggest that the user connects the drone.';
   }
   const c = state.config;
-  const lines: string[] = ['KONTEKST (odczyt z FC):'];
-  lines.push(`- Płyta: ${boardDisplayName(state.info)} (${state.info.boardId}), ${firmwareName(state.info)}, MSP API ${state.info.apiVersion.major}.${state.info.apiVersion.minor}`);
-  lines.push(`- Nazwa drona: ${state.info.craftName}`);
-  lines.push(`- Silniki: ${c.motorCount}, protokół ${protocolName(c.motorPwmProtocol)}, dshot_bidir ${c.bidir ? 'ON' : 'OFF'}, motor_poles ${c.motorPoles}, minthrottle ${c.minThrottle}, mincommand ${c.minCommand}`);
-  lines.push(`- Pętle: gyro_sync_denom ${c.gyroSyncDenom}, pid_process_denom ${c.pidProcessDenom}`);
+  const lines: string[] = ['CONTEXT (read from the FC):'];
+  lines.push(`- Board: ${boardDisplayName(state.info)} (${state.info.boardId}), ${firmwareName(state.info)}, MSP API ${state.info.apiVersion.major}.${state.info.apiVersion.minor}`);
+  lines.push(`- Craft name: ${state.info.craftName}`);
+  lines.push(`- Motors: ${c.motorCount}, protocol ${protocolName(c.motorPwmProtocol)}, dshot_bidir ${c.bidir ? 'ON' : 'OFF'}, motor_poles ${c.motorPoles}, minthrottle ${c.minThrottle}, mincommand ${c.minCommand}`);
+  lines.push(`- Loops: gyro_sync_denom ${c.gyroSyncDenom}, pid_process_denom ${c.pidProcessDenom}`);
   const t = state.telemetry;
   if (t) {
-    lines.push(`- Bateria: ${t.vbat.toFixed(2)} V${state.cells ? ` (~${state.cells}S)` : ' (zasilanie z USB?)'}, RSSI ${rssiPct(t.rssi)}%`);
-    if (t.motors.length) lines.push(`- Surowe wartości silników: ${t.motors.join(', ')}`);
+    lines.push(`- Battery: ${t.vbat.toFixed(2)} V${state.cells ? ` (~${state.cells}S)` : ' (USB power?)'}, RSSI ${rssiPct(t.rssi)}%`);
+    if (t.motors.length) lines.push(`- Raw motor values: ${t.motors.join(', ')}`);
   }
   if (state.status) {
     const flags = decodeArmingFlags(state.status.armingDisableFlags).map((f) => f.name);
-    lines.push(`- Uzbrojony: ${state.status.armed ? 'tak' : 'nie'}; blokady uzbrojenia: ${flags.length ? flags.join(', ') : 'brak'}; CPU ${state.status.cpuLoad}%; błędy I2C ${state.status.i2cErrors}`);
+    lines.push(`- Armed: ${state.status.armed ? 'yes' : 'no'}; arming disable flags: ${flags.length ? flags.join(', ') : 'none'}; CPU ${state.status.cpuLoad}%; I2C errors ${state.status.i2cErrors}`);
   }
   if (state.pid) {
     const p = state.pid;
     lines.push(`- PID (roll/pitch/yaw, P I D): ${p.roll.join('/')}  ${p.pitch.join('/')}  ${p.yaw.join('/')}`);
   }
-  if (state.meta.elrsVersion) lines.push(`- ELRS (wpisane ręcznie): ${state.meta.elrsVersion}`);
+  if (state.meta.elrsVersion) lines.push(`- ELRS (entered manually): ${state.meta.elrsVersion}`);
   if (diag) {
-    lines.push('', 'WYNIK REGUŁ (diagnoza bez AI):');
+    lines.push('', 'RULE RESULTS (diagnosis without AI):');
     for (const ch of diag.checks) lines.push(`- [${ch.severity}] ${ch.label}${ch.detail ? ` - ${ch.detail}` : ''}`);
-    if (diag.commands.length) lines.push('Komendy proponowane przez reguły: ' + diag.commands.join('; '));
+    if (diag.commands.length) lines.push('Commands proposed by the rules: ' + diag.commands.join('; '));
   }
   if (state.diff) lines.push('', 'DIFF ALL:', state.diff);
-  else lines.push('', '(diff all nie został jeszcze pobrany - jeśli potrzebny, poproś użytkownika o "Pobierz konfigurację".)');
+  else lines.push('', '(diff all has not been fetched yet - if needed, ask the user to press "Fetch the full configuration".)');
   return lines.join('\n');
 }

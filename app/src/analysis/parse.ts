@@ -1,12 +1,14 @@
 /** Strumieniowy parser CSV z blackbox_decode / Blackbox Explorer. Dziala w Web Workerze i w Node (Blob.stream()). */
 import type { LogData } from './types';
 
+/** Parse error: `key` is an i18n key (at.err.*), translated by the UI thread (this code also runs in a Web Worker). */
 export class LogError extends Error {
   constructor(
     public code: 'binary' | 'columns' | 'short' | 'empty',
-    message: string,
+    public key: string,
+    public params?: Record<string, string | number>,
   ) {
-    super(message);
+    super(key);
   }
 }
 
@@ -92,7 +94,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
       mo.push(c);
       w.push({ idx: mi, push: (v) => c.push(v) });
     }
-    if (missing.length) throw new LogError('columns', `W pliku brakuje kolumn: ${missing.join(', ')}.`);
+    if (missing.length) throw new LogError('columns', 'at.err.missingCols', { cols: missing.join(', ') });
     w.sort((a, b) => a.idx - b.idx);
     want = w;
     return true;
@@ -137,7 +139,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
       if (line.endsWith('\r')) line = line.slice(0, -1);
       if (!line) continue;
       if (!headerDone) {
-        if (++headerLines > 300) throw new LogError('binary', 'Nie znaleziono naglowka CSV.');
+        if (++headerLines > 300) throw new LogError('binary', 'at.err.noHeader');
         if (line.includes(',') && setupHeader(line)) headerDone = true;
         continue;
       }
@@ -159,7 +161,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
       const txt = new TextDecoder().decode(head);
       if (nul > 0 || txt.startsWith('H Product:') || (!txt.includes(',') && !txt.includes('\n'))) {
         void reader.cancel();
-        throw new LogError('binary', 'To nie jest plik CSV (wyglada na binarny log blackbox).');
+        throw new LogError('binary', 'at.err.notCsv');
       }
     }
     processText(carry + dec.decode(value, { stream: true }));
@@ -170,12 +172,12 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
     }
   }
   if (carry) processText(carry + '\n');
-  if (!headerDone) throw new LogError('columns', 'Nie znaleziono naglowka z kolumna "time (us)".');
+  if (!headerDone) throw new LogError('columns', 'at.err.noTimeCol');
 
   // wyrownanie dlugosci (wiersze z brakami): przycinamy do najkrotszej
   const cols: { n: number }[] = [time, ...sp, ...gy, ...mo];
   const n = Math.min(...cols.map((c) => c.n));
-  if (n < 1000) throw new LogError('short', `Za malo danych (${n} wierszy). Potrzebne co najmniej kilka sekund lotu.`);
+  if (n < 1000) throw new LogError('short', 'at.err.tooShort', { n });
   void timeIdx;
 
   // fs z mediany roznic czasu
@@ -187,7 +189,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
   }
   dts.sort((a, b) => a - b);
   const dt = dts[dts.length >> 1] ?? 0;
-  if (!(dt > 0)) throw new LogError('short', 'Nie da sie ustalic czestotliwosci probkowania (kolumna czasu).');
+  if (!(dt > 0)) throw new LogError('short', 'at.err.noRate');
   const fs = 1e6 / dt;
   onProgress(1);
   const cut = (c: Col) => c.done().subarray(0, n);

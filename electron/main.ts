@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, session, shell } from 'electron';
+import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from 'electron';
 import path from 'node:path';
 import { setupUpdater } from './updater';
 
@@ -6,6 +6,28 @@ import { setupUpdater } from './updater';
 const STM32_VID = 0x0483;
 
 let win: BrowserWindow | null = null;
+
+/** UI language of native dialogs. The renderer reports its language over IPC (app:set-language); until then follow the OS locale. */
+type Lang = 'en' | 'pl';
+let lang: Lang = 'en';
+
+const STRINGS: Record<Lang, { noPortMessage: string; noPortDetail: string; pickTitle: string; pickMessage: string; cancel: string }> = {
+  en: {
+    noPortMessage: 'No serial port found.',
+    noPortDetail: 'Connect the FC with a data-capable USB cable and try again.',
+    pickTitle: 'Choose the FC port',
+    pickMessage: 'Choose the port the FC is connected to',
+    cancel: 'Cancel',
+  },
+  pl: {
+    noPortMessage: 'Nie znaleziono żadnego portu szeregowego.',
+    noPortDetail: 'Podłącz FC kablem USB (z przesyłem danych) i spróbuj ponownie.',
+    pickTitle: 'Wybierz port FC',
+    pickMessage: 'Wybierz port, do którego podłączony jest FC',
+    cancel: 'Anuluj',
+  },
+};
+const tr = () => STRINGS[lang];
 
 const iconPath = () => path.join(__dirname, '..', 'assets', 'icon.png');
 
@@ -61,8 +83,8 @@ function setupSerial(): void {
           await dialog.showMessageBox(win, {
             type: 'info',
             title: 'Rotorlab',
-            message: 'Nie znaleziono żadnego portu szeregowego.',
-            detail: 'Podłącz FC kablem USB (z przesyłem danych) i spróbuj ponownie.',
+            message: tr().noPortMessage,
+            detail: tr().noPortDetail,
             buttons: ['OK'],
           });
         }
@@ -77,9 +99,9 @@ function setupSerial(): void {
       const labels = candidates.map((p) => `${p.displayName || p.portName} (${p.portName})`);
       const opts: Electron.MessageBoxOptions = {
         type: 'question',
-        title: 'Wybierz port FC',
-        message: 'Wybierz port, do którego podłączony jest FC',
-        buttons: [...labels, 'Anuluj'],
+        title: tr().pickTitle,
+        message: tr().pickMessage,
+        buttons: [...labels, tr().cancel],
         cancelId: labels.length,
         defaultId: 0,
         noLink: true,
@@ -106,6 +128,10 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    lang = app.getLocale().toLowerCase().startsWith('pl') ? 'pl' : 'en';
+    ipcMain.on('app:set-language', (_e, l: unknown) => {
+      if (l === 'en' || l === 'pl') lang = l;
+    });
     Menu.setApplicationMenu(null);
     setupSerial();
     createWindow();

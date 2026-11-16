@@ -1,15 +1,11 @@
+import { fmtNum, t, type Key } from '../i18n';
 import { isDshot, protocolName, type FcState } from './state';
 
 /** Czesc drona, na ktorej skupia sie "ognisko" na rentgenie. */
 export type Part = 'esc' | 'rx' | 'fc' | 'motors' | 'battery';
 
-export const PART_LABEL: Record<Part, string> = {
-  esc: 'ESC',
-  rx: 'Odbiornik',
-  fc: 'FC',
-  motors: 'Silniki',
-  battery: 'Bateria',
-};
+/** Localised part name. */
+export const partLabel = (p: Part): string => t(`parts.${p}`);
 
 export type Severity = 'ok' | 'warn' | 'fail' | 'info';
 
@@ -35,43 +31,46 @@ export interface Diagnosis {
   suggestions: Suggestion[];
   /** Czesc z najpowazniejszym problemem (do ogniska) albo null, gdy wszystko OK. */
   focus: Part | null;
-  /** Krotkie podsumowanie po polsku. */
+  /** Short summary in the UI language. */
   summary: string;
   /** Wszystkie proponowane komendy (bez duplikatow). */
   commands: string[];
 }
 
-/** Flagi blokady uzbrojenia Betaflight 4.4/4.5 (numer bitu -> nazwa i opis po polsku). */
-export const ARMING_FLAGS: Array<{ bit: number; name: string; part: Part; desc: string }> = [
-  { bit: 0, name: 'NOGYRO', part: 'fc', desc: 'Nie wykryto żyroskopu' },
-  { bit: 1, name: 'FAILSAFE', part: 'rx', desc: 'Aktywny failsafe' },
-  { bit: 2, name: 'RXLOSS', part: 'rx', desc: 'Brak sygnału z odbiornika' },
-  { bit: 3, name: 'BADRX', part: 'rx', desc: 'Odbiornik daje błędne dane' },
-  { bit: 4, name: 'BOXFAILSAFE', part: 'rx', desc: 'Przełącznik failsafe jest włączony' },
-  { bit: 5, name: 'THROTTLE', part: 'rx', desc: 'Gaz nie jest na minimum' },
-  { bit: 6, name: 'ANGLE', part: 'fc', desc: 'Dron jest za bardzo przechylony' },
-  { bit: 7, name: 'BOOTGRACE', part: 'fc', desc: 'Trwa odliczanie po starcie (poczekaj chwilę)' },
-  { bit: 8, name: 'NOPREARM', part: 'rx', desc: 'Wymagany przełącznik prearm' },
-  { bit: 9, name: 'LOAD', part: 'fc', desc: 'Za duże obciążenie procesora' },
-  { bit: 10, name: 'CALIB', part: 'fc', desc: 'Trwa kalibracja czujników' },
-  { bit: 11, name: 'CLI', part: 'fc', desc: 'Aktywny tryb CLI' },
-  { bit: 12, name: 'CMS', part: 'fc', desc: 'Otwarte menu OSD (CMS)' },
-  { bit: 13, name: 'BST', part: 'fc', desc: 'Aktywny BST (Black Box / telemetria)' },
-  { bit: 14, name: 'MSP', part: 'fc', desc: 'Podłączone narzędzie przez MSP' },
-  { bit: 15, name: 'PARALYZE', part: 'fc', desc: 'Tryb Paralyze' },
-  { bit: 16, name: 'GPS', part: 'fc', desc: 'Brak fixa GPS' },
-  { bit: 17, name: 'RESCUE_SW', part: 'rx', desc: 'Przełącznik GPS Rescue jest włączony' },
-  { bit: 18, name: 'RPMFILTER', part: 'esc', desc: 'Filtr RPM włączony, ale brak telemetrii RPM z ESC' },
-  { bit: 19, name: 'REBOOT_REQD', part: 'fc', desc: 'Wymagany restart FC' },
-  { bit: 20, name: 'DSHOT_BBANG', part: 'esc', desc: 'Bidirectional DShot wymaga innego timera/protokołu' },
-  { bit: 21, name: 'NO_ACC_CAL', part: 'fc', desc: 'Brak kalibracji akcelerometru' },
-  { bit: 22, name: 'MOTOR_PROTO', part: 'esc', desc: 'Nieprawidłowy protokół silników' },
-  { bit: 23, name: 'ARMSWITCH', part: 'rx', desc: 'Przełącznik uzbrajania jest włączony (wyłącz i włącz ponownie)' },
+/** Betaflight 4.4/4.5 arming disable flags (bit -> name); descriptions live in the dictionaries under `arm.<NAME>`. */
+export const ARMING_FLAGS: Array<{ bit: number; name: string; part: Part }> = [
+  { bit: 0, name: 'NOGYRO', part: 'fc' },
+  { bit: 1, name: 'FAILSAFE', part: 'rx' },
+  { bit: 2, name: 'RXLOSS', part: 'rx' },
+  { bit: 3, name: 'BADRX', part: 'rx' },
+  { bit: 4, name: 'BOXFAILSAFE', part: 'rx' },
+  { bit: 5, name: 'THROTTLE', part: 'rx' },
+  { bit: 6, name: 'ANGLE', part: 'fc' },
+  { bit: 7, name: 'BOOTGRACE', part: 'fc' },
+  { bit: 8, name: 'NOPREARM', part: 'rx' },
+  { bit: 9, name: 'LOAD', part: 'fc' },
+  { bit: 10, name: 'CALIB', part: 'fc' },
+  { bit: 11, name: 'CLI', part: 'fc' },
+  { bit: 12, name: 'CMS', part: 'fc' },
+  { bit: 13, name: 'BST', part: 'fc' },
+  { bit: 14, name: 'MSP', part: 'fc' },
+  { bit: 15, name: 'PARALYZE', part: 'fc' },
+  { bit: 16, name: 'GPS', part: 'fc' },
+  { bit: 17, name: 'RESCUE_SW', part: 'rx' },
+  { bit: 18, name: 'RPMFILTER', part: 'esc' },
+  { bit: 19, name: 'REBOOT_REQD', part: 'fc' },
+  { bit: 20, name: 'DSHOT_BBANG', part: 'esc' },
+  { bit: 21, name: 'NO_ACC_CAL', part: 'fc' },
+  { bit: 22, name: 'MOTOR_PROTO', part: 'esc' },
+  { bit: 23, name: 'ARMSWITCH', part: 'rx' },
 ];
 
 export function decodeArmingFlags(mask: number) {
   return ARMING_FLAGS.filter((f) => (mask & (1 << f.bit)) !== 0);
 }
+
+/** Localised description of an arming flag. */
+export const armingDesc = (name: string): string => t(`arm.${name}` as Key);
 
 const SEVERITY_RANK: Record<Severity, number> = { fail: 3, warn: 2, info: 1, ok: 0 };
 /** Przy remisie waznosci wygrywa czesc wyzej na liscie. */
@@ -92,58 +91,58 @@ export function diagnose(state: Readonly<FcState>): Diagnosis {
   const { config, status, telemetry, cells } = state;
 
   if (!config) {
-    return { checks, suggestions, focus: null, summary: 'Brak danych z FC.', commands: [] };
+    return { checks, suggestions, focus: null, summary: t('diag.noData'), commands: [] };
   }
 
   // 1. Mapowanie / liczba silnikow
   checks.push(
     config.motorCount === 4
-      ? { id: 'motors', label: 'Mapowanie silników: zgodne', severity: 'ok', part: 'motors', detail: '4 silniki (M1-M4)' }
-      : { id: 'motors', label: `Liczba silników: ${config.motorCount}`, severity: 'warn', part: 'motors', detail: 'Quad powinien mieć 4 silniki. Sprawdź mixer.' },
+      ? { id: 'motors', label: t('diag.motorsOk'), severity: 'ok', part: 'motors', detail: t('diag.motorsOkDetail') }
+      : { id: 'motors', label: t('diag.motorsCount', { n: config.motorCount }), severity: 'warn', part: 'motors', detail: t('diag.motorsCountDetail') },
   );
 
   // 2. Napiecie baterii
   if (telemetry && cells) {
     const perCell = telemetry.vbat / cells;
-    const txt = `Napięcie ${cells}S ${telemetry.vbat.toFixed(1)} V`;
+    const txt = t('diag.vbat', { cells, v: fmtNum(telemetry.vbat, 1) });
     if (perCell < 3.5) {
-      checks.push({ id: 'vbat', label: `${txt}: za niskie`, severity: 'fail', part: 'battery', detail: `${perCell.toFixed(2)} V na celę (min. zalecane 3.5 V)` });
+      checks.push({ id: 'vbat', label: t('diag.vbatLow', { txt }), severity: 'fail', part: 'battery', detail: t('diag.vbatLowDetail', { pc: fmtNum(perCell, 2) }) });
     } else {
-      checks.push({ id: 'vbat', label: `${txt}: OK`, severity: 'ok', part: 'battery', detail: `${perCell.toFixed(2)} V na celę` });
+      checks.push({ id: 'vbat', label: t('diag.vbatOk', { txt }), severity: 'ok', part: 'battery', detail: t('diag.vbatOkDetail', { pc: fmtNum(perCell, 2) }) });
     }
   } else if (telemetry) {
-    checks.push({ id: 'vbat', label: 'Bateria: zasilanie z USB', severity: 'info', part: 'battery', detail: 'Podłącz akumulator, aby sprawdzić napięcie.' });
+    checks.push({ id: 'vbat', label: t('diag.usbPower'), severity: 'info', part: 'battery', detail: t('diag.usbPowerDetail') });
   }
 
   // 3. Protokol silnikow
   const rec = recommendedDshot(config.pidProcessDenom, config.gyroSyncDenom);
   const protoName = protocolName(config.motorPwmProtocol);
   if (!isDshot(config.motorPwmProtocol)) {
-    checks.push({ id: 'protocol', label: `Protokół: ${protoName}`, severity: 'fail', part: 'esc', detail: 'Analogowe protokoły (PWM/OneShot/Multishot) są przestarzałe. Użyj DShot.' });
-    suggestions.push({ id: 'protocol', part: 'esc', title: `Przełącz protokół na ${rec.name}`, commands: [`set motor_pwm_protocol = ${rec.name}`] });
+    checks.push({ id: 'protocol', label: t('diag.protocol', { name: protoName }), severity: 'fail', part: 'esc', detail: t('diag.protocolAnalog') });
+    suggestions.push({ id: 'protocol', part: 'esc', title: t('diag.protocolSwitch', { name: rec.name }), commands: [`set motor_pwm_protocol = ${rec.name}`] });
   } else {
     const speed = DSHOT_SPEED[config.motorPwmProtocol] ?? 0;
     if (speed > 0 && speed < rec.speed) {
-      checks.push({ id: 'protocol', label: `Protokół: DShot${speed}`, severity: 'fail', part: 'esc', detail: `Przy tej częstotliwości PID zalecany jest ${rec.name}.` });
-      suggestions.push({ id: 'protocol', part: 'esc', title: `Przełącz protokół na ${rec.name}`, commands: [`set motor_pwm_protocol = ${rec.name}`], caveat: 'ESC musi obsługiwać wybraną prędkość (BLHeli_S zwykle DShot300/600).' });
+      checks.push({ id: 'protocol', label: t('diag.protocol', { name: `DShot${speed}` }), severity: 'fail', part: 'esc', detail: t('diag.protocolTooSlow', { name: rec.name }) });
+      suggestions.push({ id: 'protocol', part: 'esc', title: t('diag.protocolSwitch', { name: rec.name }), commands: [`set motor_pwm_protocol = ${rec.name}`], caveat: t('diag.protocolSwitchCaveat') });
     } else {
-      checks.push({ id: 'protocol', label: `Protokół: DShot${speed}`, severity: 'ok', part: 'esc', detail: `Zgodny z częstotliwością PID (zalecany ${rec.name}).` });
+      checks.push({ id: 'protocol', label: t('diag.protocol', { name: `DShot${speed}` }), severity: 'ok', part: 'esc', detail: t('diag.protocolOkDetail', { name: rec.name }) });
     }
   }
 
   // 4. Bidirectional DShot
   if (isDshot(config.motorPwmProtocol)) {
     if (!config.bidir) {
-      checks.push({ id: 'bidir', label: 'Bidirectional DShot: wyłączony', severity: 'fail', part: 'esc', detail: 'Bez niego nie działa filtr RPM i telemetria obrotów.' });
+      checks.push({ id: 'bidir', label: t('diag.bidirOff'), severity: 'fail', part: 'esc', detail: t('diag.bidirOffDetail') });
       suggestions.push({
         id: 'bidir',
         part: 'esc',
-        title: 'Włącz Bidirectional DShot (filtr RPM)',
+        title: t('diag.bidirEnable'),
         commands: ['set dshot_bidir = ON'],
-        caveat: 'Wymaga ESC z Bluejay, BLHeli_32 lub AM32. Nie działa na gołym BLHeli_S.',
+        caveat: t('diag.bidirCaveat'),
       });
     } else {
-      checks.push({ id: 'bidir', label: 'Bidirectional DShot: włączony', severity: 'ok', part: 'esc', detail: 'Filtr RPM może działać.' });
+      checks.push({ id: 'bidir', label: t('diag.bidirOn'), severity: 'ok', part: 'esc', detail: t('diag.bidirOnDetail') });
     }
   }
 
@@ -151,9 +150,9 @@ export function diagnose(state: Readonly<FcState>): Diagnosis {
   if (status?.armed) {
     const maxMotor = Math.max(0, ...(telemetry?.motors ?? []));
     if (!telemetry || maxMotor <= 1000) {
-      checks.push({ id: 'armed-motors', label: 'Uzbrojony, ale silniki stoją', severity: 'fail', part: 'motors', detail: 'Brak odczytu MSP_MOTOR lub wartości na minimum po uzbrojeniu.' });
+      checks.push({ id: 'armed-motors', label: t('diag.armedStill'), severity: 'fail', part: 'motors', detail: t('diag.armedStillDetail') });
     } else {
-      checks.push({ id: 'armed-motors', label: 'Uzbrojony: silniki dostają sygnał', severity: 'ok', part: 'motors' });
+      checks.push({ id: 'armed-motors', label: t('diag.armedOk'), severity: 'ok', part: 'motors' });
     }
   }
 
@@ -161,14 +160,14 @@ export function diagnose(state: Readonly<FcState>): Diagnosis {
   if (status) {
     const flags = decodeArmingFlags(status.armingDisableFlags);
     if (flags.length === 0) {
-      checks.push({ id: 'arming', label: 'Blokady uzbrojenia: brak', severity: 'ok', part: 'fc' });
+      checks.push({ id: 'arming', label: t('diag.armingNone'), severity: 'ok', part: 'fc' });
     } else {
       for (const f of flags) {
-        checks.push({ id: `arm-${f.name}`, label: `Blokada uzbrojenia: ${f.name}`, severity: f.name === 'BOOTGRACE' || f.name === 'CLI' || f.name === 'MSP' ? 'info' : 'warn', part: f.part, detail: f.desc });
+        checks.push({ id: `arm-${f.name}`, label: t('diag.armingFlag', { name: f.name }), severity: f.name === 'BOOTGRACE' || f.name === 'CLI' || f.name === 'MSP' ? 'info' : 'warn', part: f.part, detail: armingDesc(f.name) });
       }
     }
-    if (status.cpuLoad > 70) checks.push({ id: 'cpu', label: `Obciążenie CPU: ${status.cpuLoad}%`, severity: 'warn', part: 'fc', detail: 'Zmniejsz częstotliwość PID albo wyłącz zbędne funkcje.' });
-    if (status.i2cErrors > 0) checks.push({ id: 'i2c', label: `Błędy I2C: ${status.i2cErrors}`, severity: 'warn', part: 'fc', detail: 'Sprawdź połączenia barometru/magnetometru.' });
+    if (status.cpuLoad > 70) checks.push({ id: 'cpu', label: t('diag.cpu', { n: status.cpuLoad }), severity: 'warn', part: 'fc', detail: t('diag.cpuDetail') });
+    if (status.i2cErrors > 0) checks.push({ id: 'i2c', label: t('diag.i2c', { n: status.i2cErrors }), severity: 'warn', part: 'fc', detail: t('diag.i2cDetail') });
   }
 
   // Ognisko: najpowazniejszy problem
@@ -185,7 +184,7 @@ export function diagnose(state: Readonly<FcState>): Diagnosis {
   }
 
   const problems = checks.filter((c) => c.severity === 'fail' || c.severity === 'warn');
-  const summary = problems.length === 0 ? 'Reguły nie znalazły problemów.' : `Reguły znalazły problemy: ${problems.length}. Największy dotyczy: ${PART_LABEL[focus ?? 'fc']}.`;
+  const summary = problems.length === 0 ? t('diag.summaryOk') : t('diag.summaryProblems', { n: problems.length, part: partLabel(focus ?? 'fc') });
   const commands = [...new Set(suggestions.flatMap((s) => s.commands))];
   return { checks, suggestions, focus, summary, commands };
 }

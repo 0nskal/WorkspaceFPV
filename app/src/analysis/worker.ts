@@ -7,7 +7,7 @@ self.onmessage = async (e: MessageEvent<Source>) => {
     const result = await processSource(e.data, (frac) => post({ type: 'progress', frac }));
     post({ type: 'done', result });
   } catch (err) {
-    const code = (err as { code?: string }).code ?? 'error';
-    post({ type: 'error', code, message: err instanceof Error ? err.message : String(err) });
+    const e = err as { code?: string; key?: string; params?: Record<string, string | number> };
+    post({ type: 'error', code: e.code ?? 'error', key: e.key ?? 'at.err.generic', params: e.params });
   }
 };

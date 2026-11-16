@@ -11,7 +11,7 @@ export interface FcInfo {
   /** Nazwa targetu/plyty z BOARD_INFO, np. SPEEDYBEEF405V4. */
   boardName: string;
   manufacturer: string;
-  /** Nazwa drona (MSP_NAME) lub "Dron". */
+  /** Craft name (MSP_NAME), empty when not set. */
   craftName: string;
 }
 

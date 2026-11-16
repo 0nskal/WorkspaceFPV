@@ -4,6 +4,7 @@ import { rssiPct } from '../fc/state';
 import type { FcLink } from '../serial/types';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
+import { t } from '../i18n';
 import { FLASHER_URL, compat, loadLocal, providerLabel, saveLocal, type ElrsLocal, type Method, type Region } from './elrs-data';
 import { renderElrsScene } from './elrs-scene';
 
@@ -17,8 +18,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let sceneKey = '';
 
   el.innerHTML = `<div class="elrs">
-    <div class="elrs-stage"><div class="elrs-art"></div><div class="elrs-data" aria-label="Dane odbiornika"></div></div>
-    <aside class="elrs-card" aria-label="Aktualizacja ELRS"></aside>
+    <div class="elrs-stage"><div class="elrs-art"></div><div class="elrs-data" aria-label="${t('elrs.dataAria')}"></div></div>
+    <aside class="elrs-card" aria-label="${t('elrs.cardAria')}"></aside>
   </div>`;
   const art = el.querySelector<HTMLElement>('.elrs-art') as HTMLElement;
   const dataEl = el.querySelector<HTMLElement>('.elrs-data') as HTMLElement;
@@ -70,18 +71,19 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const tx = local.txVersion.trim();
     const prov = rxProvider === null ? null : providerLabel(rxProvider);
     const dash = '<span class="elrs-na">—</span>';
+    const na = (k: 'elrs.notGiven' | 'elrs.notChosen' | 'elrs.phraseNotConfirmed') => `<span class="elrs-na">${t(k)}</span>`;
     const rssi = s.telemetry ? `${rssiPct(s.telemetry.rssi)}%` : '—';
     const rows: Array<[string, string]> = [
-      ['Protokół RX', connected() ? (prov ? `${escapeHtml(prov.text)}${prov.elrs ? '' : ' <small>zwykle CRSF</small>'}` : dash) : dash],
-      ['ELRS odbiornik', rx ? escapeHtml(rx) : '<span class="elrs-na">nie podano</span>'],
-      ['ELRS nadajnik', tx ? escapeHtml(tx) : '<span class="elrs-na">nie podano</span>'],
-      ['Sygnał (RSSI)', `<span data-live="rssi">${rssi}</span>`],
-      ['Regulacje', local.region ? (local.region === 'LBT' ? 'LBT (EU)' : 'FCC') : '<span class="elrs-na">nie wybrano</span>'],
-      ['Binding phrase', local.phrase ? `zapisana ${icon('check', 15)}` : '<span class="elrs-na">nie potwierdzono</span>'],
+      [t('elrs.rowProtocol'), connected() ? (prov ? `${escapeHtml(prov.text)}${prov.elrs ? '' : ` <small>${t('elrs.usuallyCrsf')}</small>`}` : dash) : dash],
+      [t('elrs.rowRx'), rx ? escapeHtml(rx) : na('elrs.notGiven')],
+      [t('elrs.rowTx'), tx ? escapeHtml(tx) : na('elrs.notGiven')],
+      [t('elrs.rowRssi'), `<span data-live="rssi">${rssi}</span>`],
+      [t('elrs.rowRegion'), local.region ? (local.region === 'LBT' ? 'LBT (EU)' : 'FCC') : na('elrs.notChosen')],
+      [t('elrs.rowPhrase'), local.phrase ? `${t('elrs.phraseSaved')} ${icon('check', 15)}` : na('elrs.phraseNotConfirmed')],
     ];
     dataEl.innerHTML =
       rows.map(([k, v]) => `<div class="elrs-row"><span class="elrs-k mono">${k}</span><span class="elrs-v">${v}</span></div>`).join('') +
-      (connected() ? '' : `<div class="elrs-off">Brak połączenia z FC. Protokół i sygnał odbiornika pojawią się po połączeniu.</div>`);
+      (connected() ? '' : `<div class="elrs-off">${t('elrs.off')}</div>`);
   }
 
   function marker(i: number, st: StepState, current: boolean): string {
@@ -108,53 +110,51 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
     const items: Array<{ t: string; sub: string; subCls?: string; body: string }> = [
       {
-        t: 'Zgodność głównej wersji TX i RX',
+        t: t('elrs.s1'),
         sub: c.text,
         subCls: c.kind,
-        body: `<div class="elrs-pair"><label><span class="mono">Odbiornik</span><input type="text" name="rx" value="${escapeHtml(rx)}" placeholder="np. 3.4.3" autocomplete="off" spellcheck="false"/></label><label><span class="mono">Nadajnik</span><input type="text" name="tx" value="${escapeHtml(local.txVersion)}" placeholder="np. 3.5.1" autocomplete="off" spellcheck="false"/></label></div>`,
+        body: `<div class="elrs-pair"><label><span class="mono">${t('elrs.lblRx')}</span><input type="text" name="rx" value="${escapeHtml(rx)}" placeholder="${t('elrs.s1ph')}" autocomplete="off" spellcheck="false"/></label><label><span class="mono">${t('elrs.lblTx')}</span><input type="text" name="tx" value="${escapeHtml(local.txVersion)}" placeholder="${t('elrs.s1ph2')}" autocomplete="off" spellcheck="false"/></label></div>`,
       },
-      { t: 'Binding phrase zapisana', sub: 'bez niej po wgraniu firmware nie połączysz nadajnika z odbiornikiem', body: chk('phrase', local.phrase, 'Mam binding phrase zapisaną poza odbiornikiem') },
+      { t: t('elrs.s2'), sub: t('elrs.s2sub'), body: chk('phrase', local.phrase, t('elrs.s2chk')) },
       {
-        t: 'Regulacje radiowe',
-        sub: 'LBT w Europie, FCC poza nią; musi pasować do nadajnika',
+        t: t('elrs.s3'),
+        sub: t('elrs.s3sub'),
         body: seg('region', local.region, [
           ['LBT', 'LBT (EU)'],
           ['FCC', 'FCC'],
         ]),
       },
       {
-        t: 'Metoda aktualizacji',
-        sub: 'passthrough nie wymaga rozbierania drona',
+        t: t('elrs.s4'),
+        sub: t('elrs.s4sub'),
         body: seg('method', local.method, [
-          ['passthrough', 'Passthrough przez FC (USB)'],
-          ['wifi', 'WiFi odbiornika'],
+          ['passthrough', t('elrs.s4pass')],
+          ['wifi', t('elrs.s4wifi')],
         ]),
       },
-      { t: 'Po aktualizacji: link i LQ', sub: `sygnał teraz: ${rssi}. LQ sprawdź w OSD lub na radiu`, body: chk('verified', local.verified, 'Połączenie działa, LQ jest stabilne') },
+      { t: t('elrs.s5'), sub: t('elrs.s5sub', { rssi }), body: chk('verified', local.verified, t('elrs.s5chk')) },
     ];
 
     const how =
-      local.method === 'wifi'
-        ? `<li>Zostaw odbiornik bez sygnału z nadajnika, po około minucie włączy własną sieć WiFi „ExpressLRS RX”.</li><li>Połącz się z nią i otwórz <code>10.0.0.1</code>.</li><li>Wgraj plik <code>firmware.bin</code> pobrany z Web Flashera.</li>`
-        : `<li>Podłącz FC kablem USB (bez baterii i bez śmigieł).</li><li>W Web Flasherze wybierz target odbiornika, wersję i regulacje.</li><li>Jako metodę wybierz „Betaflight passthrough”, wskaż port FC i wgraj.</li>`;
+      local.method === 'wifi' ? t('elrs.howWifi') : t('elrs.howPass');
 
     const hot = curIdx === -1 ? 'ok' : st.some((x) => x.state === 'warn') ? 'warn' : '';
     card.innerHTML = `
-      <div class="elrs-h"><i class="${hot}"></i><span>AKTUALIZACJA ELRS</span><span class="r">${escapeHtml(rx || '?')} → ${escapeHtml(local.txVersion || '?')}</span></div>
+      <div class="elrs-h"><i class="${hot}"></i><span>${t('elrs.headTitle')}</span><span class="r">${escapeHtml(rx || '?')} → ${escapeHtml(local.txVersion || '?')}</span></div>
       <div class="elrs-body">
         <ol class="elrs-steps">${items
           .map(
             (it, i) => `<li class="${st[i].state}${i === curIdx ? ' cur' : ''}">${marker(i, st[i].state, i === curIdx)}<div class="elrs-st"><div class="elrs-t">${it.t}</div><div class="elrs-sub mono ${it.subCls ?? ''}">${escapeHtml(it.sub)}</div><div class="elrs-ctl">${it.body}</div></div></li>`,
           )
           .join('')}</ol>
-        <div class="elrs-how"><div class="elrs-how-h mono">${local.method === 'wifi' ? 'WiFi odbiornika' : 'Passthrough (Betaflight)'}</div><ol>${how}</ol></div>
+        <div class="elrs-how"><div class="elrs-how-h mono">${local.method === 'wifi' ? t('elrs.howWifiHead') : t('elrs.howPassHead')}</div><ol>${how}</ol></div>
       </div>
       <div class="elrs-foot">
         <div class="elrs-act">
-          <a class="btn p" href="${FLASHER_URL}" target="_blank" rel="noopener noreferrer">${icon('external', 15)}Otwórz ELRS Web Flasher</a>
-          <button class="btn s" type="button" data-act="ai">Zapytaj AI</button>
+          <a class="btn p" href="${FLASHER_URL}" target="_blank" rel="noopener noreferrer">${icon('external', 15)}${t('elrs.openFlasher')}</a>
+          <button class="btn s" type="button" data-act="ai">${t('elrs.askAi')}</button>
         </div>
-        <div class="elrs-plan mono">Flashowanie bezpośrednio z Rotorlab: w planach.</div>
+        <div class="elrs-plan mono">${t('elrs.plan')}</div>
       </div>`;
     if (focusName) card.querySelector<HTMLInputElement>(`input[name="${focusName}"]`)?.focus();
   }
@@ -164,7 +164,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const key = rx;
     if (key === sceneKey) return;
     sceneKey = key;
-    art.innerHTML = renderElrsScene(`RX · ${rx ? 'ELRS ' + escapeHtml(rx) : 'odbiornik'}`);
+    art.innerHTML = renderElrsScene(`RX · ${rx ? 'ELRS ' + escapeHtml(rx) : t('elrs.receiver')}`);
   }
 
   function render(): void {
@@ -174,13 +174,17 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   }
 
   function askAi(): void {
-    const prov = rxProvider === null ? 'nieznany' : providerLabel(rxProvider).text;
+    const prov = rxProvider === null ? t('common.unknown') : providerLabel(rxProvider).text;
+    const dk = t('elrs.ai.dontKnow');
     const parts = [
-      `Chcę zaktualizować ExpressLRS w drona.`,
-      `Wersja odbiornika: ${rxVersion() || 'nie wiem'}, wersja nadajnika: ${local.txVersion.trim() || 'nie wiem'}.`,
-      `Protokół RX w Betaflight: ${prov}.`,
-      `Regulacje: ${local.region === 'LBT' ? 'LBT (EU)' : local.region || 'jeszcze nie wybrane'}. Metoda: ${local.method === 'wifi' ? 'WiFi odbiornika' : local.method === 'passthrough' ? 'passthrough przez FC (USB)' : 'jeszcze nie wybrana'}.`,
-      `Czy wersje są zgodne i co po kolei zrobić, żeby bezpiecznie zaktualizować?`,
+      t('elrs.ai.intro'),
+      t('elrs.ai.versions', { rx: rxVersion() || dk, tx: local.txVersion.trim() || dk }),
+      t('elrs.ai.protocol', { p: prov }),
+      t('elrs.ai.region', {
+        r: local.region === 'LBT' ? 'LBT (EU)' : local.region || t('elrs.ai.notChosenYet'),
+        m: local.method === 'wifi' ? t('elrs.ai.methodWifi') : local.method === 'passthrough' ? t('elrs.ai.methodPass') : t('elrs.ai.notChosenYet'),
+      }),
+      t('elrs.ai.question'),
     ];
     ctx.askAi(parts.join(' '));
   }

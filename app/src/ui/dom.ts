@@ -6,7 +6,7 @@ export function escapeHtml(s: string): string {
 
 export function qs<T extends Element = HTMLElement>(root: ParentNode, sel: string): T {
   const el = root.querySelector<T>(sel);
-  if (!el) throw new Error(`Brak elementu: ${sel}`);
+  if (!el) throw new Error(`Missing element: ${sel}`);
   return el;
 }
 
@@ -53,9 +53,4 @@ export async function copyText(text: string): Promise<boolean> {
 export function stamp(d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
-}
-
-export function plDate(d = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
 }

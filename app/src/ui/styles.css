@@ -142,6 +142,12 @@ svg.i {
   gap: 28px;
   height: 100%;
   margin-left: 14px;
+  min-width: 0;
+  overflow-x: auto; /* room for many tabs */
+  scrollbar-width: none;
+}
+.nav::-webkit-scrollbar {
+  display: none;
 }
 .nav a {
   position: relative;
@@ -155,6 +161,9 @@ svg.i {
 }
 .nav a:hover {
   color: var(--text);
+}
+.nav.offline a[data-needs-fc='true']:not(.on) {
+  opacity: 0.55;
 }
 .nav a.on {
   color: var(--text);
@@ -1839,7 +1848,7 @@ svg.ck.info {
 .at-tbl th,
 .at-tbl td {
   text-align: left;
-  padding: 9px 12px;
+  padding: 5px 12px;
   border: 1px solid rgba(220, 239, 248, 0.22);
   font-weight: 600;
   color: var(--ink);
@@ -1874,9 +1883,10 @@ svg.ck.info {
 }
 .at-notes {
   list-style: none;
-  margin-top: 12px;
+  margin-top: 10px;
   display: grid;
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* two columns so every note fits next to the table without scrolling at 1440x900 */
+  gap: 4px 18px;
   font-size: 13px;
   line-height: 1.4;
   color: var(--text);
@@ -2017,3 +2027,6 @@ svg.ck.info {
 .at-sec {
   padding-top: 10px !important;
 }
+
+/* === logo === */
+.brand img.logo, .start-brand img.logo { display:block; border-radius:22%; flex:none; }

@@ -1,4 +1,5 @@
 /** Rekomendacje regulowe z wynikow analizy (bez AI). */
+import { fmtNum, t } from '../i18n';
 import type { AnalysisResult, PidTriple } from './types';
 
 export type Pid3 = { roll: PidTriple; pitch: PidTriple; yaw: PidTriple };
@@ -45,22 +46,22 @@ export function recommend(res: AnalysisResult, cur: Pid3 | null, bidirOn: boolea
     let ffUp = false;
     const os = a.overshoot;
     if (os === null || !a.step) {
-      notes.push({ level: 'warn', text: `${a.name}: za mało ruchu drążka w logu, brak odpowiedzi skokowej.` });
+      notes.push({ level: 'warn', text: t('at.rec.noStick', { axis: a.name }) });
     } else if (os > 10 && key !== 'yaw') {
       let f = os > 25 ? 1.2 : os > 15 ? 1.15 : 1.1;
       if (motorNoiseHigh && bidirOn !== true) f = Math.min(f, 1.1);
       dF = f;
       if (os > 20) pF = 0.95;
-      notes.push({ level: 'hot', text: `${a.name}: przeregulowanie ${os.toFixed(0)}%. Podnoszę D o ${Math.round((dF - 1) * 100)}%${pF < 1 ? ' i obniżam P o 5%' : ''}.` });
-      if (f < (os > 25 ? 1.2 : os > 15 ? 1.15 : 1.1)) notes.push({ level: 'warn', text: 'Szum silników jest wysoki, więc D podnoszę ostrożnie. Najpierw włącz filtr RPM.' });
+      notes.push({ level: 'hot', text: t('at.rec.overshoot', { axis: a.name, os: os.toFixed(0), d: Math.round((dF - 1) * 100), p: pF < 1 ? t('at.rec.overshootP') : '' }) });
+      if (f < (os > 25 ? 1.2 : os > 15 ? 1.15 : 1.1)) notes.push({ level: 'warn', text: t('at.rec.noisyD') });
     } else if (os > 10) {
-      notes.push({ level: 'warn', text: `${a.name}: przeregulowanie ${os.toFixed(0)}% (yaw zwykle poprawia się przez filtry, nie D).` });
+      notes.push({ level: 'warn', text: t('at.rec.overshootYaw', { axis: a.name, os: os.toFixed(0) }) });
     } else if (os < 3 && a.rise !== null && a.rise > (key === 'yaw' ? 90 : 60)) {
       pF = 1.08;
       ffUp = true;
-      notes.push({ level: 'warn', text: `${a.name}: wolne narastanie (${a.rise.toFixed(0)} ms). Sugeruję P +8% i mocniejszy FF.` });
+      notes.push({ level: 'warn', text: t('at.rec.slowRise', { axis: a.name, ms: a.rise.toFixed(0) }) });
     } else {
-      notes.push({ level: 'ok', text: `${a.name}: przeregulowanie ${os.toFixed(0)}%${a.settle !== null ? `, ustala się w ${a.settle} ms` : ''}. Bez zmian.` });
+      notes.push({ level: 'ok', text: t('at.rec.fine', { axis: a.name, os: os.toFixed(0), settle: a.settle !== null ? t('at.rec.fineSettle', { ms: a.settle }) : '' }) });
     }
     const c = cur?.[key] ?? null;
     const s: PidTriple | null = c ? [clamp(c[0] * pF), c[1], key === 'yaw' ? c[2] : clamp(c[2] * dF)] : null;
@@ -74,30 +75,33 @@ export function recommend(res: AnalysisResult, cur: Pid3 | null, bidirOn: boolea
   if (motorNoiseHigh && res.peaks.motor) {
     const m = res.peaks.motor;
     if (bidirOn !== true) {
-      notes.push({ level: 'hot', text: `Szum silników przy ${m.hz.toFixed(0)} Hz (+${m.prom.toFixed(0)} dB). Włącz bidirectional DShot i filtr RPM (3 harmoniczne).` });
+      notes.push({ level: 'hot', text: t('at.rec.motorNoiseNoBidir', { hz: m.hz.toFixed(0), db: m.prom.toFixed(0) }) });
       commands.push('set dshot_bidir = ON', 'set rpm_filter_harmonics = 3');
     } else {
-      notes.push({ level: 'warn', text: `Szum silników przy ${m.hz.toFixed(0)} Hz mimo filtra RPM. Sprawdź śmigła, łożyska i dokręcenie silników.` });
+      notes.push({ level: 'warn', text: t('at.rec.motorNoiseBidir', { hz: m.hz.toFixed(0) }) });
     }
   }
   if (frameNoiseHigh && res.peaks.frame) {
-    notes.push({ level: 'warn', text: `Rezonans ramy przy ${res.peaks.frame.hz.toFixed(0)} Hz. Włącz dynamic notch (dyn_notch_count 2–3) i sprawdź dokręcenie ramy.` });
+    notes.push({ level: 'warn', text: t('at.rec.frameResonance', { hz: res.peaks.frame.hz.toFixed(0) }) });
   }
-  if (!motorNoiseHigh && !frameNoiseHigh) notes.push({ level: 'ok', text: 'Widmo gyro czyste, bez wyraźnych pików szumu.' });
-  if (res.rcFallback) notes.push({ level: 'warn', text: 'Brak kolumn setpoint: użyto rcCommand, więc wyniki są przybliżone.' });
+  if (!motorNoiseHigh && !frameNoiseHigh) notes.push({ level: 'ok', text: t('at.rec.clean') });
+  if (res.rcFallback) notes.push({ level: 'warn', text: t('at.rec.rcFallback') });
 
   return { axes, notes, commands, motorNoiseHigh, frameNoiseHigh };
 }
 
 /** Streszczenie metryk dla AI (bez surowych danych). */
 export function summarize(res: AnalysisResult, rec: Recommendation): string {
-  const f = (v: number | null, d = 0, u = '') => (v === null ? 'brak' : `${v.toFixed(d)}${u}`);
+  const none = t('at.sum.none');
+  const f = (v: number | null, d = 0, u = '') => (v === null ? none : `${fmtNum(v, d)}${u}`);
+  const pk = (p: { hz: number; prom: number } | null) => (p ? `${p.hz.toFixed(0)} Hz (+${p.prom.toFixed(0)} dB)` : none);
+  const name = res.name || t('at.sampleName');
   const lines = [
-    `Analiza logu blackbox "${res.name}": ${res.duration.toFixed(0)} s, ${Math.round(res.fs)} Hz próbkowania.`,
-    ...res.axes.map((a) => `${a.name}: przeregulowanie ${f(a.overshoot, 0, '%')}, czas narastania ${f(a.rise, 0, ' ms')}, ustalanie ${a.settle === null ? '>500 ms' : a.settle + ' ms'}.`),
-    `Szczyt silników: ${res.peaks.motor ? `${res.peaks.motor.hz.toFixed(0)} Hz (+${res.peaks.motor.prom.toFixed(0)} dB)` : 'brak'}; szczyt ramy: ${res.peaks.frame ? `${res.peaks.frame.hz.toFixed(0)} Hz (+${res.peaks.frame.prom.toFixed(0)} dB)` : 'brak'}.`,
-    ...rec.axes.filter((a) => a.current && a.suggested).map((a) => `PID ${a.name} obecne P/I/D ${a.current!.join('/')} -> sugerowane ${a.suggested!.join('/')}.`),
-    rec.commands.length ? `Moje reguły proponują: ${rec.commands.join('; ')}.` : 'Reguły nie proponują zmian.',
+    t('at.sum.head', { name, s: res.duration.toFixed(0), fs: Math.round(res.fs) }),
+    ...res.axes.map((a) => t('at.sum.axis', { axis: a.name, os: f(a.overshoot, 0, '%'), rise: f(a.rise, 0, ' ms'), settle: a.settle === null ? '>500 ms' : a.settle + ' ms' })),
+    t('at.sum.peaks', { m: pk(res.peaks.motor), f: pk(res.peaks.frame) }),
+    ...rec.axes.filter((a) => a.current && a.suggested).map((a) => t('at.sum.pid', { axis: a.name, cur: a.current!.join('/'), sug: a.suggested!.join('/') })),
+    rec.commands.length ? t('at.sum.rules', { cmds: rec.commands.join('; ') }) : t('at.sum.rulesNone'),
   ];
-  return lines.join('\n') + '\n\nOceń te wyniki i powiedz, czy proponowane zmiany PID/filtrów są rozsądne dla tego drona. Podaj poprawki jako blok cli.';
+  return lines.join('\n') + '\n\n' + t('at.sum.ask');
 }

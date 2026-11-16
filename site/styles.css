@@ -20,6 +20,11 @@ svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;str
 .nav-links{display:flex;gap:28px;margin-left:auto}
 .nav-links a{font-size:14px;font-weight:500;color:var(--sub);text-decoration:none;transition:color .15s}
 .nav-links a:hover{color:var(--text)}
+.lang{display:flex;border:1px solid var(--line)}
+.lang button{font:500 12px var(--mono);letter-spacing:.06em;height:32px;min-width:38px;padding:0 10px;background:transparent;color:var(--sub);border:0;cursor:pointer;transition:background-color .15s,color .15s}
+.lang button:hover{color:var(--text)}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg2)}
+bdi{unicode-bidi:normal}
 
 /* przyciski */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 22px;font:600 15px var(--sans);text-decoration:none;border:1px solid var(--ink);color:var(--ink);background:transparent;transition:background-color .15s,color .15s,border-color .15s,transform .15s;cursor:pointer}
@@ -153,6 +158,7 @@ h1{font-size:clamp(40px,5.4vw,68px);line-height:1.03;font-weight:700;letter-spac
   .nav-in{gap:14px}
   .nav-links{gap:16px}
   .nav-links a:last-child{display:none}
+  .nav-in .btn-sm{display:none}
   .hero{padding:40px 0 56px}
   .lead{font-size:17px}
   .cta .btn{width:100%}
@@ -168,3 +174,5 @@ h1{font-size:clamp(40px,5.4vw,68px);line-height:1.03;font-weight:700;letter-spac
   html{scroll-behavior:auto}
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
+
+.brand img { display:block; border-radius:22%; flex:none; }

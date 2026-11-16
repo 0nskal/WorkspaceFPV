@@ -1,6 +1,6 @@
 import { Assistant } from './ai/assistant';
 import { buildContext } from './ai/prompts';
-import { ROUTES, type AppContext, type ApplyOptions, type Route, type ScreenMount } from './context';
+import type { AppContext, ApplyOptions, Route } from './context';
 import { diagnose } from './fc/diagnose';
 import { readAll, startTelemetry } from './fc/read';
 import { FcStore, rssiPct, type FcState } from './fc/state';
@@ -10,29 +10,16 @@ import { SerialLink } from './serial/link';
 import { hasWebSerial } from './serial/port';
 import type { CliEntry, FcLink } from './serial/types';
 import { SettingsStore, loadBackup, saveBackup } from './settings';
+import { getLang, onLanguageChange, t } from './i18n';
+import { DEFAULT_SCREEN, SCREENS, findScreen } from './screens/registry';
 import { downloadText, escapeHtml, stamp } from './ui/dom';
 import { createDrawer, type Drawer } from './ui/drawer';
 import { icon, logo } from './ui/icons';
 import { confirmDialog, toast } from './ui/modal';
 import { updatesApi } from './updates';
-import * as esc from './screens/esc';
-import * as autotune from './screens/autotune';
-import * as elrs from './screens/elrs';
-import * as ustawienia from './screens/ustawienia';
-import * as warsztat from './screens/warsztat';
-
-const SCREENS: Record<Route, { mount: ScreenMount }> = { warsztat, esc, autotune, elrs, ustawienia };
-
-const TABS: Array<{ route: Route; label: string }> = [
-  { route: 'warsztat', label: 'Warsztat' },
-  { route: 'esc', label: 'ESC' },
-  { route: 'autotune', label: 'Autotune PID' },
-  { route: 'elrs', label: 'ELRS' },
-];
-
 const parseRoute = (): Route => {
-  const h = location.hash.replace(/^#\/?/, '') as Route;
-  return ROUTES.includes(h) ? h : 'warsztat';
+  const h = location.hash.replace(/^#\/?/, '');
+  return findScreen(h) ? h : DEFAULT_SCREEN;
 };
 
 export function createApp(root: HTMLElement): AppContext {
@@ -44,7 +31,7 @@ export function createApp(root: HTMLElement): AppContext {
   let drawerOpen = true;
 
   const ai = new Assistant(
-    () => ({ apiKey: settings.get().apiKey, model: settings.get().model }),
+    () => ({ apiKey: settings.get().apiKey, model: settings.get().model, lang: getLang() }),
     () => buildContext(store.get(), store.get().conn === 'connected' ? diagnose(store.get()) : null),
   );
 
@@ -69,7 +56,7 @@ export function createApp(root: HTMLElement): AppContext {
       const msg = e instanceof Error ? e.message : String(e);
       await l.close().catch(() => undefined);
       link = null;
-      store.reset({ error: `Nie udało się odczytać FC: ${msg}. Sprawdź kabel USB i czy to płytka z Betaflight.` });
+      store.reset({ error: t('conn.readFail', { msg }) });
     }
   }
 
@@ -82,13 +69,13 @@ export function createApp(root: HTMLElement): AppContext {
       store.patch({ conn: 'reconnecting' });
       try {
         await attach(await SerialLink.reconnect(identity));
-        toast('FC połączony ponownie.', 'ok');
+        toast(t('conn.reconnected'), 'ok');
       } catch (e) {
-        store.reset({ error: e instanceof Error ? e.message : 'Nie udało się połączyć ponownie.' });
+        store.reset({ error: e instanceof Error ? e.message : t('conn.reconnectFail') });
       }
     } else if (reason === 'lost') {
-      store.reset({ error: 'Połączenie z FC zostało utracone (odłączono kabel?).' });
-      toast('Utracono połączenie z FC.', 'error');
+      store.reset({ error: t('conn.lostError') });
+      toast(t('conn.lostToast'), 'error');
     } else {
       store.reset();
     }
@@ -96,7 +83,7 @@ export function createApp(root: HTMLElement): AppContext {
 
   async function connect(): Promise<void> {
     if (!hasWebSerial()) {
-      store.patch({ error: 'Ta przeglądarka nie obsługuje WebSerial. Użyj Chrome/Edge albo aplikacji na Windows.' });
+      store.patch({ error: t('conn.noWebSerial') });
       return;
     }
     store.patch({ conn: 'connecting', error: null });
@@ -105,7 +92,7 @@ export function createApp(root: HTMLElement): AppContext {
     } catch (e) {
       const name = e instanceof DOMException ? e.name : '';
       if (name === 'NotFoundError') store.patch({ conn: 'disconnected', error: null }); // anulowano wybor portu
-      else store.reset({ error: `Nie udało się otworzyć portu: ${e instanceof Error ? e.message : String(e)}` });
+      else store.reset({ error: t('conn.openFail', { msg: e instanceof Error ? e.message : String(e) }) });
     }
   }
 
@@ -135,26 +122,26 @@ export function createApp(root: HTMLElement): AppContext {
   /* ---------------- kopie i zmiany ---------------- */
 
   function rememberBackup(text: string): void {
-    const craft = store.get().info?.craftName ?? 'dron';
+    const craft = store.get().info?.craftName || 'drone';
     store.patch({ diff: text, diffAt: Date.now() });
     saveBackup({ at: Date.now(), craft, text });
   }
 
   function downloadBackup(): boolean {
-    const b = store.get().diff ? { text: store.get().diff as string, craft: store.get().info?.craftName ?? 'dron' } : loadBackup();
+    const b = store.get().diff ? { text: store.get().diff as string, craft: store.get().info?.craftName || 'drone' } : loadBackup();
     if (!b) return false;
-    const name = b.craft.replace(/[^\w-]+/g, '_') || 'dron';
-    downloadText(`rotorlab-kopia-${name}-${stamp()}.txt`, b.text);
+    const name = b.craft.replace(/[^\w-]+/g, '_') || 'drone';
+    downloadText(`${t('backup.filePrefix')}-${name}-${stamp()}.txt`, b.text);
     return true;
   }
 
   async function fetchDiff(): Promise<string | null> {
     const l = link;
     if (!l) {
-      toast('Najpierw połącz się z FC.', 'error');
+      toast(t('conn.connectFirst'), 'error');
       return null;
     }
-    toast('Pobieram konfigurację (diff all). FC zrestartuje się po wyjściu z CLI.', 'info');
+    toast(t('backup.fetching'), 'info');
     try {
       const got: { text: string | null } = { text: null };
       await l.cli(['diff all'], { onEntry: (e: CliEntry) => (got.text = e.output) });
@@ -164,7 +151,7 @@ export function createApp(root: HTMLElement): AppContext {
       }
       return got.text;
     } catch (e) {
-      toast(`Nie udało się pobrać konfiguracji: ${e instanceof Error ? e.message : String(e)}`, 'error');
+      toast(t('backup.fetchFail', { msg: e instanceof Error ? e.message : String(e) }), 'error');
       return null;
     }
   }
@@ -174,26 +161,26 @@ export function createApp(root: HTMLElement): AppContext {
     if (!clean.length) return false;
     const blocked = clean.filter((c) => BLOCKED_CLI.test(c));
     if (blocked.length) {
-      toast(`Rotorlab nie wysyła tych komend: ${blocked.join(', ')}. Wykonaj je ręcznie w CLI, jeśli wiesz, co robisz.`, 'error');
+      toast(t('apply.blocked', { cmds: blocked.join(', ') }), 'error');
       return false;
     }
     const l = link;
     if (!l) {
-      toast('Najpierw połącz się z FC.', 'error');
+      toast(t('conn.connectFirst'), 'error');
       return false;
     }
     const ok = await confirmDialog({
-      title: options.title ?? 'Zastosować zmiany w FC?',
-      confirmText: 'Zastosuj w FC',
-      body: `<p>Komendy, które wyślę do FC:</p>
+      title: options.title ?? t('apply.title'),
+      confirmText: t('apply.confirm'),
+      body: `<p>${t('apply.intro')}</p>
         <pre class="code">${escapeHtml(clean.join('\n'))}</pre>
-        <p class="save-note"><strong>Najpierw zapiszę kopię ustawień</strong> (<code>diff all</code>) i pobiorę ją jako plik. Potem zastosuję komendy i zapiszę konfigurację (<code>save</code>). FC zrestartuje się, a Rotorlab połączy się ponownie.</p>
+        <p class="save-note">${t('apply.backupNote')}</p>
         ${options.note ? `<p>${options.note}</p>` : ''}
-        <p class="warn-note">Zdejmij śmigła, zanim cokolwiek zmienisz w układzie napędowym.</p>`,
+        <p class="warn-note">${t('apply.propsWarn')}</p>`,
     });
     if (!ok) return false;
 
-    toast('Zapisuję kopię i stosuję zmiany…', 'info');
+    toast(t('apply.working'), 'info');
     try {
       const res = await l.cli(['diff all', ...clean], {
         save: true,
@@ -207,11 +194,11 @@ export function createApp(root: HTMLElement): AppContext {
       });
       if (!res.ok) {
         const bad = res.entries.find((e) => e.error);
-        toast(`FC odrzucił komendę „${bad?.command ?? '?'}”${bad?.output ? `: ${bad.output}` : ''}. Zmiany nie zostały zapisane.`, 'error');
+        toast(t('apply.rejected', { cmd: bad?.command ?? '?', detail: bad?.output ? `: ${bad.output}` : '' }), 'error');
         if (l.kind === 'demo') await refresh();
         return false;
       }
-      toast('Zapisano w FC. Restartuję i łączę ponownie…', 'ok');
+      toast(t('apply.saved'), 'ok');
       if (l.kind === 'demo') await refresh();
       else {
         // Zwykle port sie zamyka i handleClose robi reconnect; jesli nie, odswiez recznie.
@@ -221,40 +208,51 @@ export function createApp(root: HTMLElement): AppContext {
       }
       return true;
     } catch (e) {
-      toast(`Błąd podczas zapisu: ${e instanceof Error ? e.message : String(e)}`, 'error');
+      toast(t('apply.error', { msg: e instanceof Error ? e.message : String(e) }), 'error');
       return false;
     }
   }
 
-  /* ---------------- UI: pasek, ekran, szuflada ---------------- */
+  /* ---------------- UI: top bar, screen, drawer ---------------- */
 
-  root.innerHTML = `
+  let screenEl!: HTMLElement;
+  let bodyEl!: HTMLElement;
+  let navEl!: HTMLElement;
+  let stT!: HTMLElement;
+  let stI!: HTMLElement;
+  let dnEl!: HTMLElement;
+  let rssiEl!: HTMLElement;
+  let gyroLine!: SVGPolylineElement;
+
+  /** (Re)builds the whole shell: top bar from the screen registry + empty screen area. Called on start and on language change. */
+  function buildShell(): void {
+    root.innerHTML = `
     <header class="bar">
-      <div class="brand">${logo(24)}Rotorlab</div>
+      <div class="brand">${logo(24)}${t('shell.brand')}</div>
       <div class="sep"></div>
-      <div class="st"><i></i><span class="st-t">Niepołączono</span></div>
+      <div class="st"><i></i><span class="st-t">${t('shell.disconnected')}</span></div>
       <div class="sep dn-sep"></div>
       <div class="dn"></div>
-      <nav class="nav" aria-label="Zakładki"></nav>
+      <nav class="nav" aria-label="${t('shell.tabsAria')}">${SCREENS.filter((sc) => sc.nav !== false)
+        .map((sc) => `<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`)
+        .join('')}</nav>
       <div class="tel">
         <svg class="gyro" width="98" height="22" viewBox="0 0 98 22" aria-hidden="true"><polyline fill="none" stroke="#CFE6F2" stroke-width="1.1" points=""/></svg>
         <span class="rssi">RSSI <b>—</b></span>
-        <button class="ib" data-act="settings" title="Ustawienia" aria-label="Ustawienia">${icon('settings', 17)}</button>
-        <button class="ib" data-act="drawer" title="Pokaż/ukryj asystenta" aria-label="Asystent AI">${icon('panel', 17)}</button>
+        <button class="ib" data-act="settings" title="${t('shell.settings')}" aria-label="${t('shell.settings')}">${icon('settings', 17)}</button>
+        <button class="ib" data-act="drawer" title="${t('shell.drawerToggle')}" aria-label="${t('shell.assistantAria')}">${icon('panel', 17)}</button>
       </div>
     </header>
     <div class="body"><main class="screen" id="screen"></main></div>`;
-
-  const screenEl = root.querySelector<HTMLElement>('#screen') as HTMLElement;
-  const bodyEl = root.querySelector<HTMLElement>('.body') as HTMLElement;
-  const navEl = root.querySelector<HTMLElement>('.nav') as HTMLElement;
-  const stT = root.querySelector<HTMLElement>('.st-t') as HTMLElement;
-  const stI = root.querySelector<HTMLElement>('.st i') as HTMLElement;
-  const dnEl = root.querySelector<HTMLElement>('.dn') as HTMLElement;
-  const rssiEl = root.querySelector<HTMLElement>('.rssi b') as HTMLElement;
-  const gyroLine = root.querySelector<SVGPolylineElement>('.gyro polyline') as SVGPolylineElement;
-
-  navEl.innerHTML = TABS.map((t) => `<a href="#${t.route}" data-route="${t.route}">${t.label}</a>`).join('');
+    screenEl = root.querySelector<HTMLElement>('#screen') as HTMLElement;
+    bodyEl = root.querySelector<HTMLElement>('.body') as HTMLElement;
+    navEl = root.querySelector<HTMLElement>('.nav') as HTMLElement;
+    stT = root.querySelector<HTMLElement>('.st-t') as HTMLElement;
+    stI = root.querySelector<HTMLElement>('.st i') as HTMLElement;
+    dnEl = root.querySelector<HTMLElement>('.dn') as HTMLElement;
+    rssiEl = root.querySelector<HTMLElement>('.rssi b') as HTMLElement;
+    gyroLine = root.querySelector<SVGPolylineElement>('.gyro polyline') as SVGPolylineElement;
+  }
 
   let current: Route = parseRoute();
   let unmount: (() => void) | null = null;
@@ -306,7 +304,7 @@ export function createApp(root: HTMLElement): AppContext {
       document.body.classList.remove('has-hot');
     }
     bodyEl.classList.toggle('with-drawer', show);
-    // przycisk panelu ma sens tylko po polaczeniu
+    // the panel button only makes sense once connected
     const btn = root.querySelector<HTMLElement>('[data-act="drawer"]');
     if (btn) btn.hidden = store.get().conn === 'disconnected' || current === 'ustawienia';
   }
@@ -317,7 +315,8 @@ export function createApp(root: HTMLElement): AppContext {
     document.body.classList.remove('has-hot');
     screenEl.innerHTML = '';
     screenEl.dataset.route = current;
-    unmount = SCREENS[current].mount(screenEl, ctx);
+    const def = findScreen(current) ?? findScreen(DEFAULT_SCREEN);
+    if (def) unmount = def.mount(screenEl, ctx);
     navEl.querySelectorAll<HTMLElement>('a').forEach((a) => a.classList.toggle('on', a.dataset.route === current));
     syncLayout();
   }
@@ -325,28 +324,29 @@ export function createApp(root: HTMLElement): AppContext {
   function renderBar(): void {
     const s = store.get();
     const text: Record<FcState['conn'], string> = {
-      disconnected: 'Niepołączono',
-      connecting: 'Łączenie…',
-      connected: s.mode === 'demo' ? 'Tryb demo' : `Połączono · ${link?.label ?? 'USB'}`,
-      reconnecting: 'Ponowne łączenie…',
+      disconnected: t('shell.disconnected'),
+      connecting: t('shell.connecting'),
+      connected: s.mode === 'demo' ? t('shell.demo') : t('shell.connected', { label: link?.label ?? 'USB' }),
+      reconnecting: t('shell.reconnecting'),
     };
     stT.textContent = text[s.conn];
     stI.className = s.conn === 'connected' ? 'on' : s.conn === 'disconnected' ? '' : 'wait';
-    dnEl.textContent = s.conn === 'connected' || s.conn === 'reconnecting' ? s.info?.craftName ?? '' : '';
+    dnEl.textContent = s.conn === 'connected' || s.conn === 'reconnecting' ? s.info?.craftName || t('common.drone') : '';
     (root.querySelector('.dn-sep') as HTMLElement).hidden = !dnEl.textContent;
     if (s.conn === 'disconnected') {
       rssiEl.textContent = '—';
       gyroLine.setAttribute('points', '');
     }
+    navEl.classList.toggle('offline', s.conn !== 'connected' && s.conn !== 'reconnecting');
     syncLayout();
   }
 
   const gyro: number[] = [];
   function renderTelemetry(): void {
-    const t = store.get().telemetry;
-    if (!t) return;
-    rssiEl.textContent = `${rssiPct(t.rssi)}%`;
-    gyro.push(Math.hypot(...t.gyro));
+    const tel = store.get().telemetry;
+    if (!tel) return;
+    rssiEl.textContent = `${rssiPct(tel.rssi)}%`;
+    gyro.push(Math.hypot(...tel.gyro));
     if (gyro.length > 45) gyro.shift();
     const max = Math.max(20, ...gyro);
     gyroLine.setAttribute('points', gyro.map((g, i) => `${(i * 2.2).toFixed(1)},${(20.5 - Math.min(19, (g / max) * 19)).toFixed(1)}`).join(' '));
@@ -374,18 +374,35 @@ export function createApp(root: HTMLElement): AppContext {
     }
   });
 
+  // Language switch: rebuild the shell, drawer and current screen in place (no reload).
+  onLanguageChange((lang) => {
+    unmount?.();
+    unmount = null;
+    if (drawer) {
+      drawer.destroy();
+      drawer.el.remove();
+      drawer = null;
+    }
+    buildShell();
+    renderBar();
+    mountScreen();
+    window.rotorlab?.setLanguage?.(lang);
+  });
+
+  buildShell();
   renderBar();
   mountScreen();
+  window.rotorlab?.setLanguage?.(getLang());
 
-  // ?demo=1 od razu wchodzi w tryb demo (do zrzutow ekranu)
+  // ?demo=1 enters demo mode right away (for screenshots)
   if (new URLSearchParams(location.search).get('demo') === '1') void connectDemo();
 
-  // Aktualizacje (tylko Electron): przekaz ustawienie do main i pokaz dyskretny toast po automatycznym wykryciu nowej wersji.
+  // Updates (Electron only): pass the setting to main and show a quiet toast when a new version is found automatically.
   const upd = updatesApi();
   if (upd) {
     void upd.setAutoCheck(settings.get().checkUpdates);
     upd.onStatus((s) => {
-      if (s.state === 'available' && s.auto) toast(`Dostępna wersja ${s.version} – Ustawienia → Aktualizacje`, 'info');
+      if (s.state === 'available' && s.auto) toast(t('updateToast', { version: s.version }), 'info');
     });
   }
 

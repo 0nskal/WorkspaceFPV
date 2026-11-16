@@ -1,15 +1,16 @@
 import type { AppContext, ScreenMount } from '../context';
-import { PART_LABEL, type Diagnosis, type Part } from '../fc/diagnose';
+import { partLabel, type Diagnosis } from '../fc/diagnose';
 import { boardDisplayName, firmwareName } from '../fc/board';
 import { isDshot, motorPct, protocolName, rssiPct, type FcState } from '../fc/state';
 import { hasWebSerial } from '../serial/port';
-import { plDate, escapeHtml } from '../ui/dom';
+import { escapeHtml } from '../ui/dom';
+import { fmtDate, fmtNum, t } from '../i18n';
 import { ENTRY_Y, VIEW_H, VIEW_W, renderDrone, updateMotorBars, type XrayLabels } from '../ui/drone-xray';
 import { icon, logo } from '../ui/icons';
 
 function buildLabels(s: Readonly<FcState>, d: Diagnosis): XrayLabels {
-  const t = s.telemetry;
-  const craft = (s.info?.craftName ?? 'DRON').toUpperCase();
+  const tel = s.telemetry;
+  const craft = (s.info?.craftName || t('common.drone')).toUpperCase();
   const elrs = s.meta.elrsVersion;
   const rxProblem = d.checks.find((c) => c.part === 'rx' && (c.severity === 'fail' || c.severity === 'warn'));
   const focusCheck = d.focus ? d.checks.find((c) => c.part === d.focus && (c.severity === 'fail' || c.severity === 'warn')) : undefined;
@@ -17,18 +18,18 @@ function buildLabels(s: Readonly<FcState>, d: Diagnosis): XrayLabels {
   if (d.focus && d.focus !== 'motors') {
     const friendly = (n: string) => n.replace(/^DSHOT/, 'DShot');
     const extra = d.focus === 'esc' && s.config ? friendly(protocolName(s.config.motorPwmProtocol)) : '';
-    const bidirOff = d.focus === 'esc' && s.config && isDshot(s.config.motorPwmProtocol) && !s.config.bidir ? 'bidir OFF' : '';
-    hotText = [PART_LABEL[d.focus], extra, bidirOff, d.focus !== 'esc' ? focusCheck?.label : ''].filter(Boolean).join(' · ');
+    const bidirOff = d.focus === 'esc' && s.config && isDshot(s.config.motorPwmProtocol) && !s.config.bidir ? t('xray.bidirOff') : '';
+    hotText = [partLabel(d.focus), extra, bidirOff, d.focus !== 'esc' ? focusCheck?.label : ''].filter(Boolean).join(' · ');
   }
   return {
-    filmTop: `ROTORLAB · ${craft} · ${plDate()}`,
+    filmTop: `ROTORLAB · ${craft} · ${fmtDate()}`,
     filmBottom: 'kV 60 · mAs 2',
     fcTitle: boardDisplayName(s.info),
     fcSub: firmwareName(s.info),
-    rxTitle: elrs ? `ELRS ${elrs}` : t ? `Sygnał ${rssiPct(t.rssi)}%` : 'Brak danych',
+    rxTitle: elrs ? `ELRS ${elrs}` : tel ? t('xray.signal', { pct: rssiPct(tel.rssi) }) : t('xray.noData'),
     rxSub: rxProblem?.label,
-    batteryText: t ? (s.cells ? `${s.cells}S ${t.vbat.toFixed(1)} V` : `${t.vbat.toFixed(1)} V (USB)`) : '—',
-    motors: t ? t.motors.slice(0, 4).map(motorPct) : null,
+    batteryText: tel ? (s.cells ? `${s.cells}S ${fmtNum(tel.vbat, 1)} V` : t('xray.usb', { v: fmtNum(tel.vbat, 1) })) : '—',
+    motors: tel ? tel.motors.slice(0, 4).map(motorPct) : null,
     hotText,
   };
 }
@@ -59,15 +60,15 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         <div class="start-art" aria-hidden="true">${renderDrone({ highlight: null, bare: true, labels: emptyLabels() })}</div>
         <div class="start-card">
           <div class="start-brand">${logo(28)}<span>Rotorlab</span></div>
-          <h1>Diagnoza i naprawa drona FPV</h1>
-          <p>Podłącz płytkę FC kablem USB. Rotorlab odczyta konfigurację Betaflight, sprawdzi ją regułami i pomoże naprawić problem z asystentem AI.</p>
+          <h1>${t('start.title')}</h1>
+          <p>${t('start.lead')}</p>
           <div class="start-btns">
-            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? 'Łączenie…' : 'Połącz z FC'}</button>
-            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}Tryb demo</button>
+            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('start.connect')}</button>
+            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('start.demo')}</button>
           </div>
-          ${noSerial ? `<div class="start-msg warn">Ta przeglądarka nie obsługuje WebSerial. Użyj Chrome/Edge albo aplikacji na Windows.</div>` : ''}
+          ${noSerial ? `<div class="start-msg warn">${t('start.noSerial')}</div>` : ''}
           ${s.error ? `<div class="start-msg err" role="alert">${escapeHtml(s.error)}</div>` : ''}
-          <div class="start-foot mono">Bez drona? Tryb demo pokazuje symulowanego quada 5" z problemem w ESC.</div>
+          <div class="start-foot mono">${t('start.foot')}</div>
         </div>
       </div>`;
     stage = null;
@@ -101,7 +102,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const overlay = el.querySelector<HTMLElement>('.overlay');
     if (overlay) {
       overlay.hidden = s.conn !== 'reconnecting';
-      overlay.innerHTML = s.conn === 'reconnecting' ? `<div class="mono">FC się restartuje. Łączę ponownie…</div>` : '';
+      overlay.innerHTML = s.conn === 'reconnecting' ? `<div class="mono">${t('start.reconnecting')}</div>` : '';
     }
     positionTab();
   }
@@ -128,8 +129,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const offState = ctx.state.subscribe(render);
   const offTel = ctx.state.subscribeTelemetry(() => {
     if (view !== 'scene' || !stage) return;
-    const t = ctx.state.get().telemetry;
-    updateMotorBars(stage, t ? t.motors.slice(0, 4).map(motorPct) : null);
+    const tel = ctx.state.get().telemetry;
+    updateMotorBars(stage, tel ? tel.motors.slice(0, 4).map(motorPct) : null);
   });
   render();
 

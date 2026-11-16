@@ -1,5 +1,11 @@
 /** Polish dictionary. Must satisfy the same type as en.ts (Dict). */
 import type { Dict } from './en';
+import { plBfConfig } from './pl/bfConfig';
+import { plBfCore } from './pl/bfCore';
+import { plBfFailsafe } from './pl/bfFailsafe';
+import { plBfPorts } from './pl/bfPorts';
+import { plBfPower } from './pl/bfPower';
+import { plBfSetup } from './pl/bfSetup';
 
 export const pl: Dict = {
   lang: {
@@ -133,32 +139,6 @@ export const pl: Dict = {
     i2cDetail: 'Sprawdź połączenia barometru/magnetometru.',
     summaryOk: 'Reguły nie znalazły problemów.',
     summaryProblems: 'Reguły znalazły problemy: {n}. Największy dotyczy: {part}.',
-  },
-  arm: {
-    NOGYRO: 'Nie wykryto żyroskopu',
-    FAILSAFE: 'Aktywny failsafe',
-    RXLOSS: 'Brak sygnału z odbiornika',
-    BADRX: 'Odbiornik daje błędne dane',
-    BOXFAILSAFE: 'Przełącznik failsafe jest włączony',
-    THROTTLE: 'Gaz nie jest na minimum',
-    ANGLE: 'Dron jest za bardzo przechylony',
-    BOOTGRACE: 'Trwa odliczanie po starcie (poczekaj chwilę)',
-    NOPREARM: 'Wymagany przełącznik prearm',
-    LOAD: 'Za duże obciążenie procesora',
-    CALIB: 'Trwa kalibracja czujników',
-    CLI: 'Aktywny tryb CLI',
-    CMS: 'Otwarte menu OSD (CMS)',
-    BST: 'Aktywny BST (Black Box / telemetria)',
-    MSP: 'Podłączone narzędzie przez MSP',
-    PARALYZE: 'Tryb Paralyze',
-    GPS: 'Brak fixa GPS',
-    RESCUE_SW: 'Przełącznik GPS Rescue jest włączony',
-    RPMFILTER: 'Filtr RPM włączony, ale brak telemetrii RPM z ESC',
-    REBOOT_REQD: 'Wymagany restart FC',
-    DSHOT_BBANG: 'Bidirectional DShot wymaga innego timera/protokołu',
-    NO_ACC_CAL: 'Brak kalibracji akcelerometru',
-    MOTOR_PROTO: 'Nieprawidłowy protokół silników',
-    ARMSWITCH: 'Przełącznik uzbrajania jest włączony (wyłącz i włącz ponownie)',
   },
   drawer: {
     title: 'Asystent',
@@ -453,4 +433,10 @@ export const pl: Dict = {
     cliNoReply: 'Brak odpowiedzi FC na: {cmd}',
     demoUnsupported: 'Demo: nieobsługiwana komenda MSP {cmd}',
   },
+  bfCore: plBfCore,
+  bfSetup: plBfSetup,
+  bfPorts: plBfPorts,
+  bfConfig: plBfConfig,
+  bfPower: plBfPower,
+  bfFailsafe: plBfFailsafe,
 };

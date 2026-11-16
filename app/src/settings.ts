@@ -12,10 +12,12 @@ export interface Settings {
   elrsVersion: string;
   /** Sprawdzaj aktualizacje przy starcie (tylko wersja desktop). */
   checkUpdates: boolean;
+  /** Send MSP_SET_ARMING_DISABLED while connected (like the Betaflight Configurator); released on disconnect. */
+  armingDisable: boolean;
 }
 
 const KEY = 'rotorlab.settings.v1';
-const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, elrsVersion: '', checkUpdates: true };
+const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, elrsVersion: '', checkUpdates: true, armingDisable: true };
 
 export class SettingsStore {
   private s: Settings = { ...DEFAULTS };

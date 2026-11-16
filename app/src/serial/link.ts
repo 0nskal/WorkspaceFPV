@@ -36,8 +36,13 @@ export class SerialLink implements FcLink {
     return new SerialLink(await SerialTransport.reopen(identity));
   }
 
-  request(cmd: number, payload?: Uint8Array, timeoutMs?: number): Promise<Uint8Array> {
-    return this.msp.request(cmd, payload, timeoutMs);
+  request(cmd: number, payload?: Uint8Array, timeoutMs?: number, attempts?: number): Promise<Uint8Array> {
+    return this.msp.request(cmd, payload, timeoutMs, attempts);
+  }
+
+  expectReboot(kind: 'reconnect' | 'leave'): void {
+    if (kind === 'leave') this.userClosed = true; // reported as a plain close: no reconnect attempt
+    else this.rebootExpected = true;
   }
 
   async cli(commands: string[], options?: CliOptions): Promise<CliResult> {

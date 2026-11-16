@@ -9,6 +9,8 @@ export interface ConfirmOptions {
   cancelText?: string;
   /** Czerwony przycisk potwierdzenia (operacje ryzykowne). */
   danger?: boolean;
+  /** The confirm button stays disabled until the user types exactly this text (destructive actions). */
+  requireText?: string;
 }
 
 /** Okno potwierdzenia w stylu "karty pacjenta". Zwraca true po potwierdzeniu. */
@@ -26,6 +28,19 @@ export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
     const body = overlay.querySelector('.modal-b') as HTMLElement;
     if (typeof opts.body === 'string') body.innerHTML = opts.body;
     else body.appendChild(opts.body);
+
+    if (opts.requireText) {
+      const ok = overlay.querySelector<HTMLButtonElement>('[data-act="ok"]') as HTMLButtonElement;
+      ok.disabled = true;
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'modal-req mono';
+      inp.autocomplete = 'off';
+      inp.setAttribute('aria-label', opts.requireText);
+      inp.placeholder = opts.requireText;
+      inp.addEventListener('input', () => (ok.disabled = inp.value.trim() !== opts.requireText));
+      body.appendChild(inp);
+    }
 
     const done = (v: boolean) => {
       document.removeEventListener('keydown', onKey);

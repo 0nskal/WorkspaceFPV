@@ -1,4 +1,5 @@
 import { MSP } from './msp';
+import { DemoBf } from './demo-bf';
 import { sleep } from './port';
 import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink } from './types';
 import { t as tr } from '../i18n';
@@ -33,12 +34,15 @@ export class DemoLink implements FcLink {
   busy = false;
   private cfg: DemoConfig = { protocol: 6, bidir: false, pidDenom: 1, poles: 14 };
   private t0 = Date.now();
+  private bf = new DemoBf(() => this.cfg);
   private closeCbs = new Set<(r: CloseReason) => void>();
 
   async request(cmd: number, payload?: Uint8Array): Promise<Uint8Array> {
     await sleep(4); // opoznienie "linii"
     if (this.busy) throw new Error(tr('serial.mspSuspended'));
     const t = (Date.now() - this.t0) / 1000;
+    const bfReply = this.bf.handle(cmd, payload, t); // Betaflight core tabs (serial/demo-bf.ts)
+    if (bfReply) return bfReply;
     switch (cmd) {
       case MSP.API_VERSION:
         return bytes(0, 1, 46);
@@ -46,28 +50,6 @@ export class DemoLink implements FcLink {
         return str('BTFL');
       case MSP.FC_VERSION:
         return bytes(4, 5, 1);
-      case MSP.BOARD_INFO: {
-        const tail = [...lenStr('SPEEDYBEEF405V4'), ...lenStr('SPEEDYBEEF405V4'), ...lenStr('SPBE')];
-        return Uint8Array.from([...str('S405'), 0, 0, 0, 0, ...tail, ...new Array<number>(32).fill(0), 4]);
-      }
-      case MSP.RX_CONFIG:
-        return bytes(9, 0, 0, 0, 0, 0, 0, 0, 0); // serialrx_provider = 9 (CRSF)
-      case MSP.NAME:
-        return str('5" Freestyle');
-      case MSP.STATUS:
-        return build((dv) => {
-          dv.setUint16(0, 125, true); // cycleTime us
-          dv.setUint16(2, 0, true); // i2c errors
-          dv.setUint16(4, 0b100011, true); // sensors: acc, baro?, gyro
-          dv.setUint32(6, 0, true); // flight mode flags (rozbrojony)
-          dv.setUint8(10, 0);
-          dv.setUint16(11, 14 + Math.round(Math.sin(t) * 2), true); // CPU
-          dv.setUint16(13, 125, true);
-          dv.setUint8(15, 4); // dlugosc rozszerzonych flag
-          dv.setUint8(20, 24); // liczba flag blokady
-          dv.setUint32(21, 0, true); // brak blokad
-          dv.setUint8(25, 0);
-        }, 26);
       case MSP.RAW_IMU:
         return build((dv) => {
           const g = (k: number) => Math.round(Math.sin(t * 2.3 + k) * 6 + Math.sin(t * 9 + k * 2) * 3);
@@ -95,27 +77,6 @@ export class DemoLink implements FcLink {
         }, 9);
       case MSP.PID:
         return Uint8Array.from([48, 82, 38, 52, 88, 42, 45, 90, 3, ...new Array<number>(21).fill(0)]);
-      case MSP.ADVANCED_CONFIG:
-        return build((dv) => {
-          dv.setUint8(0, 1);
-          dv.setUint8(1, this.cfg.pidDenom);
-          dv.setUint8(2, 0);
-          dv.setUint8(3, this.cfg.protocol);
-          dv.setUint16(4, 480, true);
-          dv.setUint16(6, 550, true);
-          dv.setUint8(8, 0);
-          dv.setUint8(9, this.cfg.bidir ? 1 : 0);
-        }, 10);
-      case MSP.MOTOR_CONFIG:
-        return build((dv) => {
-          dv.setUint16(0, 1070, true);
-          dv.setUint16(2, 2000, true);
-          dv.setUint16(4, 1000, true);
-          dv.setUint8(6, 4);
-          dv.setUint8(7, this.cfg.poles);
-          dv.setUint8(8, this.cfg.bidir ? 1 : 0);
-          dv.setUint8(9, 0);
-        }, 10);
       case MSP.SET_MOTOR:
         void payload;
         return new Uint8Array(0);
@@ -216,6 +177,9 @@ export class DemoLink implements FcLink {
       'set i_yaw = 90',
     ].join('\n');
   }
+
+  /** The demo never really reboots: saveSettings simulates it, so there is nothing to prepare. */
+  expectReboot(): void {}
 
   onClose(cb: (reason: CloseReason) => void): () => void {
     this.closeCbs.add(cb);

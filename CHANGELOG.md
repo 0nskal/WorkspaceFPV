@@ -2,9 +2,12 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
-## Unreleased
+## 0.4.0 – 2026-11-17
 
 - **AI providers.** The assistant no longer needs the paid Anthropic API. Choose in Settings → AI assistant: **Claude Code** (your own installed and logged-in CLI, desktop app only, counts toward your plan), **Google Gemini** (free API key, default model gemini-2.5-flash), **Local model (Ollama)** (model list from `/api/tags`) or the **Anthropic API** as before. Each card shows its status and a Test button; the chat shows which provider answered. In the desktop app the default is Claude Code when it is detected and no Anthropic key is set.
+- **Settings icon is a gear** now (it looked like a sun).
+- **Contribution rules.** The repository stays public, but changes come only as pull requests from forks, with screenshots of what changed (same model as the Burn project). Added CONTRIBUTING.md, a PR template, an issue template, SECURITY.md, CODEOWNERS and automatic checks for the PR title and screenshots. CI now also runs the tests (`npm test`).
+- README: WorkspaceFPV is described as a hobby project made to make our work in the FPV hobby easier.
 
 ## 0.3.0 – 2026-11-16
 
@@ -31,6 +34,13 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.4.0 – 2026-11-17
+
+- **Dostawcy AI.** Asystent nie wymaga już płatnego API Anthropic. Wybierz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko appka na Windows, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **API Anthropic** jak dotąd. Każda karta pokazuje status i przycisk Testuj; w czacie widać, który dostawca odpowiedział. W appce na Windows domyślnie wybierany jest Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+- **Ikona ustawień to zębatka** (wyglądała jak słońce).
+- **Zasady współpracy.** Repozytorium zostaje publiczne, ale zmiany przychodzą tylko jako pull requesty z forków, ze zrzutami ekranu zmian (jak w projekcie Burn). Dodane: CONTRIBUTING.md, szablon PR, szablon zgłoszenia błędu, SECURITY.md, CODEOWNERS oraz automatyczne sprawdzanie tytułu PR i zrzutów ekranu. CI uruchamia teraz także testy (`npm test`).
+- README: WorkspaceFPV opisany jako projekt hobbystyczny, który ma ułatwiać nam pracę w hobby FPV.
 
 ## 0.3.0 – 2026-11-16
 

@@ -16,6 +16,7 @@
     "dist:win": "npm run build:electron && electron-builder --win nsis --publish never",
     "preview": "vite preview --config vite.config.ts",
     "icons": "node scripts/make-icons.mjs",
+    "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit -p app/tsconfig.json && tsc --noEmit -p electron/tsconfig.json"
   },
   "dependencies": {

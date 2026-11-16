@@ -8,7 +8,7 @@ const CY = 272; // poziom srodka plyty na ekranie
 const CYAN = '#DCEFF8';
 const RED = '#FF4A2E';
 const OCC = '#0B151F'; // wypelnienie "zaslaniajace" (kolor tla)
-const SW = 3.2; // jedna grubosc linii (512 jednostek = 1.6 px przy 256 px)
+const SW = 2.9; // jedna grubosc linii (512 jednostek = 1.6 px przy 256 px)
 
 const f = (n) => (Math.round(n * 10) / 10).toString();
 const P = (x, y, z = 0, cy = CY, cx = 256) => [cx + (x - y) * C, cy + (x + y) * 0.5 - z];
@@ -82,7 +82,7 @@ function rotor() {
 
 // ---------------- plyta z siatka i linijka ----------------
 function plate() {
-  const H = 114, I = 104;
+  const H = 104, I = 95;
   let s = `<path d="${path(world(sq(H), 0))}"/>`;
   s += `<path d="${path(world(sq(I), 0))}" stroke-opacity=".55"/>`;
   let g = '';
@@ -175,7 +175,7 @@ function full() {
   <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#bg)"/>
   <rect x="9.5" y="9.5" width="493" height="493" rx="110.5" fill="none" stroke="${CYAN}" stroke-opacity=".1" stroke-width="3"/>
   <use href="#art" filter="url(#glow)" opacity=".28"/>
-  <g id="art" fill="none" stroke="${CYAN}" stroke-width="${SW}" stroke-linejoin="round" stroke-linecap="round">
+  <g id="art" transform="translate(256 256) scale(1.16) translate(-256 -254)" fill="none" stroke="${CYAN}" stroke-width="${SW}" stroke-linejoin="round" stroke-linecap="round">
     <g>${plate()}</g>
     <path d="${frameLow}" stroke-opacity=".45"/>
     <path d="${frameD}${holeSq}" fill="${OCC}" fill-opacity=".92" fill-rule="evenodd"/>
@@ -195,7 +195,7 @@ function full() {
 
 // ---------------- wariant maly (16/24/32 px) ----------------
 function small() {
-  const a = 81, rxD = 70, ryD = 40;
+  const a = 80, rxD = 80, ryD = 46;
   const mp = [[0, -a], [a * 1.732, 0], [0, a], [-a * 1.732, 0]].map(([x, y]) => [256 + x, 262 + y]);
   const arms = mp.map(([x, y]) => `M256 262L${f(x)} ${f(y)}`).join('');
   const discs = mp.map(([x, y]) => `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${rxD}" ry="${ryD}" fill="#0B151F"/><ellipse cx="${f(x)}" cy="${f(y)}" rx="${rxD}" ry="${ryD}" fill="${CYAN}" fill-opacity=".28"/>`).join('');

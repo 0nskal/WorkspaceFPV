@@ -1,5 +1,6 @@
 import { MSP } from './msp';
 import { sleep } from './port';
+import { demoCli, demoMsp } from './demo-motors';
 import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink } from './types';
 import { t as tr } from '../i18n';
 
@@ -39,6 +40,8 @@ export class DemoLink implements FcLink {
     await sleep(4); // opoznienie "linii"
     if (this.busy) throw new Error(tr('serial.mspSuspended'));
     const t = (Date.now() - this.t0) / 1000;
+    const own = demoMsp(cmd, payload, this.cfg, t); // Motors / Blackbox / OSD tabs (demo-motors.ts)
+    if (own) return own;
     switch (cmd) {
       case MSP.API_VERSION:
         return bytes(0, 1, 46);
@@ -137,7 +140,10 @@ export class DemoLink implements FcLink {
         await sleep(120);
         const entry: CliEntry = { command: cmd, output: '', error: false };
         const m = /^set\s+([a-z_0-9]+)\s*=\s*(\S+)$/i.exec(cmd);
-        if (/^diff(\s+all)?$/i.test(cmd)) {
+        const extra = /^(diff|set)(\s|$)/i.test(cmd) ? null : demoCli(cmd, this.cfg); // get / dump / status / version / help (demo-motors.ts)
+        if (extra !== null) {
+          entry.output = extra;
+        } else if (/^diff(\s+all)?$/i.test(cmd)) {
           entry.output = this.diffAll(this.cfg);
         } else if (m) {
           const [, name, raw] = m;

@@ -6,16 +6,8 @@ import { hasWebSerial } from '../serial/port';
 import { MSP } from '../serial/msp';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
-
-/** Protokoly do wyboru: nazwa w CLI i enum Betaflight. */
-const PROTOCOLS: Array<{ id: number; name: string; label: string }> = [
-  { id: 0, name: 'PWM', label: 'PWM' },
-  { id: 1, name: 'ONESHOT125', label: 'ONESHOT125' },
-  { id: 3, name: 'MULTISHOT', label: 'MULTISHOT' },
-  { id: 5, name: 'DSHOT150', label: 'DSHOT150' },
-  { id: 6, name: 'DSHOT300', label: 'DSHOT300' },
-  { id: 7, name: 'DSHOT600', label: 'DSHOT600' },
-];
+import { mountMotorConfig, type MotorCfgHandle } from './bf-motors-cfg';
+import { mountMotorTelemetry, type MotorTelHandle } from './bf-motors-tel';
 
 const SAFE_MAX = 30;
 const TICK_MS = 100;
@@ -84,6 +76,7 @@ function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string
       `<g transform="translate(${m.x} ${m.y})"><use href="#esc-motor"/></g>` +
       `<text x="${m.x}" y="${m.y + 5}" text-anchor="middle" class="esc-mid">M${m.n}</text>` +
       `<text x="${m.x}" y="${m.y + 48}" text-anchor="middle" class="esc-pct" data-pct="${m.n - 1}">--</text>` +
+      `<text x="${m.x}" y="${m.y + 66}" text-anchor="middle" class="esc-pct esc-rpm" data-rpm="${m.n - 1}"></text>` +
       `</g>`
     );
   }).join('');
@@ -136,17 +129,15 @@ function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let view: 'empty' | 'main' | '' = '';
   let propsOut = false;
-  let selProto = -1;
-  let selBidir = false;
-  let cfgKey = '';
   let droneKey = '';
+  let cfgHandle: MotorCfgHandle | null = null;
+  let telHandle: MotorTelHandle | null = null;
   // test silnikow
   let propsOff = false; // zawsze odznaczone przy wejsciu
   let unlock = false;
   const vals = [0, 0, 0, 0];
   let timer: ReturnType<typeof setInterval> | null = null;
   let inflight = false;
-  let applying = false;
 
   const q = <T extends Element = HTMLElement>(sel: string): T | null => el.querySelector<T>(sel);
   const maxPct = () => (unlock ? 100 : SAFE_MAX);
@@ -220,6 +211,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       const g = q<SVGGElement>(`g[data-m="${i}"]`);
       const p = pcts[i];
       if (txt) txt.textContent = p === null ? '--' : `${p}%`;
+      const rpmTxt = q<SVGTextElement>(`[data-rpm="${i}"]`);
+      const tel = telHandle?.latest()[i];
+      if (rpmTxt) rpmTxt.textContent = tel && tel.rpm > 0 ? `${tel.rpm} rpm` : '';
       if (g) {
         const disc = g.querySelector<SVGElement>('.esc-disc');
         const hub = g.querySelector<SVGElement>('.esc-hub');
@@ -258,48 +252,6 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (un) un.disabled = !propsOff;
     const stop = q<HTMLButtonElement>('.esc-stop');
     if (stop) stop.classList.toggle('armed', propsOff && anyActive());
-  }
-
-  function paintProto(): void {
-    const s = ctx.state.get();
-    const cur = s.config?.motorPwmProtocol ?? -1;
-    const seg = q('.esc-seg');
-    if (seg) {
-      seg.innerHTML = PROTOCOLS.map((p) => {
-        const isCur = p.id === cur;
-        const isSel = p.id === selProto;
-        const tag = isCur ? t('esc.tagCurrent') : isSel ? t('esc.tagNew') : '';
-        return `<button type="button" class="esc-seg-b${isSel ? ' sel' : ''}${isCur && !isSel ? ' cur' : ''}" role="radio" aria-checked="${isSel}" data-proto="${p.id}"><span class="${isCur && !isSel ? 'strike' : ''}">${p.label}</span><small>${tag || '&nbsp;'}</small></button>`;
-      }).join('');
-    }
-    const sw = q<HTMLButtonElement>('.esc-sw');
-    const dshot = isDshot(selProto);
-    if (sw) {
-      sw.setAttribute('aria-checked', String(selBidir));
-      sw.classList.toggle('on', selBidir);
-      sw.disabled = !dshot;
-      const lbl = sw.querySelector('.esc-sw-t');
-      if (lbl) lbl.textContent = selBidir ? 'ON' : 'OFF';
-    }
-    const bnote = q('.esc-bidir-note');
-    if (bnote) bnote.hidden = dshot;
-    const cmds = changedCommands();
-    const save = q<HTMLButtonElement>('.esc-save');
-    if (save) save.disabled = cmds.length === 0 || applying || s.conn !== 'connected';
-    const cmdBox = q('.esc-cmds');
-    if (cmdBox) cmdBox.textContent = cmds.length ? cmds.join('\n') : t('esc.noChanges');
-  }
-
-  function changedCommands(): string[] {
-    const cfg = ctx.state.get().config;
-    if (!cfg) return [];
-    const cmds: string[] = [];
-    if (selProto !== cfg.motorPwmProtocol) {
-      const p = PROTOCOLS.find((x) => x.id === selProto);
-      if (p) cmds.push(`set motor_pwm_protocol = ${p.name}`);
-    }
-    if (selBidir !== cfg.bidir) cmds.push(`set dshot_bidir = ${selBidir ? 'ON' : 'OFF'}`);
-    return cmds;
   }
 
   function paintDrone(): void {
@@ -354,7 +306,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       </div>`;
     view = 'empty';
     droneKey = '';
-    cfgKey = '';
+    destroyBf();
   }
 
   function buildMain(): void {
@@ -362,9 +314,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     unlock = false;
     vals.fill(0);
     droneKey = '';
-    cfgKey = '';
-    const diff = ctx.state.get().diff ?? '';
-    propsOut = /set\s+yaw_motors_reversed\s*=\s*ON/i.test(diff);
+    destroyBf();
+    propsOut = false; // set from MSP_MIXER_CONFIG by the motor configuration panel
     const rows = [0, 1, 2, 3]
       .map(
         (i) =>
@@ -375,6 +326,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       <div class="esc">
         <div class="esc-left">
           <div class="esc-art"></div>
+          <div class="bf-motors-tel"></div>
           <div class="esc-info">
             <div><small class="mono">${t('esc.infoView')}</small><b>${t('esc.infoViewVal')}</b></div>
             <div><small class="mono">${t('esc.infoProps')}</small>
@@ -383,18 +335,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           </div>
         </div>
         <div class="esc-side">
-          <section class="esc-panel">
-            <header><span class="mono">${t('esc.protoHead')}</span><span class="mono esc-key">motor_pwm_protocol</span></header>
-            <div class="esc-seg" role="radiogroup" aria-label="${t('esc.protoAria')}"></div>
-            <div class="esc-bidir">
-              <div><b>${t('esc.bidirTitle')}</b><small class="mono">dshot_bidir</small></div>
-              <button type="button" class="esc-sw" role="switch" aria-checked="false" aria-label="${t('esc.bidirAria')}"><span class="esc-sw-t mono">OFF</span><i></i></button>
-            </div>
-            <p class="esc-note mono">${t('esc.bidirNote')}</p>
-            <p class="esc-note esc-bidir-note mono" hidden>${t('esc.bidirDshotOnly')}</p>
-            <pre class="esc-cmds mono"></pre>
-            <div class="esc-actions"><button type="button" class="btn light esc-save">${icon('check', 16)}${t('esc.save')}</button></div>
-          </section>
+          <section class="esc-panel bf-motors-cfg"></section>
           <section class="esc-panel">
             <header><span class="mono">${t('esc.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
             <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>${t('esc.propsOff')}</span></label>
@@ -409,19 +350,29 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       </div>`;
     view = 'main';
     paintTest();
+    // MSP-based motor configuration (protocol, bidir, idle, poles, direction) and live ESC telemetry
+    const cfgHost = q('.bf-motors-cfg');
+    const telHost = q('.bf-motors-tel');
+    if (cfgHost)
+      cfgHandle = mountMotorConfig(cfgHost, ctx, {
+        onReversed: (v) => {
+          propsOut = v;
+          paintPropsToggle();
+          paintDrone();
+        },
+        stopTest,
+      });
+    if (telHost) telHandle = mountMotorTelemetry(telHost, ctx, () => paintMotors());
+  }
+
+  function destroyBf(): void {
+    cfgHandle?.destroy();
+    telHandle?.destroy();
+    cfgHandle = null;
+    telHandle = null;
   }
 
   function sync(): void {
-    const cfg = ctx.state.get().config;
-    const key = cfg ? `${cfg.motorPwmProtocol}|${cfg.bidir}` : '';
-    if (key !== cfgKey) {
-      cfgKey = key;
-      if (cfg) {
-        selProto = cfg.motorPwmProtocol;
-        selBidir = cfg.bidir;
-      }
-    }
-    paintProto();
     paintDrone();
     paintPropsToggle();
     paintOverlay();
@@ -450,44 +401,15 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const act = tg.closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'connect') return void ctx.connect();
     if (act === 'demo') return void ctx.connectDemo();
-    const proto = tg.closest<HTMLElement>('[data-proto]');
-    if (proto) {
-      selProto = Number(proto.dataset.proto);
-      if (!isDshot(selProto)) selBidir = false;
-      paintProto();
-      return;
-    }
     const pv = tg.closest<HTMLElement>('[data-props]');
     if (pv) {
       propsOut = pv.dataset.props === 'out';
+      cfgHandle?.setReversed(propsOut); // the real setting (yaw_motors_reversed) is a pending edit saved from the config panel
       paintPropsToggle();
       paintDrone();
       return;
     }
-    if (tg.closest('.esc-sw')) {
-      if (isDshot(selProto)) {
-        selBidir = !selBidir;
-        paintProto();
-      }
-      return;
-    }
     if (tg.closest('.esc-stop')) return stopTest();
-    if (tg.closest('.esc-save')) {
-      const cmds = changedCommands();
-      if (!cmds.length || applying) return;
-      stopTest();
-      applying = true;
-      paintProto();
-      void ctx
-        .applyCommands(cmds, { title: t('esc.saveTitle') })
-        .catch(() => false)
-        .finally(() => {
-          applying = false;
-          // po udanym zapisie FC sie restartuje i konfiguracja wczyta sie na nowo; przy anulowaniu zostaje wybor
-          cfgKey = '';
-          sync();
-        });
-    }
   });
 
   el.addEventListener('change', (e) => {
@@ -544,6 +466,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   return () => {
     stopTest();
+    destroyBf();
     off();
     offT();
     window.removeEventListener('keydown', onKey, true);

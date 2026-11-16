@@ -7,6 +7,9 @@ import type { ScreenMount } from '../context';
 import type { Key } from '../i18n';
 import type { IconName } from '../ui/icons';
 import * as autotune from './autotune';
+import * as bfBlackbox from './bf-blackbox';
+import * as bfCli from './bf-cli';
+import * as bfOsd from './bf-osd';
 import * as elrs from './elrs';
 import * as esc from './esc';
 import * as ustawienia from './ustawienia';
@@ -28,6 +31,9 @@ export const SCREENS: ScreenDef[] = [
   { id: 'warsztat', titleKey: 'tabs.warsztat', icon: 'chip', mount: warsztat.mount, requiresConnection: false },
   { id: 'esc', titleKey: 'tabs.esc', icon: 'plug', mount: esc.mount, requiresConnection: true },
   { id: 'autotune', titleKey: 'tabs.autotune', icon: 'sliders', mount: autotune.mount, requiresConnection: false },
+  { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'download', mount: bfBlackbox.mount, requiresConnection: true },
+  { id: 'osd', titleKey: 'bfOsd.tab', icon: 'panel', mount: bfOsd.mount, requiresConnection: true },
+  { id: 'cli', titleKey: 'bfCli.tab', icon: 'play', mount: bfCli.mount, requiresConnection: true },
   { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false },
   { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false },
 ];

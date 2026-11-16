@@ -4,6 +4,10 @@
  * Strings may contain {name} placeholders (see t()) and, where noted, trusted HTML.
  * Plural entries use { one, few, many } (English only needs one + many, `few` repeats `many`).
  */
+import { enBfMotors } from './en/motors';
+import { enBfBlackbox } from './en/blackbox';
+import { enBfCli } from './en/cli';
+import { enBfOsd } from './en/osd';
 export const en = {
   lang: {
     en: 'English',
@@ -314,17 +318,17 @@ export const en = {
   at: {
     film: 'ROTORLAB · PID AUTOTUNE',
     dropTitle: 'Blackbox log analysis',
-    dropLead: 'Drop a <span class="mono">.csv</span> file from blackbox_decode or Blackbox Explorer here. Rotorlab computes the gyro noise spectrum and the PID step response, then suggests changes.',
-    pick: 'Choose CSV file',
+    dropLead: 'Drop a <span class="mono">.bbl</span> log (read natively) or a <span class="mono">.csv</span> from Blackbox Explorer here. Rotorlab computes the gyro noise spectrum and the PID step response, then suggests changes.',
+    pick: 'Choose log file',
     pickOther: 'Choose another file',
     sample: 'Load sample log',
-    how: 'No CSV? In Blackbox Explorer use File → Export CSV. Or in a terminal: <span class="at-code">blackbox_decode LOG.BBL</span>',
+    how: 'No log yet? Download one in the Blackbox tab. A .bbl that cannot be read: in Blackbox Explorer use File → Export CSV. Or in a terminal: <span class="at-code">blackbox_decode LOG.BBL</span>',
     busyNote: 'Computing in the background, the interface stays responsive.',
     analysing: 'Analysing {name}…',
     generating: 'Generating a sample log…',
     sampleName: 'sample log (synthetic)',
     binaryTitle: 'This is a binary blackbox log',
-    binaryLead: '<span class="mono">{name}</span> is not a CSV file. Version 0.1 reads CSV only. Export the log in one of these ways:',
+    binaryLead: '<span class="mono">{name}</span> could not be read as a Blackbox log or CSV. Export the log in one of these ways:',
     binaryStep1: '<b>Blackbox Explorer:</b> open the .bbl/.bfl file, then <span class="mono">File → Export CSV</span>.',
     binaryStep2: '<b>blackbox_decode</b> (from blackbox-tools): <span class="at-code">blackbox_decode LOG.BBL</span> creates <span class="mono">LOG.01.csv</span>.',
     errorTitle: 'Could not load the log',
@@ -462,6 +466,10 @@ export const en = {
     cliNoReply: 'No reply from the FC to: {cmd}',
     demoUnsupported: 'Demo: unsupported MSP command {cmd}',
   },
+  bfMotors: enBfMotors,
+  bfBlackbox: enBfBlackbox,
+  bfCli: enBfCli,
+  bfOsd: enBfOsd,
 };
 
 export type Dict = typeof en;

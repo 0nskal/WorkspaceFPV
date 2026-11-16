@@ -10,3 +10,4 @@ site/app/
 *.log
 .env
 .env.*
+.claude/

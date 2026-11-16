@@ -59,7 +59,7 @@ export const mount: ScreenMount = (el, ctx) => {
         <p class="upd-ver">Wersja: <b class="mono" data-upd="ver">${escapeHtml(APP_VERSION)}</b></p>
         ${
           upd
-            ? `<label class="chk"><input type="checkbox" name="checkUpdates" ${s.checkUpdates ? 'checked' : ''} /><span>Sprawdzaj przy starcie</span></label>
+            ? `<label class="upd-chk"><input type="checkbox" name="checkUpdates" ${s.checkUpdates ? 'checked' : ''} /><span>Sprawdzaj przy starcie</span></label>
         <div class="upd-bar" data-upd="bar" hidden><div class="upd-fill" data-upd="fill"></div></div>
         <p class="upd-msg" data-upd="msg" aria-live="polite">Nie sprawdzano w tej sesji.</p>
         <div class="field-row actions">

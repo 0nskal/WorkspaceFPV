@@ -883,7 +883,7 @@ svg.ck.info {
   font-size: 14px;
   margin-bottom: 14px;
 }
-.chk {
+.upd-chk {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -891,7 +891,7 @@ svg.ck.info {
   font-size: 14px;
   font-weight: 600;
 }
-.chk input {
+.upd-chk input {
   width: 18px;
   height: 18px;
   accent-color: var(--dark);

@@ -1,5 +1,7 @@
 import type { AppContext, ScreenMount } from '../context';
+import { hwInfo, type HwJob } from '../bf/hw-info';
 import { readRxConfig } from '../fc/read';
+import { jobText } from './bf-esc-info';
 import { rssiPct } from '../fc/state';
 import type { FcLink } from '../serial/types';
 import { escapeHtml } from '../ui/dom';
@@ -25,7 +27,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const dataEl = el.querySelector<HTMLElement>('.elrs-data') as HTMLElement;
   const card = el.querySelector<HTMLElement>('.elrs-card') as HTMLElement;
 
-  const rxVersion = () => (ctx.settings.get().elrsVersion || ctx.state.get().meta.elrsVersion || '').trim();
+  /** The receiver version is only ever read from the receiver (state.hw.elrs); nothing is typed in. */
+  const rxVersion = () => ctx.state.get().hw.elrs?.version ?? '';
+  const hw = hwInfo();
   const connected = () => ctx.state.get().conn === 'connected';
 
   function update(patch: Partial<ElrsLocal>): void {
@@ -75,7 +79,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const rssi = s.telemetry ? `${rssiPct(s.telemetry.rssi)}%` : '—';
     const rows: Array<[string, string]> = [
       [t('elrs.rowProtocol'), connected() ? (prov ? `${escapeHtml(prov.text)}${prov.elrs ? '' : ` <small>${t('elrs.usuallyCrsf')}</small>`}` : dash) : dash],
-      [t('elrs.rowRx'), rx ? escapeHtml(rx) : na('elrs.notGiven')],
+      [t('elrs.rowRx'), rx ? escapeHtml(rx) : `<span class="elrs-na">${t('bfInfo.elrs.notRead')}</span>`],
       [t('elrs.rowTx'), tx ? escapeHtml(tx) : na('elrs.notGiven')],
       [t('elrs.rowRssi'), `<span data-live="rssi">${rssi}</span>`],
       [t('elrs.rowRegion'), local.region ? (local.region === 'LBT' ? 'LBT (EU)' : 'FCC') : na('elrs.notChosen')],
@@ -90,6 +94,27 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (st === 'done') return `<span class="elrs-mk done">${icon('check', 14)}</span>`;
     if (st === 'warn') return `<span class="elrs-mk warn">${icon('alert', 13)}</span>`;
     return `<span class="elrs-mk${current ? ' cur' : ''}">${i + 1}</span>`;
+  }
+
+  /** Step 1 body: the receiver version read from the hardware (button, status) plus the optional transmitter version. */
+  function step1Body(rx: string): string {
+    const job: HwJob = hw?.elrs ?? { phase: 'idle' };
+    const busy = job.phase === 'checking' || job.phase === 'running' || job.phase === 'reconnecting';
+    const info = ctx.state.get().hw.elrs;
+    const cls = busy ? 'run' : job.phase === 'error' ? 'err' : job.phase === 'blocked' ? 'warn' : '';
+    let status = busy || job.phase === 'blocked' || job.phase === 'error' ? jobText(job) : '';
+    const rc = hw?.reconnectLine();
+    if (rc && ctx.state.get().conn === 'reconnecting') status = rc;
+    const canRead = connected() && !!hw && !busy;
+    const showHow = job.phase === 'blocked' && ['noUart', 'noAnswer', 'noAnswerSeen', 'notCrsf'].includes(job.reason ?? '');
+    return `<div class="bf-elrs-read">
+        <div class="bf-elrs-ver"><span class="mono">${t('bfInfo.elrs.head')}</span><b>${rx ? 'ELRS ' + escapeHtml(rx) : `<span class="elrs-na">${t('bfInfo.elrs.notRead')}</span>`}</b>${info ? `<small class="mono">${escapeHtml(t('bfInfo.elrs.deviceName', { name: info.name }))}</small>` : ''}</div>
+        <div class="bf-elrs-act"><button class="btn s" type="button" data-act="read-elrs" ${canRead ? '' : 'disabled'}>${busy ? t('bfInfo.elrs.reading') : rx ? t('bfInfo.elrs.rereadBtn') : t('bfInfo.elrs.readBtn')}</button></div>
+        ${status ? `<p class="bf-elrs-st mono ${cls}" role="status" aria-live="polite">${escapeHtml(status)}</p>` : `<p class="bf-elrs-st mono">${connected() ? t('bfInfo.elrs.readLead') : t('bfInfo.elrs.needsConn')}</p>`}
+        ${showHow ? `<div class="bf-elrs-how"><b class="mono">${t('bfInfo.elrs.howHead')}</b><ol>${t('bfInfo.elrs.how')}</ol></div>` : ''}
+      </div>
+      <label class="bf-elrs-tx"><span class="mono">${t('bfInfo.elrs.txLabel')}</span><input type="text" name="tx" value="${escapeHtml(local.txVersion)}" placeholder="${t('elrs.s1ph2')}" autocomplete="off" spellcheck="false"/></label>
+      <small class="bf-elrs-txhint">${t('bfInfo.elrs.txHint')}</small>`;
   }
 
   function renderCard(): void {
@@ -113,7 +138,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         t: t('elrs.s1'),
         sub: c.text,
         subCls: c.kind,
-        body: `<div class="elrs-pair"><label><span class="mono">${t('elrs.lblRx')}</span><input type="text" name="rx" value="${escapeHtml(rx)}" placeholder="${t('elrs.s1ph')}" autocomplete="off" spellcheck="false"/></label><label><span class="mono">${t('elrs.lblTx')}</span><input type="text" name="tx" value="${escapeHtml(local.txVersion)}" placeholder="${t('elrs.s1ph2')}" autocomplete="off" spellcheck="false"/></label></div>`,
+        body: step1Body(rx),
       },
       { t: t('elrs.s2'), sub: t('elrs.s2sub'), body: chk('phrase', local.phrase, t('elrs.s2chk')) },
       {
@@ -200,14 +225,14 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       else if (name === 'method') update({ method: (local.method === val ? '' : val) as Method });
       return;
     }
-    if (t.closest('[data-act="ai"]')) askAi();
+    if (t.closest('[data-act="read-elrs"]')) void hw?.runElrs('manual');
+    else if (t.closest('[data-act="ai"]')) askAi();
   });
   card.addEventListener('change', (e) => {
     const inp = e.target as HTMLInputElement;
     if (inp.name === 'phrase') update({ phrase: inp.checked });
     else if (inp.name === 'verified') update({ verified: inp.checked });
     else if (inp.name === 'tx') update({ txVersion: inp.value.trim() });
-    else if (inp.name === 'rx') ctx.settings.set({ elrsVersion: inp.value.trim() });
   });
 
   const offState = ctx.state.subscribe(() => {
@@ -215,6 +240,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     render();
   });
   const offSettings = ctx.settings.subscribe(render);
+  const offHw = hw?.subscribe(render);
   const offTel = ctx.state.subscribeTelemetry(() => {
     const t = ctx.state.get().telemetry;
     const txt = t ? `${rssiPct(t.rssi)}%` : '—';
@@ -230,6 +256,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     disposed = true;
     offState();
     offSettings();
+    offHw?.();
     offTel();
   };
 };

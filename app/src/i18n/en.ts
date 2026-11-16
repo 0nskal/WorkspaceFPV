@@ -4,6 +4,21 @@
  * Strings may contain {name} placeholders (see t()) and, where noted, trusted HTML.
  * Plural entries use { one, few, many } (English only needs one + many, `few` repeats `many`).
  */
+import { enBfConfig } from './en/bfConfig';
+import { enBfCore } from './en/bfCore';
+import { enBfFailsafe } from './en/bfFailsafe';
+import { enBfPorts } from './en/bfPorts';
+import { enBfPower } from './en/bfPower';
+import { enBfSetup } from './en/bfSetup';
+import { enBfInfo } from './en/esc-elrs';
+import { enBfTuning } from './en/tuning';
+import { enBfReceiver } from './en/receiver';
+import { enBfModes } from './en/modes';
+
+import { enBfMotors } from './en/motors';
+import { enBfBlackbox } from './en/blackbox';
+import { enBfCli } from './en/cli';
+import { enBfOsd } from './en/osd';
 export const en = {
   lang: {
     en: 'English',
@@ -38,7 +53,7 @@ export const en = {
   },
   tabs: {
     warsztat: 'Workshop',
-    esc: 'ESC',
+    esc: 'Motors',
     autotune: 'PID Autotune',
     elrs: 'ELRS',
     ustawienia: 'Settings',
@@ -75,7 +90,7 @@ export const en = {
   },
   updateToast: 'Version {version} is available. Settings → Updates',
   parts: {
-    esc: 'ESC',
+    esc: 'Motors',
     rx: 'Receiver',
     fc: 'FC',
     motors: 'Motors',
@@ -137,32 +152,6 @@ export const en = {
     i2cDetail: 'Check the barometer/magnetometer connections.',
     summaryOk: 'The rules found no problems.',
     summaryProblems: 'The rules found problems: {n}. The biggest one concerns: {part}.',
-  },
-  arm: {
-    NOGYRO: 'No gyro detected',
-    FAILSAFE: 'Failsafe is active',
-    RXLOSS: 'No signal from the receiver',
-    BADRX: 'The receiver is sending bad data',
-    BOXFAILSAFE: 'The failsafe switch is on',
-    THROTTLE: 'Throttle is not at minimum',
-    ANGLE: 'The drone is tilted too far',
-    BOOTGRACE: 'Boot grace time is running (wait a moment)',
-    NOPREARM: 'The prearm switch is required',
-    LOAD: 'CPU load is too high',
-    CALIB: 'Sensor calibration in progress',
-    CLI: 'CLI mode is active',
-    CMS: 'The OSD menu (CMS) is open',
-    BST: 'BST is active (Black Box / telemetry)',
-    MSP: 'A tool is connected over MSP',
-    PARALYZE: 'Paralyze mode',
-    GPS: 'No GPS fix',
-    RESCUE_SW: 'The GPS Rescue switch is on',
-    RPMFILTER: 'RPM filter is on, but there is no RPM telemetry from the ESC',
-    REBOOT_REQD: 'An FC reboot is required',
-    DSHOT_BBANG: 'Bidirectional DShot needs a different timer/protocol',
-    NO_ACC_CAL: 'Accelerometer is not calibrated',
-    MOTOR_PROTO: 'Invalid motor protocol',
-    ARMSWITCH: 'The arm switch is on (turn it off and on again)',
   },
   drawer: {
     title: 'Assistant',
@@ -263,10 +252,7 @@ export const en = {
     off: 'No connection to the FC. The receiver protocol and signal show up after you connect.',
     headTitle: 'ELRS UPDATE',
     s1: 'Major version match, TX and RX',
-    s1ph: 'e.g. 3.4.3',
     s1ph2: 'e.g. 3.5.1',
-    lblRx: 'Receiver',
-    lblTx: 'Transmitter',
     s2: 'Binding phrase saved',
     s2sub: 'without it you cannot rebind the transmitter and receiver after flashing',
     s2chk: 'I have the binding phrase written down outside the receiver',
@@ -314,17 +300,17 @@ export const en = {
   at: {
     film: 'ROTORLAB · PID AUTOTUNE',
     dropTitle: 'Blackbox log analysis',
-    dropLead: 'Drop a <span class="mono">.csv</span> file from blackbox_decode or Blackbox Explorer here. Rotorlab computes the gyro noise spectrum and the PID step response, then suggests changes.',
-    pick: 'Choose CSV file',
+    dropLead: 'Drop a <span class="mono">.bbl</span> log (read natively) or a <span class="mono">.csv</span> from Blackbox Explorer here. Rotorlab computes the gyro noise spectrum and the PID step response, then suggests changes.',
+    pick: 'Choose log file',
     pickOther: 'Choose another file',
     sample: 'Load sample log',
-    how: 'No CSV? In Blackbox Explorer use File → Export CSV. Or in a terminal: <span class="at-code">blackbox_decode LOG.BBL</span>',
+    how: 'No log yet? Download one in the Blackbox tab. A .bbl that cannot be read: in Blackbox Explorer use File → Export CSV. Or in a terminal: <span class="at-code">blackbox_decode LOG.BBL</span>',
     busyNote: 'Computing in the background, the interface stays responsive.',
     analysing: 'Analysing {name}…',
     generating: 'Generating a sample log…',
     sampleName: 'sample log (synthetic)',
     binaryTitle: 'This is a binary blackbox log',
-    binaryLead: '<span class="mono">{name}</span> is not a CSV file. Version 0.1 reads CSV only. Export the log in one of these ways:',
+    binaryLead: '<span class="mono">{name}</span> could not be read as a Blackbox log or CSV. Export the log in one of these ways:',
     binaryStep1: '<b>Blackbox Explorer:</b> open the .bbl/.bfl file, then <span class="mono">File → Export CSV</span>.',
     binaryStep2: '<b>blackbox_decode</b> (from blackbox-tools): <span class="at-code">blackbox_decode LOG.BBL</span> creates <span class="mono">LOG.01.csv</span>.',
     errorTitle: 'Could not load the log',
@@ -417,10 +403,6 @@ export const en = {
     saved: 'Saved.',
     keyRemoved: 'Key removed.',
     chatCleared: 'Conversation cleared.',
-    elrsHead: 'ELRS version (entered manually)',
-    elrsField: 'Receiver firmware version',
-    elrsPh: 'e.g. 3.4.3',
-    elrsNote: 'The FC does not know the ELRS version. What you enter here appears on the drone layout.',
     dataHead: 'Data and demo',
     demo: 'Demo mode',
     backup: 'Download settings backup',
@@ -462,6 +444,21 @@ export const en = {
     cliNoReply: 'No reply from the FC to: {cmd}',
     demoUnsupported: 'Demo: unsupported MSP command {cmd}',
   },
+  bfCore: enBfCore,
+  bfSetup: enBfSetup,
+  bfPorts: enBfPorts,
+  bfConfig: enBfConfig,
+  bfPower: enBfPower,
+  bfFailsafe: enBfFailsafe,
+  bfInfo: enBfInfo,
+  bfTuning: enBfTuning,
+  bfReceiver: enBfReceiver,
+  bfModes: enBfModes,
+  bfMotors: enBfMotors,
+  bfBlackbox: enBfBlackbox,
+  bfCli: enBfCli,
+  bfOsd: enBfOsd,
 };
 
 export type Dict = typeof en;
+// (Betaflight tab dictionaries live in ./en/bf*.ts and are attached at the end of `en`.)

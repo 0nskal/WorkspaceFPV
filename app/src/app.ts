@@ -1,8 +1,10 @@
 import { Assistant } from './ai/assistant';
 import { buildContext } from './ai/prompts';
 import type { AppContext, ApplyOptions, Route } from './context';
+import { initHwInfo } from './bf/hw-info';
+import { ALL_AREAS, BfSession } from './bf/store';
 import { diagnose } from './fc/diagnose';
-import { readAll, startTelemetry } from './fc/read';
+import { deriveCore, readAll, startTelemetry, statusFromEx } from './fc/read';
 import { FcStore, rssiPct, type FcState } from './fc/state';
 import { BLOCKED_CLI } from './serial/cli';
 import { DemoLink } from './serial/demo';
@@ -30,17 +32,45 @@ export function createApp(root: HTMLElement): AppContext {
   let identity: { usbVendorId?: number; usbProductId?: number } | null = null;
   let drawerOpen = true;
 
+  /** Betaflight configuration store + session (ctx.bf); the shared FcState core is derived from it. */
+  const bf = new BfSession({
+    link: () => link,
+    watchReconnect: (ms) =>
+      new Promise<boolean>((resolve) => {
+        // Starts watching immediately: the connection drops (reboot) and must come back to 'connected'.
+        let dropped = false;
+        const done = (v: boolean) => {
+          off();
+          clearTimeout(to);
+          resolve(v);
+        };
+        const off = store.subscribe(() => {
+          const c = store.get().conn;
+          if (c !== 'connected') dropped = true;
+          else if (dropped) done(true);
+        });
+        const to = setTimeout(() => done(false), ms);
+      }),
+  });
+  let coreKey = '';
+  /** Keeps FcState.info/config/status in step with the Betaflight store (after saves, refreshes and status polls). */
+  function syncCore(): void {
+    if (!bf.store.isReady() || store.get().conn === 'disconnected') return;
+    const d = bf.get();
+    const { info, config } = deriveCore(d);
+    const key = JSON.stringify([info, config]);
+    if (key === coreKey) return;
+    coreKey = key;
+    store.patch({ info, config, status: d.status ? statusFromEx(d.status) : store.get().status });
+  }
+  bf.subscribe(syncCore);
+
   const ai = new Assistant(
     () => ({ apiKey: settings.get().apiKey, model: settings.get().model, lang: getLang() }),
-    () => buildContext(store.get(), store.get().conn === 'connected' ? diagnose(store.get()) : null),
+    () => buildContext(store.get(), store.get().conn === 'connected' ? diagnose(store.get(), bf.get()) : null, bf.get()),
   );
 
   /* ---------------- polaczenie ---------------- */
-
-  const mergeMeta = (mode: 'serial' | 'demo' | null): FcState['meta'] => {
-    const v = settings.get().elrsVersion.trim();
-    return { elrsVersion: v || (mode === 'demo' ? '3.4.3' : undefined) };
-  };
 
   async function attach(l: FcLink): Promise<void> {
     stopTelemetry?.();
@@ -49,13 +79,17 @@ export function createApp(root: HTMLElement): AppContext {
     l.onClose((reason) => void handleClose(l, reason));
     store.patch({ conn: 'connecting', mode: l.kind, error: null });
     try {
-      const data = await readAll(l);
-      store.patch({ ...data, conn: 'connected', mode: l.kind, meta: mergeMeta(l.kind), error: null });
-      stopTelemetry = startTelemetry(l, store);
+      const data = await readAll(l, bf);
+      coreKey = JSON.stringify([data.info, data.config]);
+      store.patch({ ...data, conn: 'connected', mode: l.kind, error: null });
+      // Same safety as the Configurator: no arming while a tool is connected (released on disconnect).
+      if (settings.get().armingDisable && bf.get().supported) void bf.setArmingDisabled(true);
+      stopTelemetry = startTelemetry(l, store, bf);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       await l.close().catch(() => undefined);
       link = null;
+      bf.reset();
       store.reset({ error: t('conn.readFail', { msg }) });
     }
   }
@@ -105,6 +139,7 @@ export function createApp(root: HTMLElement): AppContext {
     stopTelemetry?.();
     stopTelemetry = null;
     const l = link;
+    if (l && settings.get().armingDisable && bf.get().supported) await bf.setArmingDisabled(false); // release the interlock on a clean disconnect
     link = null;
     store.reset();
     await l?.close().catch(() => undefined);
@@ -113,9 +148,10 @@ export function createApp(root: HTMLElement): AppContext {
   async function refresh(): Promise<void> {
     if (!link) return;
     try {
-      store.patch(await readAll(link));
+      await bf.refresh(ALL_AREAS);
+      syncCore();
     } catch {
-      /* kolejne odczyty telemetrii naprawia stan */
+      /* the next telemetry reads repair the state */
     }
   }
 
@@ -224,7 +260,19 @@ export function createApp(root: HTMLElement): AppContext {
   let rssiEl!: HTMLElement;
   let gyroLine!: SVGPolylineElement;
 
-  /** (Re)builds the whole shell: top bar from the screen registry + empty screen area. Called on start and on language change. */
+  /** Second bar: every tab in registry order, a thin divider between groups (overview | FC setup | tuning | tools). */
+  function navHtml(): string {
+    let prev = '';
+    return SCREENS.filter((sc) => sc.nav !== false)
+      .map((sc) => {
+        const sep = prev && sc.group !== prev ? '<span class="nav-sep" aria-hidden="true"></span>' : '';
+        prev = sc.group;
+        return `${sep}<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`;
+      })
+      .join('');
+  }
+
+  /** (Re)builds the whole shell: top bar, tab bar from the screen registry, empty screen area. Called on start and on language change. */
   function buildShell(): void {
     root.innerHTML = `
     <header class="bar">
@@ -233,9 +281,6 @@ export function createApp(root: HTMLElement): AppContext {
       <div class="st"><i></i><span class="st-t">${t('shell.disconnected')}</span></div>
       <div class="sep dn-sep"></div>
       <div class="dn"></div>
-      <nav class="nav" aria-label="${t('shell.tabsAria')}">${SCREENS.filter((sc) => sc.nav !== false)
-        .map((sc) => `<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`)
-        .join('')}</nav>
       <div class="tel">
         <svg class="gyro" width="98" height="22" viewBox="0 0 98 22" aria-hidden="true"><polyline fill="none" stroke="#CFE6F2" stroke-width="1.1" points=""/></svg>
         <span class="rssi">RSSI <b>—</b></span>
@@ -243,6 +288,7 @@ export function createApp(root: HTMLElement): AppContext {
         <button class="ib" data-act="drawer" title="${t('shell.drawerToggle')}" aria-label="${t('shell.assistantAria')}">${icon('panel', 17)}</button>
       </div>
     </header>
+    <nav class="nav" aria-label="${t('shell.tabsAria')}">${navHtml()}</nav>
     <div class="body"><main class="screen" id="screen"></main></div>`;
     screenEl = root.querySelector<HTMLElement>('#screen') as HTMLElement;
     bodyEl = root.querySelector<HTMLElement>('.body') as HTMLElement;
@@ -262,7 +308,8 @@ export function createApp(root: HTMLElement): AppContext {
     settings,
     ai,
     link: () => link,
-    diagnosis: () => diagnose(store.get()),
+    bf,
+    diagnosis: () => diagnose(store.get(), bf.get()),
     route: () => current,
     navigate: (r) => {
       location.hash = r;
@@ -285,6 +332,8 @@ export function createApp(root: HTMLElement): AppContext {
     toast,
     confirm: confirmDialog,
   };
+
+  initHwInfo(ctx); // ESC info (4-way) + ELRS version (CRSF): preconditions, auto-run after connect, status
 
   let drawer: Drawer | null = null;
 
@@ -361,11 +410,11 @@ export function createApp(root: HTMLElement): AppContext {
     }
   });
 
+  store.subscribe(() => {
+    if (store.get().conn === 'disconnected') bf.reset();
+  });
   store.subscribe(renderBar);
   store.subscribeTelemetry(renderTelemetry);
-  settings.subscribe(() => {
-    store.patch({ meta: mergeMeta(store.get().mode) });
-  });
   window.addEventListener('hashchange', () => {
     const r = parseRoute();
     if (r !== current) {

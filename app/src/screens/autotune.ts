@@ -2,10 +2,12 @@ import type { AppContext, ScreenMount } from '../context';
 import { recommend, summarize, type AxisRec, type Pid3, type Recommendation } from '../analysis/recommend';
 import { RunError, runAnalysis } from '../analysis/run';
 import type { AnalysisResult } from '../analysis/types';
+import { takePendingLog } from '../bf/log-handoff';
 import { copyText, escapeHtml } from '../ui/dom';
 import { fmtNum, t, tn, type Key } from '../i18n';
 import { icon } from '../ui/icons';
 import { spectrumChart, stepChart } from './autotune-charts';
+import { publishSuggestion } from '../bf/autotune-link';
 
 /** PID z trybu demo (te same wartosci, co symulowany FC), gdy brak polaczenia. */
 const DEMO_PID: Pid3 = { roll: [48, 82, 38], pitch: [52, 88, 42], yaw: [45, 90, 3] };
@@ -34,10 +36,15 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   }
 
   function recs(): Recommendation | null {
-    if (!cache) return null;
+    if (!cache) {
+      publishSuggestion(null);
+      return null;
+    }
     const s = ctx.state.get();
     const bidir = s.config ? s.config.bidir : cache.sample ? false : null;
-    return recommend(cache.res, currentPid().pid, bidir);
+    const r = recommend(cache.res, currentPid().pid, bidir);
+    publishSuggestion(r.axes);
+    return r;
   }
 
   /* ---------- widoki ---------- */
@@ -248,6 +255,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   });
 
   render();
+  // a log downloaded in the Blackbox tab ("Analyse in Autotune") starts analysing right away
+  const handed = takePendingLog();
+  if (handed) pickFile(handed);
   // ?demo=1#autotune od razu pokazuje przykladowa analize
   if (!cache && new URLSearchParams(location.search).get('demo') === '1') void load({ kind: 'demo' }, t('at.generating'));
 

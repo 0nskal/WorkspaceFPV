@@ -1,3 +1,5 @@
+import { RX_PROVIDERS } from '../bf/decode';
+import type { BfData } from '../bf/store';
 import type { AppContext, ScreenMount } from '../context';
 import { partLabel, type Diagnosis } from '../fc/diagnose';
 import { boardDisplayName, firmwareName } from '../fc/board';
@@ -8,10 +10,12 @@ import { fmtDate, fmtNum, t } from '../i18n';
 import { ENTRY_Y, VIEW_H, VIEW_W, renderDrone, updateMotorBars, type XrayLabels } from '../ui/drone-xray';
 import { icon, logo } from '../ui/icons';
 
-function buildLabels(s: Readonly<FcState>, d: Diagnosis): XrayLabels {
+function buildLabels(s: Readonly<FcState>, d: Diagnosis, bf: Readonly<BfData>): XrayLabels {
   const tel = s.telemetry;
   const craft = (s.info?.craftName || t('common.drone')).toUpperCase();
-  const elrs = s.meta.elrsVersion;
+  const elrs = s.hw.elrs?.version;
+  const provider = bf.rx && bf.rx.serialRxProvider > 0 ? (RX_PROVIDERS[bf.rx.serialRxProvider] ?? '') : '';
+  const cellCount = bf.batteryState?.cells || s.cells;
   const rxProblem = d.checks.find((c) => c.part === 'rx' && (c.severity === 'fail' || c.severity === 'warn'));
   const focusCheck = d.focus ? d.checks.find((c) => c.part === d.focus && (c.severity === 'fail' || c.severity === 'warn')) : undefined;
   let hotText: string | undefined;
@@ -25,10 +29,10 @@ function buildLabels(s: Readonly<FcState>, d: Diagnosis): XrayLabels {
     filmTop: `ROTORLAB · ${craft} · ${fmtDate()}`,
     filmBottom: 'kV 60 · mAs 2',
     fcTitle: boardDisplayName(s.info),
-    fcSub: firmwareName(s.info),
-    rxTitle: elrs ? `ELRS ${elrs}` : tel ? t('xray.signal', { pct: rssiPct(tel.rssi) }) : t('xray.noData'),
+    fcSub: firmwareName(s.info) + (s.info ? ` · API ${s.info.apiVersion.major}.${s.info.apiVersion.minor}` : ''),
+    rxTitle: elrs ? `ELRS ${elrs}` : provider && tel ? `${provider} · ${rssiPct(tel.rssi)}%` : tel ? t('xray.signal', { pct: rssiPct(tel.rssi) }) : t('xray.noData'),
     rxSub: rxProblem?.label,
-    batteryText: tel ? (s.cells ? `${s.cells}S ${fmtNum(tel.vbat, 1)} V` : t('xray.usb', { v: fmtNum(tel.vbat, 1) })) : '—',
+    batteryText: tel ? (cellCount ? `${cellCount}S ${fmtNum(tel.vbat, 1)} V` : t('xray.usb', { v: fmtNum(tel.vbat, 1) })) : '—',
     motors: tel ? tel.motors.slice(0, 4).map(motorPct) : null,
     hotText,
   };
@@ -50,6 +54,15 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     document.documentElement.style.setProperty('--tab-y', `${y.toFixed(1)}px`);
   }
 
+  const progressText = () => {
+    const p = ctx.bf.store.progress();
+    return p ? t('bfCore.progress', { done: p.done, total: p.total }) : t('bfCore.loading');
+  };
+  const progressPct = () => {
+    const p = ctx.bf.store.progress();
+    return p ? Math.round((p.done / Math.max(1, p.total)) * 100) : 0;
+  };
+
   /* ---------- ekran startowy ---------- */
   function renderStart(): void {
     const s = ctx.state.get();
@@ -62,6 +75,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           <div class="start-brand">${logo(28)}<span>Rotorlab</span></div>
           <h1>${t('start.title')}</h1>
           <p>${t('start.lead')}</p>
+          ${busy ? `<div class="bf-progress mono" role="status"><span>${progressText()}</span><i><b style="width:${progressPct()}%"></b></i></div>` : ''}
           <div class="start-btns">
             <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('start.connect')}</button>
             <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('start.demo')}</button>
@@ -83,7 +97,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function renderScene(): void {
     const s = ctx.state.get();
     const d = ctx.diagnosis();
-    const labels = buildLabels(s, d);
+    const labels = buildLabels(s, d, ctx.bf.get());
     const key = JSON.stringify([d.focus, { ...labels, motors: null }, s.conn]);
     if (view !== 'scene' || !stage) {
       el.innerHTML = `<div class="stage"></div><div class="overlay" hidden></div>`;
@@ -127,6 +141,15 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   });
 
   const offState = ctx.state.subscribe(render);
+  const offBf = ctx.bf.subscribe(() => {
+    const box = el.querySelector<HTMLElement>('.bf-progress');
+    if (box) {
+      const sp = box.querySelector('span');
+      if (sp) sp.textContent = progressText();
+      const b = box.querySelector<HTMLElement>('b');
+      if (b) b.style.width = `${progressPct()}%`;
+    } else if (view === 'scene') render();
+  });
   const offTel = ctx.state.subscribeTelemetry(() => {
     if (view !== 'scene' || !stage) return;
     const tel = ctx.state.get().telemetry;
@@ -136,6 +159,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   return () => {
     offState();
+    offBf();
     offTel();
     ro.disconnect();
     document.body.classList.remove('has-hot');

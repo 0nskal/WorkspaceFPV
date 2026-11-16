@@ -1,46 +1,26 @@
-import { MSP, ascii, s16, u16, u32, view } from '../serial/msp';
+import { C } from '../bf/codes';
+import * as D from '../bf/decode';
+import type { BfData, BfSession } from '../bf/store';
+import { MSP, s16, u16, view } from '../serial/msp';
 import type { FcLink } from '../serial/types';
 import type { FcConfig, FcInfo, FcState, FcStatus, FcStore, PidSet, Telemetry } from './state';
 
-export function decodeApiVersion(p: Uint8Array) {
-  return { major: p[1] ?? 0, minor: p[2] ?? 0 };
-}
-
-export function decodeBoardInfo(p: Uint8Array): { boardId: string; boardName: string; manufacturer: string } {
-  const boardId = ascii(p, 0, 4);
-  // 4 B id + 2 B rev + 1 B type + 1 B caps, potem len+str: targetName, boardName, manufacturerId
-  let o = 8;
-  const readStr = () => {
-    if (o >= p.length) return '';
-    const n = p[o++];
-    const s = ascii(p, o, o + n);
-    o += n;
-    return s;
-  };
-  const targetName = readStr();
-  const boardName = readStr();
-  const manufacturer = readStr();
-  return { boardId, boardName: boardName || targetName, manufacturer };
-}
-
-export function decodeStatus(p: Uint8Array): FcStatus {
-  const dv = view(p);
-  const flags = p.length >= 4 ? u32(dv, 6) : 0;
-  let armingDisableFlags = 0;
-  if (p.length > 16) {
-    const extLen = p[15];
-    const o = 16 + extLen;
-    if (p.length >= o + 5) armingDisableFlags = u32(dv, o + 1);
-  }
+/** FcStatus (the slim view used by the shared state and the diagnosis) from a decoded MSP_STATUS_EX. */
+export function statusFromEx(ex: D.StatusEx): FcStatus {
   return {
-    cycleTimeUs: u16(dv, 0),
-    i2cErrors: u16(dv, 2),
-    sensors: u16(dv, 4),
-    flightModeFlags: flags,
-    cpuLoad: p.length >= 13 ? u16(dv, 11) : 0,
-    armingDisableFlags,
-    armed: (flags & 1) === 1,
+    cycleTimeUs: ex.cycleTimeUs,
+    i2cErrors: ex.i2cErrors,
+    sensors: ex.sensors,
+    flightModeFlags: ex.modeFlags,
+    cpuLoad: ex.cpuLoad,
+    armingDisableFlags: ex.armingFlags,
+    armingFlagCount: ex.armingFlagCount,
+    armed: (ex.modeFlags & 1) === 1,
   };
+}
+
+export function decodeStatus(p: Uint8Array, apiMinor = 46): FcStatus {
+  return statusFromEx(D.decodeStatusEx(p, apiMinor));
 }
 
 export function decodeMotors(p: Uint8Array, count = 4): number[] {
@@ -51,10 +31,7 @@ export function decodeMotors(p: Uint8Array, count = 4): number[] {
 }
 
 export function decodeAnalog(p: Uint8Array, apiMinor: number): { vbat: number; mah: number; rssi: number; amperage: number } {
-  const dv = view(p);
-  let vbat = p[0] / 10;
-  if (apiMinor >= 41 && p.length >= 9) vbat = u16(dv, 7) / 100;
-  return { vbat, mah: u16(dv, 1), rssi: u16(dv, 3), amperage: s16(dv, 5) / 100 };
+  return D.decodeAnalog(p, apiMinor);
 }
 
 export function decodeImu(p: Uint8Array) {
@@ -69,25 +46,7 @@ export function decodePid(p: Uint8Array): PidSet {
   return { roll: ax(0), pitch: ax(1), yaw: ax(2) };
 }
 
-export function decodeConfig(adv: Uint8Array, mot: Uint8Array): FcConfig {
-  const a = view(adv);
-  const m = view(mot);
-  return {
-    gyroSyncDenom: adv[0] ?? 1,
-    pidProcessDenom: adv[1] ?? 1,
-    motorPwmProtocol: adv[3] ?? 0,
-    motorPwmRate: adv.length >= 6 ? u16(a, 4) : 0,
-    minThrottle: u16(m, 0),
-    maxThrottle: u16(m, 2),
-    minCommand: u16(m, 4),
-    motorCount: mot[6] ?? 4,
-    motorPoles: mot[7] ?? 14,
-    bidir: (mot[8] ?? 0) === 1,
-    useEscSensor: (mot[9] ?? 0) === 1,
-  };
-}
-
-/** MSP_RX_CONFIG (44): bajt 0 = serialrx_provider (9 = CRSF, czyli ExpressLRS/Crossfire). */
+/** MSP_RX_CONFIG (44): byte 0 = serialrx_provider (9 = CRSF, i.e. ExpressLRS/Crossfire). */
 export function decodeRxConfig(p: Uint8Array): { serialRxProvider: number } {
   return { serialRxProvider: p[0] ?? 0 };
 }
@@ -96,55 +55,70 @@ export async function readRxConfig(link: FcLink): Promise<{ serialRxProvider: nu
   return decodeRxConfig(await link.request(MSP.RX_CONFIG));
 }
 
-/** Szacunek liczby cel 1S-8S z napiecia (zaklada pelne do HV 4.35 V na cele). */
+/** Estimated cell count 1S-8S from the voltage (assumes a full pack up to 4.35 V per cell). */
 export function estimateCells(vbat: number): number | null {
-  if (vbat < 5) return null; // zasilanie z USB, brak baterii
+  if (vbat < 5) return null; // USB power, no battery
   return Math.max(1, Math.min(8, Math.ceil(vbat / 4.36)));
 }
 
-/** Pelny odczyt statyczny po polaczeniu: info, konfiguracja, status, PID, pierwsza telemetria. */
-export async function readAll(link: FcLink): Promise<Pick<FcState, 'info' | 'config' | 'status' | 'pid' | 'cells' | 'telemetry'>> {
-  const api = decodeApiVersion(await link.request(MSP.API_VERSION));
-  const variant = ascii(await link.request(MSP.FC_VARIANT));
-  const v = await link.request(MSP.FC_VERSION);
-  const board = decodeBoardInfo(await link.request(MSP.BOARD_INFO));
-  let craftName = '';
-  try {
-    craftName = ascii(await link.request(MSP.NAME));
-  } catch {
-    /* brak nazwy */
-  }
+/** The shared FcInfo/FcConfig view derived from the Betaflight store (single source of truth: the store). */
+export function deriveCore(bf: BfData): { info: FcInfo; config: FcConfig | null } {
+  const b = bf.board;
   const info: FcInfo = {
-    apiVersion: api,
-    variant,
-    version: `${v[0]}.${v[1]}.${v[2]}`,
-    ...board,
-    craftName,
+    apiVersion: { major: 1, minor: bf.api },
+    variant: bf.variant,
+    version: bf.version,
+    boardId: b?.boardId ?? '',
+    boardName: b?.boardName || b?.targetName || '',
+    manufacturer: b?.manufacturer ?? '',
+    craftName: bf.craftName,
   };
-  const config = decodeConfig(await link.request(MSP.ADVANCED_CONFIG), await link.request(MSP.MOTOR_CONFIG));
-  const status = decodeStatus(await link.request(MSP.STATUS));
-  let pid: PidSet | null = null;
-  try {
-    pid = decodePid(await link.request(MSP.PID));
-  } catch {
-    /* PID opcjonalny */
-  }
+  const a = bf.advanced;
+  const m = bf.motor;
+  const config: FcConfig | null =
+    a && m
+      ? {
+          gyroSyncDenom: a.gyroSyncDenom,
+          pidProcessDenom: a.pidProcessDenom,
+          motorPwmProtocol: a.motorProtocol,
+          motorPwmRate: a.motorPwmRate,
+          minThrottle: m.minThrottle,
+          maxThrottle: m.maxThrottle,
+          minCommand: m.minCommand,
+          motorCount: m.motorCount,
+          motorPoles: m.motorPoles,
+          bidir: m.dshotTelemetry,
+          useEscSensor: m.escSensor,
+        }
+      : null;
+  return { info, config };
+}
+
+/** Full read after connecting: the Betaflight snapshot (with progress) plus the first telemetry sample. */
+export async function readAll(link: FcLink, bf: BfSession): Promise<Pick<FcState, 'info' | 'config' | 'status' | 'pid' | 'cells' | 'telemetry'>> {
+  await bf.snapshot(link);
+  const d = bf.get();
+  const { info, config } = deriveCore(d);
+  const status = d.status ? statusFromEx(d.status) : null;
+  const rawPid = d.raw.get('pid');
+  const pid: PidSet | null = rawPid ? decodePid(rawPid) : null;
+  if (!config) return { info, config, status, pid, cells: null, telemetry: null };
   const telemetry = await readTelemetry(link, info.apiVersion.minor, config.motorCount);
   return { info, config, status, pid, cells: estimateCells(telemetry.vbat), telemetry };
 }
 
 export async function readTelemetry(link: FcLink, apiMinor: number, motorCount: number): Promise<Telemetry> {
-  const motors = decodeMotors(await link.request(MSP.MOTOR), motorCount);
-  const analog = decodeAnalog(await link.request(MSP.ANALOG), apiMinor);
-  const imu = decodeImu(await link.request(MSP.RAW_IMU));
+  const motors = decodeMotors(await link.request(C.MOTOR), motorCount);
+  const analog = decodeAnalog(await link.request(C.ANALOG), apiMinor);
+  const imu = decodeImu(await link.request(C.RAW_IMU));
   return { motors, ...analog, gyro: imu.gyro, acc: imu.acc, t: Date.now() };
 }
 
 /**
- * Petla telemetrii co ~100 ms (silniki, analog, IMU), status co ~1 s.
- * Wstrzymuje sie w trakcie CLI. Zwraca funkcje zatrzymujaca.
+ * Telemetry loop every ~100 ms (motors, analog, IMU), status every ~1 s (STATUS_EX, also fed to the Betaflight store).
+ * Pauses during CLI. Returns the stop function.
  */
-export function startTelemetry(link: FcLink, store: FcStore): () => void {
+export function startTelemetry(link: FcLink, store: FcStore, bf?: BfSession): () => void {
   let stop = false;
   let tick = 0;
   void (async () => {
@@ -153,19 +127,22 @@ export function startTelemetry(link: FcLink, store: FcStore): () => void {
       if (!link.busy) {
         try {
           const s = store.get();
-          const t = await readTelemetry(link, s.info?.apiVersion.minor ?? 46, s.config?.motorCount ?? 4);
+          const api = s.info?.apiVersion.minor ?? 46;
+          const t = await readTelemetry(link, api, s.config?.motorCount ?? 4);
           if (stop) break;
           store.setTelemetry(t);
           if (tick++ % 10 === 0) {
-            const status = decodeStatus(await link.request(MSP.STATUS));
+            const ex = D.decodeStatusEx(await link.request(C.STATUS_EX), api);
             if (stop) break;
+            bf?.ingestStatus(ex);
+            const status = statusFromEx(ex);
             const prev = store.get().status;
             if (!prev || prev.armingDisableFlags !== status.armingDisableFlags || prev.armed !== status.armed || prev.i2cErrors !== status.i2cErrors) {
               store.patch({ status, cells: estimateCells(t.vbat) });
             }
           }
         } catch {
-          /* chwilowy timeout - sprobuj w nastepnym cyklu */
+          /* transient timeout - try again next cycle */
         }
       }
       const wait = Math.max(20, 100 - (Date.now() - t0));

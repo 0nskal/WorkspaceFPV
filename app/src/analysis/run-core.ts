@@ -1,5 +1,6 @@
 import { analyze } from './analyze';
 import { parseCsv } from './parse';
+import { looksLikeBbl, parseBbl } from '../bf/bbl';
 import { synthLog } from './synth';
 import type { AnalysisResult } from './types';
 
@@ -16,7 +17,9 @@ export async function processSource(src: Source, onProgress: (frac: number) => v
     onProgress(0.6);
     return analyze(log, ''); // the UI shows a localised name for the sample log
   }
-  const log = await parseCsv(src.file, (f) => onProgress(f * 0.7));
+  // .bbl/.bfl straight from the FC (or a flash dump) is decoded natively; everything else is CSV
+  const head = new Uint8Array(await src.file.slice(0, 80).arrayBuffer());
+  const log = looksLikeBbl(head) ? await parseBbl(src.file, (f) => onProgress(f * 0.7)) : await parseCsv(src.file, (f) => onProgress(f * 0.7));
   onProgress(0.75);
   return analyze(log, src.file.name);
 }

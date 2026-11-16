@@ -1,3 +1,5 @@
+import { bfSummaryLines } from '../bf/summary';
+import type { BfData } from '../bf/store';
 import type { Diagnosis } from '../fc/diagnose';
 import { decodeArmingFlags } from '../fc/diagnose';
 import { firmwareName, boardDisplayName } from '../fc/board';
@@ -21,7 +23,7 @@ Rules:
 }
 
 /** Context about the current drone (stable within a conversation, cached; the user's question goes last). */
-export function buildContext(state: Readonly<FcState>, diag: Diagnosis | null): string {
+export function buildContext(state: Readonly<FcState>, diag: Diagnosis | null, bf?: Readonly<BfData>): string {
   if (!state.info || !state.config) {
     return 'CONTEXT: not connected to an FC. Answer in general terms and suggest that the user connects the drone.';
   }
@@ -37,14 +39,21 @@ export function buildContext(state: Readonly<FcState>, diag: Diagnosis | null): 
     if (t.motors.length) lines.push(`- Raw motor values: ${t.motors.join(', ')}`);
   }
   if (state.status) {
-    const flags = decodeArmingFlags(state.status.armingDisableFlags).map((f) => f.name);
+    const flags = decodeArmingFlags(state.status.armingDisableFlags, state.info.apiVersion.minor, state.status.armingFlagCount).map((f) => f.name);
     lines.push(`- Armed: ${state.status.armed ? 'yes' : 'no'}; arming disable flags: ${flags.length ? flags.join(', ') : 'none'}; CPU ${state.status.cpuLoad}%; I2C errors ${state.status.i2cErrors}`);
   }
+  if (bf) lines.push(...bfSummaryLines(bf));
   if (state.pid) {
     const p = state.pid;
     lines.push(`- PID (roll/pitch/yaw, P I D): ${p.roll.join('/')}  ${p.pitch.join('/')}  ${p.yaw.join('/')}`);
   }
-  if (state.meta.elrsVersion) lines.push(`- ELRS (entered manually): ${state.meta.elrsVersion}`);
+  if (state.hw.elrs) lines.push(`- ELRS receiver (read from the hardware): ${state.hw.elrs.version}, device "${state.hw.elrs.name}"`);
+  if (state.hw.esc) {
+    for (const e of state.hw.esc.escs) {
+      const fw = e.settings && e.settings.firmware !== 'unknown' ? `${e.settings.firmwareName} ${e.settings.version ?? ''}`.trim() : e.firmware === 'blheli_32' ? 'BLHeli_32 (settings not readable)' : e.status === 'no-response' ? 'no answer' : 'unknown layout';
+      lines.push(`- ESC ${e.index + 1} (read via 4-way): ${fw}${e.mcuName ? `, MCU ${e.mcuName}` : ''}`);
+    }
+  }
   if (diag) {
     lines.push('', 'RULE RESULTS (diagnosis without AI):');
     for (const ch of diag.checks) lines.push(`- [${ch.severity}] ${ch.label}${ch.detail ? ` - ${ch.detail}` : ''}`);

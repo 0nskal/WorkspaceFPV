@@ -1,5 +1,19 @@
 /** Polish dictionary. Must satisfy the same type as en.ts (Dict). */
 import type { Dict } from './en';
+import { plBfConfig } from './pl/bfConfig';
+import { plBfCore } from './pl/bfCore';
+import { plBfFailsafe } from './pl/bfFailsafe';
+import { plBfPorts } from './pl/bfPorts';
+import { plBfPower } from './pl/bfPower';
+import { plBfSetup } from './pl/bfSetup';
+import { plBfInfo } from './pl/esc-elrs';
+import { plBfTuning } from './pl/tuning';
+import { plBfReceiver } from './pl/receiver';
+import { plBfModes } from './pl/modes';
+import { plBfMotors } from './pl/motors';
+import { plBfBlackbox } from './pl/blackbox';
+import { plBfCli } from './pl/cli';
+import { plBfOsd } from './pl/osd';
 
 export const pl: Dict = {
   lang: {
@@ -35,7 +49,7 @@ export const pl: Dict = {
   },
   tabs: {
     warsztat: 'Warsztat',
-    esc: 'ESC',
+    esc: 'Silniki',
     autotune: 'Autotune PID',
     elrs: 'ELRS',
     ustawienia: 'Ustawienia',
@@ -71,7 +85,7 @@ export const pl: Dict = {
   },
   updateToast: 'Dostępna wersja {version} – Ustawienia → Aktualizacje',
   parts: {
-    esc: 'ESC',
+    esc: 'Silniki',
     rx: 'Odbiornik',
     fc: 'FC',
     motors: 'Silniki',
@@ -133,32 +147,6 @@ export const pl: Dict = {
     i2cDetail: 'Sprawdź połączenia barometru/magnetometru.',
     summaryOk: 'Reguły nie znalazły problemów.',
     summaryProblems: 'Reguły znalazły problemy: {n}. Największy dotyczy: {part}.',
-  },
-  arm: {
-    NOGYRO: 'Nie wykryto żyroskopu',
-    FAILSAFE: 'Aktywny failsafe',
-    RXLOSS: 'Brak sygnału z odbiornika',
-    BADRX: 'Odbiornik daje błędne dane',
-    BOXFAILSAFE: 'Przełącznik failsafe jest włączony',
-    THROTTLE: 'Gaz nie jest na minimum',
-    ANGLE: 'Dron jest za bardzo przechylony',
-    BOOTGRACE: 'Trwa odliczanie po starcie (poczekaj chwilę)',
-    NOPREARM: 'Wymagany przełącznik prearm',
-    LOAD: 'Za duże obciążenie procesora',
-    CALIB: 'Trwa kalibracja czujników',
-    CLI: 'Aktywny tryb CLI',
-    CMS: 'Otwarte menu OSD (CMS)',
-    BST: 'Aktywny BST (Black Box / telemetria)',
-    MSP: 'Podłączone narzędzie przez MSP',
-    PARALYZE: 'Tryb Paralyze',
-    GPS: 'Brak fixa GPS',
-    RESCUE_SW: 'Przełącznik GPS Rescue jest włączony',
-    RPMFILTER: 'Filtr RPM włączony, ale brak telemetrii RPM z ESC',
-    REBOOT_REQD: 'Wymagany restart FC',
-    DSHOT_BBANG: 'Bidirectional DShot wymaga innego timera/protokołu',
-    NO_ACC_CAL: 'Brak kalibracji akcelerometru',
-    MOTOR_PROTO: 'Nieprawidłowy protokół silników',
-    ARMSWITCH: 'Przełącznik uzbrajania jest włączony (wyłącz i włącz ponownie)',
   },
   drawer: {
     title: 'Asystent',
@@ -258,10 +246,7 @@ export const pl: Dict = {
     off: 'Brak połączenia z FC. Protokół i sygnał odbiornika pojawią się po połączeniu.',
     headTitle: 'AKTUALIZACJA ELRS',
     s1: 'Zgodność głównej wersji TX i RX',
-    s1ph: 'np. 3.4.3',
     s1ph2: 'np. 3.5.1',
-    lblRx: 'Odbiornik',
-    lblTx: 'Nadajnik',
     s2: 'Binding phrase zapisana',
     s2sub: 'bez niej po wgraniu firmware nie połączysz nadajnika z odbiornikiem',
     s2chk: 'Mam binding phrase zapisaną poza odbiornikiem',
@@ -308,17 +293,17 @@ export const pl: Dict = {
   at: {
     film: 'ROTORLAB · AUTOTUNE PID',
     dropTitle: 'Analiza logu blackbox',
-    dropLead: 'Przeciągnij tu plik <span class="mono">.csv</span> z blackbox_decode albo Blackbox Explorera. Rotorlab policzy widmo szumu gyro i odpowiedź skokową PID, a potem zaproponuje zmiany.',
-    pick: 'Wybierz plik CSV',
+    dropLead: 'Przeciągnij tu log <span class="mono">.bbl</span> (czytany natywnie) albo <span class="mono">.csv</span> z Blackbox Explorera. Rotorlab policzy widmo szumu gyro i odpowiedź skokową PID, a potem zaproponuje zmiany.',
+    pick: 'Wybierz plik logu',
     pickOther: 'Wybierz inny plik',
     sample: 'Wczytaj przykładowy log',
-    how: 'Nie masz CSV? Blackbox Explorer: File → Export CSV. Albo w terminalu: <span class="at-code">blackbox_decode LOG.BBL</span>',
+    how: 'Brak logu? Pobierz go na zakładce Blackbox. Nieczytelny .bbl: Blackbox Explorer: File → Export CSV. Albo w terminalu: <span class="at-code">blackbox_decode LOG.BBL</span>',
     busyNote: 'Liczę w tle, interfejs nie zawiesza się.',
     analysing: 'Analizuję {name}…',
     generating: 'Generuję przykładowy log…',
     sampleName: 'przykładowy log (syntetyczny)',
     binaryTitle: 'To jest binarny log blackbox',
-    binaryLead: '<span class="mono">{name}</span> nie jest plikiem CSV. Wersja 0.1 czyta tylko CSV. Wyeksportuj log jednym ze sposobów:',
+    binaryLead: '<span class="mono">{name}</span> nie udało się wczytać jako log Blackbox ani CSV. Wyeksportuj log jednym ze sposobów:',
     binaryStep1: '<b>Blackbox Explorer:</b> otwórz plik .bbl/.bfl, potem <span class="mono">File → Export CSV</span>.',
     binaryStep2: '<b>blackbox_decode</b> (z paczki blackbox-tools): <span class="at-code">blackbox_decode LOG.BBL</span> utworzy plik <span class="mono">LOG.01.csv</span>.',
     errorTitle: 'Nie udało się wczytać logu',
@@ -408,10 +393,6 @@ export const pl: Dict = {
     saved: 'Zapisano.',
     keyRemoved: 'Klucz usunięty.',
     chatCleared: 'Rozmowa wyczyszczona.',
-    elrsHead: 'Wersja ELRS (wpisana ręcznie)',
-    elrsField: 'Wersja firmware odbiornika',
-    elrsPh: 'np. 3.4.3',
-    elrsNote: 'FC nie zna wersji ELRS. Wpisana tutaj pojawi się na rozkładzie drona.',
     dataHead: 'Dane i demo',
     demo: 'Tryb demo',
     backup: 'Pobierz kopię ustawień',
@@ -453,4 +434,18 @@ export const pl: Dict = {
     cliNoReply: 'Brak odpowiedzi FC na: {cmd}',
     demoUnsupported: 'Demo: nieobsługiwana komenda MSP {cmd}',
   },
+  bfCore: plBfCore,
+  bfSetup: plBfSetup,
+  bfPorts: plBfPorts,
+  bfConfig: plBfConfig,
+  bfPower: plBfPower,
+  bfFailsafe: plBfFailsafe,
+  bfInfo: plBfInfo,
+  bfTuning: plBfTuning,
+  bfReceiver: plBfReceiver,
+  bfModes: plBfModes,
+  bfMotors: plBfMotors,
+  bfBlackbox: plBfBlackbox,
+  bfCli: plBfCli,
+  bfOsd: plBfOsd,
 };

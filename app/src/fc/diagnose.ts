@@ -1,5 +1,6 @@
 import type { BfData } from '../bf/store';
 import { BENIGN_ARM_FLAGS, decodeArmFlags } from '../bf/arming';
+import { describeGroups, summarizeEsc } from '../bf/esc-summary';
 import { fmtNum, t, type Key } from '../i18n';
 import { isDshot, protocolName, type FcState } from './state';
 
@@ -131,20 +132,36 @@ export function diagnose(state: Readonly<FcState>, bf?: Readonly<BfData>): Diagn
     }
   }
 
-  // 4. Bidirectional DShot
+  // 4. Bidirectional DShot (ESC firmware is read from the hardware when available: Bluejay/AM32/BLHeli_32 can, BLHeli_S cannot)
+  const fw = summarizeEsc(state.hw.esc);
+  if (fw) {
+    checks.push({ id: 'esc-fw', label: t('bfInfo.diag.fw', { fw: describeGroups(fw.groups) }), severity: 'info', part: 'esc', detail: t('bfInfo.diag.fwDetail') });
+  }
   if (isDshot(config.motorPwmProtocol)) {
     if (!config.bidir) {
-      checks.push({ id: 'bidir', label: t('diag.bidirOff'), severity: 'fail', part: 'esc', detail: t('diag.bidirOffDetail') });
-      suggestions.push({
-        id: 'bidir',
-        part: 'esc',
-        title: t('diag.bidirEnable'),
-        commands: ['set dshot_bidir = ON'],
-        caveat: t('diag.bidirCaveat'),
-      });
+      if (fw?.bidir === 'no') {
+        // the generic "turn bidir on" advice would be wrong here: the ESCs cannot do it
+        checks.push({ id: 'bidir', label: t('bfInfo.diag.bidirNoFw'), severity: 'warn', part: 'esc', detail: t('bfInfo.diag.bidirNoFwDetail', { fw: describeGroups(fw.blockers) }) });
+      } else {
+        checks.push({ id: 'bidir', label: t('diag.bidirOff'), severity: 'fail', part: 'esc', detail: fw?.bidir === 'yes' ? `${t('diag.bidirOffDetail')} ${t('bfInfo.diag.bidirFwOk', { fw: describeGroups(fw.groups) })}` : t('diag.bidirOffDetail') });
+        suggestions.push({
+          id: 'bidir',
+          part: 'esc',
+          title: t('diag.bidirEnable'),
+          commands: ['set dshot_bidir = ON'],
+          caveat: t('diag.bidirCaveat'),
+        });
+      }
+    } else if (fw?.bidir === 'no') {
+      checks.push({ id: 'bidir', label: t('bfInfo.diag.bidirOnNoFw'), severity: 'fail', part: 'esc', detail: t('bfInfo.diag.bidirOnNoFwDetail', { fw: describeGroups(fw.blockers) }) });
     } else {
       checks.push({ id: 'bidir', label: t('diag.bidirOn'), severity: 'ok', part: 'esc', detail: t('diag.bidirOnDetail') });
     }
+  }
+
+  // ELRS receiver version, read from the receiver itself
+  if (state.hw.elrs) {
+    checks.push({ id: 'elrs', label: t('bfInfo.diag.elrs', { v: state.hw.elrs.version }), severity: 'info', part: 'rx', detail: t('bfInfo.diag.elrsDetail', { name: state.hw.elrs.name }) });
   }
 
   // 5. Silniki przy uzbrojeniu

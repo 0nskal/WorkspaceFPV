@@ -1,7 +1,8 @@
 import { SerialTransport } from './port';
 import { MspClient } from './msp';
 import { runCliSession } from './cli';
-import type { CliOptions, CliResult, CloseReason, FcLink, PortIdentity } from './types';
+import { RawBuffer } from '../bf/raw-buffer';
+import type { CliOptions, CliResult, CloseReason, FcLink, PortIdentity, RawIo } from './types';
 
 /** Prawdziwe polaczenie z FC przez WebSerial: transport + MSP + CLI. */
 export class SerialLink implements FcLink {
@@ -55,6 +56,49 @@ export class SerialLink implements FcLink {
       throw e;
     } finally {
       this.busy = false;
+    }
+  }
+
+  /**
+   * Raw session (4-way ESC interface, CLI text, CRSF passthrough): MSP is suspended and `busy` is true while `fn` runs.
+   * If `fn` declares a reboot (expectReboot / dropDtrAndClose) the link stays suspended and the port closing is reported
+   * as 'reboot' (the app reconnects); if the port is still open after 8 s the FC did not reset, so the port is closed
+   * anyway and the same reconnect path shows a clear error instead of a half-dead link.
+   */
+  async raw<T>(fn: (io: RawIo) => Promise<T>): Promise<T> {
+    this.busy = true;
+    this.msp.suspend();
+    const buf = new RawBuffer();
+    const off = this.transport.onData((d) => buf.push(d));
+    let reboot = false;
+    const io: RawIo = {
+      write: (d) => this.transport.write(d),
+      readExact: (n, ms) => buf.readExact(n, ms),
+      readSome: (ms) => buf.readSome(ms),
+      clear: () => buf.clear(),
+      expectReboot: () => {
+        reboot = true;
+        this.rebootExpected = true;
+      },
+      dropDtrAndClose: async () => {
+        reboot = true;
+        this.rebootExpected = true;
+        await this.transport.dropDtr();
+        await this.transport.close();
+      },
+    };
+    try {
+      return await fn(io);
+    } finally {
+      off();
+      if (reboot) {
+        setTimeout(() => {
+          if (!this.transport.isClosed) void this.transport.close();
+        }, 8000);
+      } else {
+        this.msp.resume();
+        this.busy = false;
+      }
     }
   }
 

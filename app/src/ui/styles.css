@@ -2151,3 +2151,222 @@ p.bf-note { padding: 8px 14px; }
 @media (max-width: 1100px) { .bf-grid { grid-template-columns: 1fr; } }
 .bf-fields > .bf-ports, .bf-fields > .bf-fs-chgrid, .bf-fields > p { grid-column: 1 / -1; }
 .bf-ports select { min-width: 120px; }
+/* === bf-esc-elrs-info === */
+/* ESC info panel (ESC tab, dark) */
+.bf-esc-body {
+  padding: 10px 14px 14px;
+}
+.bf-esc-lead {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--sub);
+}
+.bf-esc-status {
+  margin-top: 8px;
+  min-height: 18px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--sub);
+}
+.bf-esc-status.run {
+  color: var(--text);
+}
+.bf-esc-status.warn {
+  color: var(--amber);
+}
+.bf-esc-status.err {
+  color: var(--hot);
+}
+.bf-esc-actions {
+  margin-top: 8px;
+}
+.bf-esc-actions .btn {
+  height: 34px;
+  padding: 0 12px;
+  gap: 7px;
+  font-size: 13px;
+}
+.bf-esc-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.bf-esc-cards:empty {
+  display: none;
+}
+.bf-esc-card {
+  min-width: 0;
+  padding: 9px 11px 10px;
+  border: 1px solid #2a3d4c;
+  background: rgba(220, 239, 248, 0.04);
+}
+.bf-esc-card.warn {
+  border-color: #6a5a2a;
+}
+.bf-esc-card.bad {
+  border-color: var(--hot);
+}
+.bf-esc-card > header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #2a3d4c;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.bf-esc-card > header b {
+  font-size: 12px;
+  color: var(--sub);
+  font-weight: 500;
+}
+.bf-esc-card.bad > header {
+  color: var(--hot);
+}
+.bf-esc-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.bf-esc-card dt {
+  color: var(--sub);
+}
+.bf-esc-card dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  font-family: var(--mono);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.bf-esc-card details {
+  margin-top: 6px;
+}
+.bf-esc-card summary {
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--sub);
+}
+.bf-esc-card details dl {
+  margin-top: 4px;
+}
+.bf-esc-bidir {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--sub);
+}
+.bf-esc-bidir.yes {
+  color: var(--text);
+}
+.bf-esc-bidir.no {
+  color: var(--amber);
+}
+.bf-esc-note {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--amber);
+}
+.bf-esc-card.bad .bf-esc-note {
+  color: var(--sub);
+}
+
+/* confirmation dialog (light) */
+.bf-info-checklist {
+  margin: 10px 0 0 20px;
+  line-height: 1.7;
+}
+
+/* ELRS tab, step 1 (light card) */
+.bf-elrs-read {
+  display: grid;
+  gap: 8px;
+}
+.bf-elrs-ver {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.bf-elrs-ver span {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.bf-elrs-ver b {
+  font: 600 16px var(--mono);
+  color: var(--dark);
+}
+.bf-elrs-ver small {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.bf-elrs-act .btn {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.bf-elrs-st {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.bf-elrs-st.run {
+  color: var(--dark);
+}
+.bf-elrs-st.warn {
+  color: var(--warn);
+}
+.bf-elrs-st.err {
+  color: var(--fail);
+}
+.bf-elrs-how {
+  padding: 8px 10px;
+  background: var(--surf);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dark);
+}
+.bf-elrs-how ol {
+  margin: 4px 0 0 18px;
+}
+.bf-elrs-how code {
+  font-family: var(--mono);
+}
+.bf-elrs-tx {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+.bf-elrs-tx span {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.bf-elrs-tx input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  background: #fff;
+  border: 1px solid var(--card-edge);
+  font: 500 13.5px var(--mono);
+  color: var(--dark);
+}
+.bf-elrs-tx input:focus-visible {
+  outline-offset: 0;
+  border-color: var(--dark);
+}
+.bf-elrs-txhint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}

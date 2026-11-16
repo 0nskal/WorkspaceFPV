@@ -8,16 +8,18 @@ export const MODELS: Array<{ id: string; labelKey: 'settings.modelOpus' | 'setti
 export interface Settings {
   apiKey: string;
   model: string;
-  /** Wersja ELRS wpisana recznie (FC jej nie zna). */
-  elrsVersion: string;
   /** Sprawdzaj aktualizacje przy starcie (tylko wersja desktop). */
   checkUpdates: boolean;
   /** Send MSP_SET_ARMING_DISABLED while connected (like the Betaflight Configurator); released on disconnect. */
   armingDisable: boolean;
+  /** Read ESC firmware/settings via the 4-way interface once after connect, when the battery is detected. */
+  autoEscInfo: boolean;
+  /** Read the ELRS receiver version via CRSF passthrough once after connect (the FC reboots afterwards). */
+  autoElrsInfo: boolean;
 }
 
 const KEY = 'rotorlab.settings.v1';
-const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, elrsVersion: '', checkUpdates: true, armingDisable: true };
+const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: true };
 
 export class SettingsStore {
   private s: Settings = { ...DEFAULTS };
@@ -26,7 +28,10 @@ export class SettingsStore {
   constructor() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) this.s = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
+      if (raw) {
+        this.s = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
+        delete (this.s as unknown as Record<string, unknown>).elrsVersion; // removed: the ELRS version is read from the receiver now
+      }
     } catch {
       /* brak localStorage - zostaja domyslne */
     }

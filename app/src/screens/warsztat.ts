@@ -13,7 +13,7 @@ import { icon, logo } from '../ui/icons';
 function buildLabels(s: Readonly<FcState>, d: Diagnosis, bf: Readonly<BfData>): XrayLabels {
   const tel = s.telemetry;
   const craft = (s.info?.craftName || t('common.drone')).toUpperCase();
-  const elrs = s.meta.elrsVersion;
+  const elrs = s.hw.elrs?.version;
   const provider = bf.rx && bf.rx.serialRxProvider > 0 ? (RX_PROVIDERS[bf.rx.serialRxProvider] ?? '') : '';
   const cellCount = bf.batteryState?.cells || s.cells;
   const rxProblem = d.checks.find((c) => c.part === 'rx' && (c.severity === 'fail' || c.severity === 'warn'));

@@ -1,3 +1,4 @@
+import logoUrl from './logo.png';
 /** Ikony inline SVG w stylu Lucide (stroke 1.75, bez wypelnien). */
 const PATHS: Record<string, string> = {
   check: '<path d="M20 6 9 17l-5-5"/>',
@@ -28,7 +29,7 @@ export function icon(name: IconName, size = 15, extra = ''): string {
   return `<svg class="i" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" ${extra}>${PATHS[name] ?? ''}</svg>`;
 }
 
-/** Logo Rotorlab: ikona aplikacji (cztery wirniki w ukladzie X, jeden w ognisku). */
+/** Rotorlab logo (app icon), rendered from assets/icon-source.png by scripts/make-icons.mjs. */
 export function logo(size = 24): string {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 512 512" aria-hidden="true"><rect x="8" y="8" width="496" height="496" rx="112" fill="#0B131B"/><g stroke="#DCEFF8" stroke-linejoin="round" stroke-linecap="butt"><path d="M256 262L256 182M256 262L394.6 262M256 262L256 342M256 262L117.4 262" fill="none" stroke-width="30"/><g stroke-width="18"><ellipse cx="256" cy="182" rx="80" ry="46" fill="#0B151F"/><ellipse cx="256" cy="182" rx="80" ry="46" fill="#DCEFF8" fill-opacity=".28"/><ellipse cx="394.6" cy="262" rx="80" ry="46" fill="#0B151F"/><ellipse cx="394.6" cy="262" rx="80" ry="46" fill="#DCEFF8" fill-opacity=".28"/><ellipse cx="256" cy="342" rx="80" ry="46" fill="#0B151F"/><ellipse cx="256" cy="342" rx="80" ry="46" fill="#DCEFF8" fill-opacity=".28"/><ellipse cx="117.4" cy="262" rx="80" ry="46" fill="#0B151F"/><ellipse cx="117.4" cy="262" rx="80" ry="46" fill="#DCEFF8" fill-opacity=".28"/></g><path d="M256 236L301 262L256 288L211 262Z" fill="#FF4A2E" stroke="#FF4A2E" stroke-width="12"/></g></svg>`;
+  return `<img class="logo" src="${logoUrl}" width="${size}" height="${size}" alt="" aria-hidden="true">`;
 }

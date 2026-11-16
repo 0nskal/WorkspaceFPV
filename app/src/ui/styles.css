@@ -2017,3 +2017,6 @@ svg.ck.info {
 .at-sec {
   padding-top: 10px !important;
 }
+
+/* === logo === */
+.brand img.logo, .start-brand img.logo { display:block; border-radius:22%; flex:none; }

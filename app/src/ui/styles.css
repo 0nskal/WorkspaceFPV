@@ -3336,3 +3336,25 @@ p.bf-note { padding: 8px 14px; }
 .bf-osd-sel.chg { box-shadow: inset 3px 0 0 var(--hot); background: rgba(255, 74, 46, 0.07); }
 .bf-osd-side > header { flex: none; }
 .bf-motors-cfg .esc-tog button { white-space: nowrap; }
+
+/* === ai-providers === */
+.prov-list { display: grid; gap: 12px; margin: 16px 0 20px; }
+.prov { border: 1px solid var(--card-edge); padding: 14px 16px; }
+.prov.on { border-color: var(--dark); box-shadow: inset 3px 0 0 var(--dark); }
+.prov.off { opacity: 0.6; }
+.prov-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; cursor: pointer; font-size: 14.5px; }
+.prov-h input { width: 18px; height: 18px; accent-color: var(--dark); margin: 0; }
+.prov-tag { font: 600 10.5px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; background: var(--dark); color: #fff; }
+.prov-st { margin-left: auto; font-size: 12px; color: var(--muted); }
+.prov-st.ok { color: var(--ok); }
+.prov-st.bad { color: var(--hot); }
+.prov > .about { margin: 6px 0 0 28px; font-size: 13px; }
+.prov-body { margin: 14px 0 0 28px; padding-top: 14px; border-top: 1px solid var(--card-edge); }
+.prov-body[hidden] { display: none; }
+.prov-body small { display: block; margin: 8px 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.prov-body small a, .prov-body .about a { color: var(--dark); }
+.prov-body code { font: 500 12px var(--mono); }
+.prov-test { font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+.prov-test.ok { color: var(--ok); }
+.prov-test.bad { color: var(--hot); }
+.via { margin-top: 8px; font: 400 11px var(--mono); color: var(--muted); }

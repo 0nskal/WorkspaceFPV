@@ -34,7 +34,12 @@
 ## Features
 
 - **Diagnosis in a minute.** Reads the whole configuration over MSP when you connect and checks it against rules: ESC protocol, bidirectional DShot, voltage per cell, arming disable flags. The "What I checked" list shows every rule.
-- **AI assistant.** With an Anthropic API key it completes the diagnosis and proposes Betaflight CLI commands. The configuration tabs have an "Ask AI about this tab" button. Without a key the rules still work.
+- **AI assistant.** Completes the diagnosis and proposes Betaflight CLI commands. The configuration tabs have an "Ask AI about this tab" button. You choose the provider in **Settings → AI assistant**, and you do not need to pay for the Anthropic API:
+  - **Claude Code (local, desktop app only):** uses the Claude Code you already have installed and logged in. No key in the app; it counts toward your plan's usage limits. Runs with no tools in an empty temporary folder.
+  - **Google Gemini:** a free API key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (desktop app and browser). The free tier has rate limits and Google may use free-tier prompts to improve its products.
+  - **Local model (Ollama):** a model on your own computer, for example `qwen3:8b` or `llama3.1:8b`. Free and offline. In the browser, set `OLLAMA_ORIGINS` for this page (the settings screen shows how); the desktop app needs no setup.
+  - **Anthropic API:** pay-per-use with your own key (as before).
+  The answer in the chat shows which provider wrote it. Without any provider the rules still work.
 - **Betaflight Configurator tabs.** Everything is read automatically on connect (no "read" buttons) and saved over MSP (SET commands, EEPROM write, reboot and reconnect when needed). Changed fields are marked until you press Save.
   - **Setup:** firmware and board info, live attitude, sensors, arming status, calibration, reboot to DFU/MSC, reset.
   - **Ports:** UART functions and baud rates.
@@ -81,7 +86,7 @@ Requirements: a USB data cable, Betaflight 4.3+ on the flight controller.
 
 1. Close Betaflight Configurator (it holds the port) and remove the props.
 2. Plug in the flight controller over USB and click **Connect**. No drone at hand? Choose **Demo mode**.
-3. Optionally paste your Anthropic API key in **Settings**. It is stored locally and never goes to the repo or any WorkspaceFPV server.
+3. Optionally choose an AI provider in **Settings** (Claude Code, a free Gemini key, a local Ollama model or an Anthropic API key). Keys are stored locally and never go to the repo or any WorkspaceFPV server.
 
 ## How it works
 
@@ -92,7 +97,7 @@ Requirements: a USB data cable, Betaflight 4.3+ on the flight controller.
 | AI fixes, `diff all`, CLI tab | Betaflight CLI over the serial port |
 | ESC firmware and settings | 4-way interface (read-only) |
 | ELRS receiver version | CRSF over `serialpassthrough` |
-| AI diagnosis and command proposals | Claude API (Anthropic) |
+| AI diagnosis and command proposals | Claude Code CLI, Gemini (`@google/genai`), Ollama or Claude API (Anthropic) |
 | PID autotune: spectrum and step response | `.bbl` from the FC or CSV from `blackbox_decode` / Blackbox Explorer |
 
 Architecture of the Betaflight layer: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -103,7 +108,7 @@ Architecture of the Betaflight layer: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 - While connected WorkspaceFPV disables arming (like the Betaflight Configurator); it is released on disconnect.
 - The motor test only works after you tick "Props removed", has a STOP button and stops on disconnect or tab change.
 - The API key is stored locally on your device.
-- Drone data (configuration, `diff all`, rule results) goes to Anthropic only when you ask the AI assistant a question.
+- Drone data (configuration, `diff all`, rule results) goes to the AI provider you chose (Anthropic, Google, or your own Claude Code login) only when you ask the AI assistant a question. With Ollama it stays on your computer.
 
 ## Development
 
@@ -166,7 +171,12 @@ Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI work
 ## Funkcje
 
 - **Diagnoza w minutę.** Po połączeniu WorkspaceFPV czyta całą konfigurację przez MSP i sprawdza ją regułami: protokół ESC, bidirectional DShot, napięcie na celę, flagi blokady uzbrojenia. Lista „Co sprawdziłem” pokazuje każdą regułę.
-- **Asystent AI.** Z kluczem Anthropic API dopowiada diagnozę i proponuje komendy CLI Betaflight. Zakładki konfiguracji mają przycisk „Zapytaj AI o tę kartę”. Bez klucza działają same reguły.
+- **Asystent AI.** Dopowiada diagnozę i proponuje komendy CLI Betaflight. Zakładki konfiguracji mają przycisk „Zapytaj AI o tę kartę”. Dostawcę wybierasz w **Ustawienia → Asystent AI** i nie musisz płacić za Anthropic API:
+  - **Claude Code (lokalnie, tylko aplikacja desktopowa):** korzysta z Claude Code, który masz zainstalowany i zalogowany. Bez klucza w aplikacji; liczy się do limitów Twojego planu. Działa bez narzędzi w pustym folderze tymczasowym.
+  - **Google Gemini:** darmowy klucz API z [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (aplikacja i przeglądarka). Darmowy poziom ma limity zapytań, a Google może używać promptów z darmowego poziomu do ulepszania swoich produktów.
+  - **Model lokalny (Ollama):** model na Twoim komputerze, np. `qwen3:8b` albo `llama3.1:8b`. Za darmo i offline. W przeglądarce ustaw `OLLAMA_ORIGINS` dla tej strony (ekran ustawień podpowiada jak); aplikacja desktopowa nie wymaga konfiguracji.
+  - **Anthropic API:** płatne za użycie, z własnym kluczem (jak dotąd).
+  W czacie widać, który dostawca napisał odpowiedź. Bez żadnego dostawcy działają same reguły.
 - **Zakładki jak w Betaflight Configuratorze.** Wszystko czyta się samo przy połączeniu (bez przycisków „odczytaj”), zapis idzie przez MSP (komendy SET, zapis EEPROM, restart i ponowne połączenie, gdy trzeba). Zmienione pola są zaznaczone, dopóki nie klikniesz Zapisz.
   - **Setup:** firmware i płytka, położenie na żywo, czujniki, blokady uzbrojenia, kalibracja, restart do DFU/MSC, reset.
   - **Porty:** funkcje UART i prędkości.
@@ -206,7 +216,7 @@ Wymagania: kabel USB z danymi, Betaflight 4.3+ na kontrolerze lotu.
 
 1. Zamknij Betaflight Configurator (zajmuje port) i zdejmij śmigła.
 2. Podłącz kontroler lotu kablem USB i kliknij **Połącz**. Nie masz drona pod ręką? Wybierz **Tryb demo**.
-3. Opcjonalnie wklej klucz Anthropic API w **Ustawieniach**. Zapisuje się lokalnie, nie trafia do repo ani na żaden serwer WorkspaceFPV.
+3. Opcjonalnie wybierz dostawcę AI w **Ustawieniach** (Claude Code, darmowy klucz Gemini, lokalny model Ollama albo klucz Anthropic API). Klucze zapisują się lokalnie, nie trafiają do repo ani na żaden serwer WorkspaceFPV.
 
 ## Jak to działa
 
@@ -217,7 +227,7 @@ Wymagania: kabel USB z danymi, Betaflight 4.3+ na kontrolerze lotu.
 | Poprawki od AI, `diff all`, zakładka CLI | CLI Betaflight przez port szeregowy |
 | Firmware i ustawienia ESC | interfejs 4-way (tylko odczyt) |
 | Wersja odbiornika ELRS | CRSF przez `serialpassthrough` |
-| Diagnoza AI i propozycje komend | Claude API (Anthropic) |
+| Diagnoza AI i propozycje komend | Claude Code CLI, Gemini (`@google/genai`), Ollama lub Claude API (Anthropic) |
 | Autotune PID: widmo i step response | `.bbl` z FC albo CSV z `blackbox_decode` / Blackbox Explorera |
 
 Architektura warstwy Betaflight: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -228,7 +238,7 @@ Architektura warstwy Betaflight: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Po połączeniu WorkspaceFPV blokuje uzbrajanie (jak Betaflight Configurator); blokada znika po rozłączeniu.
 - Test silników działa tylko po zaznaczeniu „Śmigła zdjęte”, ma przycisk STOP i zatrzymuje się po rozłączeniu albo zmianie zakładki.
 - Klucz API jest przechowywany lokalnie na Twoim urządzeniu.
-- Dane drona (konfiguracja, `diff all`, wynik reguł) trafiają do Anthropic tylko wtedy, gdy zadajesz pytanie asystentowi AI.
+- Dane drona (konfiguracja, `diff all`, wynik reguł) trafiają do wybranego dostawcy AI (Anthropic, Google albo Twoje logowanie Claude Code) tylko wtedy, gdy zadajesz pytanie asystentowi AI. Przy Ollamie zostają na Twoim komputerze.
 
 ## Rozwój
 

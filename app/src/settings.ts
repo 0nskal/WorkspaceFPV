@@ -1,13 +1,24 @@
 /** Ustawienia uzytkownika - tylko lokalnie (localStorage), klucz API nigdy nie opuszcza maszyny poza zapytaniami do API Anthropic. */
 
+import type { ProviderId } from './ai/types';
+import { DEFAULT_CLAUDE_CODE_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_URL } from './ai/types';
+
 export const MODELS: Array<{ id: string; labelKey: 'settings.modelOpus' | 'settings.modelSonnet' }> = [
   { id: 'claude-opus-5-5', labelKey: 'settings.modelOpus' },
   { id: 'claude-sonnet-5-5', labelKey: 'settings.modelSonnet' },
 ];
 
 export interface Settings {
+  /** Anthropic API key and model (the original two settings). */
   apiKey: string;
   model: string;
+  /** Chosen AI provider; '' = automatic (Claude Code in the desktop app when detected and no Anthropic key, else Anthropic). */
+  aiProvider: ProviderId | '';
+  claudeCodeModel: string;
+  geminiKey: string;
+  geminiModel: string;
+  ollamaUrl: string;
+  ollamaModel: string;
   /** Sprawdzaj aktualizacje przy starcie (tylko wersja desktop). */
   checkUpdates: boolean;
   /** Send MSP_SET_ARMING_DISABLED while connected (like the Betaflight Configurator); released on disconnect. */
@@ -19,7 +30,7 @@ export interface Settings {
 }
 
 const KEY = 'workspacefpv.settings.v1';
-const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: true };
+const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, aiProvider: '', claudeCodeModel: DEFAULT_CLAUDE_CODE_MODEL, geminiKey: '', geminiModel: DEFAULT_GEMINI_MODEL, ollamaUrl: DEFAULT_OLLAMA_URL, ollamaModel: '', checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: true };
 
 export class SettingsStore {
   private s: Settings = { ...DEFAULTS };

@@ -1,4 +1,5 @@
 import { Assistant } from './ai/assistant';
+import { refreshClaudeDetected } from './ai/providers';
 import { buildContext } from './ai/prompts';
 import type { AppContext, ApplyOptions, Route } from './context';
 import { initHwInfo } from './bf/hw-info';
@@ -66,9 +67,14 @@ export function createApp(root: HTMLElement): AppContext {
   bf.subscribe(syncCore);
 
   const ai = new Assistant(
-    () => ({ apiKey: settings.get().apiKey, model: settings.get().model, lang: getLang() }),
+    () => {
+      const s = settings.get();
+      return { provider: s.aiProvider, lang: getLang(), anthropicKey: s.apiKey, anthropicModel: s.model, claudeCodeModel: s.claudeCodeModel, geminiKey: s.geminiKey, geminiModel: s.geminiModel, ollamaUrl: s.ollamaUrl, ollamaModel: s.ollamaModel };
+    },
     () => buildContext(store.get(), store.get().conn === 'connected' ? diagnose(store.get(), bf.get()) : null, bf.get()),
   );
+
+  void refreshClaudeDetected().then(() => ai.notify()); // the default provider in the desktop app depends on it
 
   /* ---------------- polaczenie ---------------- */
 

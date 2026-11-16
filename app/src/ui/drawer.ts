@@ -1,4 +1,5 @@
 import type { AppContext } from '../context';
+import { providerName } from '../ai/providers';
 import { partLabel, type Check } from '../fc/diagnose';
 import { t } from '../i18n';
 import { copyText, escapeHtml } from './dom';
@@ -187,7 +188,7 @@ export function createDrawer(ctx: AppContext): Drawer {
     } else {
       body = `<div class="tx">${t('drawer.rulesCardOk')}</div>`;
     }
-    const hint = ctx.ai.hasKey() ? '' : `<div class="hint">${t('drawer.keyHint')}</div>`;
+    const hint = ctx.ai.ready() ? '' : `<div class="hint">${t('drawer.keyHint')}</div>`;
     return `<div class="ai">${AV}<div class="ai-b">${body}${hint}</div></div>`;
   }
 
@@ -200,7 +201,8 @@ export function createDrawer(ctx: AppContext): Drawer {
         const streaming = ctx.ai.busy && i === hist.length - 1;
         const inner = m.text ? renderMessageBody(m.text, streaming) : '';
         const think = streaming && ctx.ai.thinking ? `<div class="thinking"><span></span><span></span><span></span>${t('drawer.thinking')}</div>` : '';
-        parts.push(`<div class="ai${m.note ? ' note' : ''}">${AV}<div class="ai-b">${inner}${think}</div></div>`);
+        const via = m.provider && m.text && !streaming ? `<div class="via">${escapeHtml(t('aiProviders.via', { provider: providerName(m.provider) }))}</div>` : '';
+        parts.push(`<div class="ai${m.note ? ' note' : ''}">${AV}<div class="ai-b">${inner}${think}${via}</div></div>`);
       }
     });
     const nearBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;

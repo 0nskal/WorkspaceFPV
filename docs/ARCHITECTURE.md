@@ -108,3 +108,9 @@ npx esbuild app/src/bf/test-core.mjs --bundle --platform=node --format=esm --out
 ## Tab bar
 
 `screens/registry.ts` orders the tabs like the Configurator and puts each in a `group` (overview, FC setup, tuning and logs, tools); the shell draws them in a second row under the top bar with a thin divider between groups.
+
+## AI providers (`app/src/ai/`)
+
+`Assistant` (assistant.ts) builds the same system prompt + drone context for every provider and streams through one interface: `AiProvider { id; available(): Promise<{ok, reason?}>; stream(messages, system, onText, signal): Promise<{text, stopReason}> }` (types.ts). Implementations in providers.ts: Anthropic API (SDK, cached context block), Gemini (`@google/genai`, loaded lazily; gemini-core.ts), Ollama (ollama-core.ts over an injectable `fetch`), Claude Code (desktop only).
+
+Desktop-only paths run in the Electron main process (`electron/ai.ts`, IPC `ai:*`, bridge in `ai/bridge.ts`): Claude Code is spawned headless (`electron/claude-code.ts`: args array, prompt on stdin, empty temp cwd, no tools, `--setting-sources ""`, `ANTHROPIC_API_KEY` stripped from the env, output parsed by `ai/claude-stream.ts`); Ollama is called from main to avoid CORS. In the browser Ollama is called directly. `effectiveProvider()` picks the user's choice, else Claude Code (desktop, detected, no Anthropic key), else Anthropic. Tests: `app/src/ai/test-providers.mjs`.

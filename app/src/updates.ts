@@ -1,5 +1,7 @@
 /** Aktualizacje: typy wspolne z procesem glownym Electrona oraz dostep do mostu `window.workspacefpv.updates`. */
 
+import type { DesktopAi } from './ai/bridge';
+
 export type UpdateStatus =
   | { state: 'dev' }
   | { state: 'checking' }
@@ -22,7 +24,7 @@ export interface UpdatesApi {
 
 declare global {
   interface Window {
-    workspacefpv?: { isElectron?: boolean; platform?: string; updates?: UpdatesApi; setLanguage?: (lang: string) => void };
+    workspacefpv?: { isElectron?: boolean; platform?: string; updates?: UpdatesApi; ai?: DesktopAi; setLanguage?: (lang: string) => void };
   }
   const __APP_VERSION__: string;
 }

@@ -14,6 +14,7 @@ import { plBfMotors } from './pl/motors';
 import { plBfBlackbox } from './pl/blackbox';
 import { plBfCli } from './pl/cli';
 import { plBfOsd } from './pl/osd';
+import { plAiProviders } from './pl/ai-providers';
 
 export const pl: Dict = {
   lang: {
@@ -164,7 +165,7 @@ export const pl: Dict = {
     thinking: 'Analizuję…',
     rulesCardProblems: 'Opisz problem, a podpowiem co zrobić.',
     rulesCardOk: 'Reguły nie znalazły problemów. Opisz, co nie działa, a przeanalizuję konfigurację.',
-    keyHint: 'Asystent AI wymaga klucza API. <a href="#ustawienia">Dodaj go w Ustawieniach</a>. Reguły działają bez klucza.',
+    keyHint: 'Asystent AI nie jest skonfigurowany. <a href="#ustawienia">Wybierz dostawcę w Ustawieniach</a> (Claude Code, darmowy klucz Gemini, model lokalny albo Anthropic API). Reguły działają bez tego.',
     checked: 'Co sprawdziłem',
     showLog: 'Zobacz log diagnostyki',
     hideLog: 'Ukryj log diagnostyki',
@@ -179,7 +180,7 @@ export const pl: Dict = {
     attachedFile: 'Załączony plik {name}:',
   },
   ai: {
-    noKey: 'Brak klucza API. Dodaj go w Ustawieniach, żeby rozmawiać z asystentem. Reguły diagnostyczne działają bez klucza.',
+    noKey: 'Nie skonfigurowano dostawcy AI. Wybierz go w Ustawieniach, żeby rozmawiać z asystentem. Reguły diagnostyczne działają bez tego.',
     refusal: 'Model odmówił odpowiedzi na to pytanie. Spróbuj je przeformułować.',
     cutOff: '(Odpowiedź została ucięta - limit długości.)',
     empty: '(Pusta odpowiedź.)',
@@ -448,4 +449,5 @@ export const pl: Dict = {
   bfBlackbox: plBfBlackbox,
   bfCli: plBfCli,
   bfOsd: plBfOsd,
+  aiProviders: plAiProviders,
 };

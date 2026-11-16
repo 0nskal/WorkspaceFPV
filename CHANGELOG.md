@@ -2,6 +2,10 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## Unreleased
+
+- **AI providers.** The assistant no longer needs the paid Anthropic API. Choose in Settings → AI assistant: **Claude Code** (your own installed and logged-in CLI, desktop app only, counts toward your plan), **Google Gemini** (free API key, default model gemini-2.5-flash), **Local model (Ollama)** (model list from `/api/tags`) or the **Anthropic API** as before. Each card shows its status and a Test button; the chat shows which provider answered. In the desktop app the default is Claude Code when it is detected and no Anthropic key is set.
+
 ## 0.3.0 – 2026-11-16
 
 - **New name: WorkspaceFPV** (formerly Rotorlab). New repo `0nskal/WorkspaceFPV`, website `workspacefpv.pages.dev`, installer `WorkspaceFPV-Setup.exe`. Old links redirect.
@@ -23,6 +27,10 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ---
 
 # Historia zmian
+
+## Niewydane
+
+- **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
 
 ## 0.3.0 – 2026-11-16
 

@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from 'elect
 import fs from 'node:fs';
 import path from 'node:path';
 import { setupUpdater } from './updater';
+import { setupAi } from './ai';
 
 /** VID STM32 (Betaflight FC zwykle uzywaja 0x0483). */
 const STM32_VID = 0x0483;
@@ -156,6 +157,7 @@ if (!gotLock) {
     });
     Menu.setApplicationMenu(null);
     setupSerial();
+    setupAi();
     createWindow();
     setupUpdater(() => win);
     app.on('activate', () => {

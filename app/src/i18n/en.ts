@@ -19,6 +19,7 @@ import { enBfMotors } from './en/motors';
 import { enBfBlackbox } from './en/blackbox';
 import { enBfCli } from './en/cli';
 import { enBfOsd } from './en/osd';
+import { enAiProviders } from './en/ai-providers';
 export const en = {
   lang: {
     en: 'English',
@@ -170,7 +171,7 @@ export const en = {
     rulesCardProblems: 'Describe the problem and I will suggest what to do.',
     rulesCardOk: 'The rules found no problems. Describe what is not working and I will analyse the configuration.',
     // trusted HTML
-    keyHint: 'The AI assistant needs an API key. <a href="#ustawienia">Add it in Settings</a>. The rules work without a key.',
+    keyHint: 'The AI assistant is not set up. <a href="#ustawienia">Choose a provider in Settings</a> (Claude Code, a free Gemini key, a local model or the Anthropic API). The rules work without it.',
     checked: 'What I checked',
     showLog: 'Show diagnostic log',
     hideLog: 'Hide diagnostic log',
@@ -185,7 +186,7 @@ export const en = {
     attachedFile: 'Attached file {name}:',
   },
   ai: {
-    noKey: 'No API key. Add one in Settings to chat with the assistant. The diagnostic rules work without a key.',
+    noKey: 'No AI provider is set up. Choose one in Settings to chat with the assistant. The diagnostic rules work without it.',
     refusal: 'The model declined to answer this question. Try rephrasing it.',
     cutOff: '(The answer was cut off: length limit.)',
     empty: '(Empty answer.)',
@@ -458,6 +459,7 @@ export const en = {
   bfBlackbox: enBfBlackbox,
   bfCli: enBfCli,
   bfOsd: enBfOsd,
+  aiProviders: enAiProviders,
 };
 
 export type Dict = typeof en;

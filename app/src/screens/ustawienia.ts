@@ -1,5 +1,5 @@
 import type { ScreenMount } from '../context';
-import { MODELS } from '../settings';
+import { aiSettingsHtml, bindAiSettings } from './ai-settings';
 import { LANGS, fmtNum, getLang, setLang, t, type Lang } from '../i18n';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
@@ -22,27 +22,7 @@ export const mount: ScreenMount = (el, ctx) => {
         </label>
       </section>
 
-      <section class="card">
-        <div class="ch">${t('settings.ai')}</div>
-        <label class="field">
-          <span>${t('settings.apiKey')}</span>
-          <div class="field-row">
-            <input type="password" name="key" value="${escapeHtml(s.apiKey)}" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" />
-            <button class="btn s" type="button" data-act="toggle">${t('settings.show')}</button>
-          </div>
-          <small>${t('settings.keyNote')}</small>
-        </label>
-        <label class="field">
-          <span>${t('settings.model')}</span>
-          <select name="model">${MODELS.map((m) => `<option value="${m.id}" ${m.id === s.model ? 'selected' : ''}>${escapeHtml(t(m.labelKey))}</option>`).join('')}</select>
-        </label>
-        <div class="field-row actions">
-          <button class="btn p" type="button" data-act="save">${icon('check')}${t('settings.save')}</button>
-          <button class="btn s" type="button" data-act="clear">${t('settings.clearKey')}</button>
-          <button class="btn s" type="button" data-act="chat">${t('settings.clearChat')}</button>
-          <span class="saved mono" aria-live="polite"></span>
-        </div>
-      </section>
+${aiSettingsHtml(ctx)}
 
       <section class="card">
         <div class="ch">${t('bfInfo.settings.head')}</div>
@@ -88,14 +68,14 @@ export const mount: ScreenMount = (el, ctx) => {
       </section>
     </div>`;
 
-  const keyInput = el.querySelector<HTMLInputElement>('input[name="key"]') as HTMLInputElement;
-  const modelSel = el.querySelector<HTMLSelectElement>('select[name="model"]') as HTMLSelectElement;
   const saved = el.querySelector<HTMLElement>('.saved') as HTMLElement;
 
   const flash = (t: string) => {
     saved.textContent = t;
     setTimeout(() => (saved.textContent = ''), 2500);
   };
+
+  const saveAi = bindAiSettings(el, ctx, flash);
 
   // --- Aktualizacje ---
   const q = (k: string) => el.querySelector<HTMLElement>(`[data-upd="${k}"]`);
@@ -163,28 +143,14 @@ export const mount: ScreenMount = (el, ctx) => {
   // Language switches instantly: the shell and this screen are re-mounted by the app (onLanguageChange).
   el.querySelector<HTMLSelectElement>('select[name="lang"]')?.addEventListener('change', (e) => {
     // keep what was typed in the fields, so re-mounting does not lose it
-    ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value });
+    saveAi();
     setLang((e.target as HTMLSelectElement).value as Lang);
   });
 
   el.addEventListener('click', (e) => {
     const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
     if (!act) return;
-    if (act === 'toggle') {
-      const b = e.target as HTMLElement;
-      keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
-      b.textContent = keyInput.type === 'password' ? t('settings.show') : t('settings.hide');
-    } else if (act === 'save') {
-      ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value });
-      flash(t('settings.saved'));
-    } else if (act === 'clear') {
-      keyInput.value = '';
-      ctx.settings.set({ apiKey: '' });
-      flash(t('settings.keyRemoved'));
-    } else if (act === 'chat') {
-      ctx.ai.clear();
-      flash(t('settings.chatCleared'));
-    } else if (act === 'upd-check') {
+    if (act === 'upd-check') {
       void upd?.check().then(renderUpd);
     } else if (act === 'upd-download') {
       void upd?.download();

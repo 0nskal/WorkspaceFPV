@@ -5,6 +5,8 @@ type Status = { state: string; [k: string]: unknown };
 contextBridge.exposeInMainWorld('rotorlab', {
   isElectron: true,
   platform: process.platform,
+  /** Tells the main process which language the UI uses (for native dialogs). */
+  setLanguage: (lang: string): void => ipcRenderer.send('app:set-language', lang),
   updates: {
     getVersion: (): Promise<string> => ipcRenderer.invoke('updates:version'),
     getStatus: (): Promise<Status | null> => ipcRenderer.invoke('updates:status'),

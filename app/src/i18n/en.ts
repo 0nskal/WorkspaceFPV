@@ -4,6 +4,10 @@
  * Strings may contain {name} placeholders (see t()) and, where noted, trusted HTML.
  * Plural entries use { one, few, many } (English only needs one + many, `few` repeats `many`).
  */
+import { enBfTuning } from './en/tuning';
+import { enBfReceiver } from './en/receiver';
+import { enBfModes } from './en/modes';
+
 export const en = {
   lang: {
     en: 'English',
@@ -462,6 +466,9 @@ export const en = {
     cliNoReply: 'No reply from the FC to: {cmd}',
     demoUnsupported: 'Demo: unsupported MSP command {cmd}',
   },
+  bfTuning: enBfTuning,
+  bfReceiver: enBfReceiver,
+  bfModes: enBfModes,
 };
 
 export type Dict = typeof en;

@@ -1,5 +1,6 @@
 import { MSP } from './msp';
 import { sleep } from './port';
+import { demoTuning } from './demo-tuning';
 import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink } from './types';
 import { t as tr } from '../i18n';
 
@@ -39,6 +40,8 @@ export class DemoLink implements FcLink {
     await sleep(4); // opoznienie "linii"
     if (this.busy) throw new Error(tr('serial.mspSuspended'));
     const t = (Date.now() - this.t0) / 1000;
+    const tuned = demoTuning(cmd, payload, t); // tuning / receiver / modes tabs (demo-tuning.ts)
+    if (tuned) return tuned;
     switch (cmd) {
       case MSP.API_VERSION:
         return bytes(0, 1, 46);

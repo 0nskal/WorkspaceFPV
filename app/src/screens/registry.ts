@@ -7,6 +7,9 @@ import type { ScreenMount } from '../context';
 import type { Key } from '../i18n';
 import type { IconName } from '../ui/icons';
 import * as autotune from './autotune';
+import * as bfModes from './bf-modes';
+import * as bfReceiver from './bf-receiver';
+import * as bfTuning from './bf-tuning';
 import * as elrs from './elrs';
 import * as esc from './esc';
 import * as ustawienia from './ustawienia';
@@ -29,6 +32,9 @@ export const SCREENS: ScreenDef[] = [
   { id: 'esc', titleKey: 'tabs.esc', icon: 'plug', mount: esc.mount, requiresConnection: true },
   { id: 'autotune', titleKey: 'tabs.autotune', icon: 'sliders', mount: autotune.mount, requiresConnection: false },
   { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false },
+  { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true },
+  { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true },
+  { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true },
   { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false },
 ];
 

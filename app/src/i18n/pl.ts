@@ -1,5 +1,8 @@
 /** Polish dictionary. Must satisfy the same type as en.ts (Dict). */
 import type { Dict } from './en';
+import { plBfTuning } from './pl/tuning';
+import { plBfReceiver } from './pl/receiver';
+import { plBfModes } from './pl/modes';
 
 export const pl: Dict = {
   lang: {
@@ -453,4 +456,7 @@ export const pl: Dict = {
     cliNoReply: 'Brak odpowiedzi FC na: {cmd}',
     demoUnsupported: 'Demo: nieobsługiwana komenda MSP {cmd}',
   },
+  bfTuning: plBfTuning,
+  bfReceiver: plBfReceiver,
+  bfModes: plBfModes,
 };

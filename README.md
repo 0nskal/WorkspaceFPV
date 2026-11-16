@@ -27,7 +27,9 @@
   <img src="docs/screenshot.png" alt="WorkspaceFPV: X-ray style drone layout and a patient chart with the diagnosis" width="860">
 </p>
 
-<p align="center"><b>English</b> · <a href="#polski">Polski</a></p>
+<p align="center"><b>English</b> · <a href="#polski">Polski</a> · <a href="CHANGELOG.md">Changelog</a></p>
+
+> Formerly **Rotorlab**. Installs of Rotorlab 0.2.0 update to WorkspaceFPV from **Settings → Updates** and keep their settings.
 
 ## Features
 
@@ -137,15 +139,16 @@ The Windows version updates from inside the app: **Settings → Updates** ("Chec
 
 ## Releases
 
-Process: bump `version` in `package.json` (e.g. `0.2.0`), commit, `git tag v0.2.0 && git push --tags`, and GitHub Actions does the rest. The workflow checks that the tag matches the version in `package.json` (it fails otherwise), builds on Windows and uploads `WorkspaceFPV-Setup.exe`, `WorkspaceFPV-Setup.exe.blockmap` and `latest.yml` (used by the update mechanism) to the GitHub Release.
+Process: bump `version` in `package.json` (e.g. `0.3.0`) and add an entry to `CHANGELOG.md`, commit, `git tag v0.3.0 && git push --tags`, and GitHub Actions does the rest. The workflow checks that the tag matches the version in `package.json` (it fails otherwise), builds on Windows and uploads `WorkspaceFPV-Setup.exe`, `WorkspaceFPV-Setup.exe.blockmap` and `latest.yml` (used by the update mechanism) to the GitHub Release.
 
 Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI workflow builds the project on every push and pull request.
 
 ## Roadmap
 
 - Testing the Betaflight tabs on more flight controllers
+- Adjustments tab
 - Per-motor spin direction and motor order (DShot commands)
-- Flashing ELRS from inside the app
+- Flashing Betaflight firmware (DFU) and ELRS from inside the app
 - macOS and Linux
 
 ## License
@@ -156,7 +159,9 @@ Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI work
 
 ## Polski
 
-<p align="center"><a href="#features">English</a> · <b>Polski</b></p>
+<p align="center"><a href="#features">English</a> · <b>Polski</b> · <a href="CHANGELOG.md">Historia zmian</a></p>
+
+> Wcześniej **Rotorlab**. Instalacje Rotorlab 0.2.0 zaktualizują się do WorkspaceFPV z **Ustawienia → Aktualizacje** i zachowają ustawienia.
 
 ## Funkcje
 
@@ -253,15 +258,16 @@ Wersja Windows aktualizuje się z poziomu appki: **Ustawienia → Aktualizacje**
 
 ## Wydania
 
-Proces: podbij `version` w `package.json` (np. `0.2.0`), zacommituj, `git tag v0.2.0 && git push --tags`, a resztę robi GitHub Actions. Workflow sprawdza, że tag zgadza się z wersją w `package.json` (inaczej kończy się błędem), buduje na Windows i wgrywa do GitHub Release `WorkspaceFPV-Setup.exe`, `WorkspaceFPV-Setup.exe.blockmap` oraz `latest.yml` (z tego pliku korzysta mechanizm aktualizacji).
+Proces: podbij `version` w `package.json` (np. `0.3.0`) i dopisz wpis w `CHANGELOG.md`, zacommituj, `git tag v0.3.0 && git push --tags`, a resztę robi GitHub Actions. Workflow sprawdza, że tag zgadza się z wersją w `package.json` (inaczej kończy się błędem), buduje na Windows i wgrywa do GitHub Release `WorkspaceFPV-Setup.exe`, `WorkspaceFPV-Setup.exe.blockmap` oraz `latest.yml` (z tego pliku korzysta mechanizm aktualizacji).
 
 Wypchnięcie tagu `v*` uruchamia GitHub Actions z automatycznymi notatkami wydania. Workflow CI buduje projekt przy każdym pushu i pull requeście.
 
 ## Roadmap
 
 - Testy zakładek Betaflight na kolejnych kontrolerach lotu
+- Zakładka Adjustments
 - Kierunek obrotów i kolejność silników per silnik (komendy DShot)
-- Flashowanie ELRS z poziomu appki
+- Wgrywanie firmware Betaflight (DFU) i ELRS z poziomu appki
 - macOS i Linux
 
 ## Licencja

@@ -51,6 +51,18 @@ function detail(): string {
   g += box(0.36, 0.68, 0.26, 0.64, 0, 8, 'rgba(11,16,22,.92)', 'rgba(11,16,22,.8)', 'rgba(11,16,22,.7)');
   const dot = P(0.4, 0.31, 8);
   g += `<circle cx="${n(dot[0])}" cy="${n(dot[1])}" r="2" fill="${INK}"/>`;
+  // oslona RF (shield can), kondensatory, kwarc, zlacze u.FL, sciezki i pady montazowe
+  g += box(0.08, 0.3, 0.58, 0.76, 0, 6, 'rgba(207,230,242,.3)', 'rgba(207,230,242,.2)', 'rgba(207,230,242,.14)');
+  for (const [u, v] of [[0.74, 0.3], [0.82, 0.3], [0.74, 0.5], [0.82, 0.5], [0.5, 0.74]]) g += box(u, u + 0.06, v, v + 0.08, 0, 2.2, 'rgba(207,230,242,.34)', 'rgba(207,230,242,.2)', 'rgba(207,230,242,.14)');
+  g += box(0.74, 0.9, 0.12, 0.22, 0, 3.4, 'rgba(207,230,242,.3)', 'rgba(207,230,242,.2)', 'rgba(207,230,242,.14)');
+  const ufl = P(0.04, 0.12, 3);
+  g += `<circle cx="${n(ufl[0])}" cy="${n(ufl[1])}" r="5" fill="rgba(207,230,242,.34)" stroke="${INK}" stroke-width=".9"/><circle cx="${n(ufl[0])}" cy="${n(ufl[1])}" r="2" fill="${BG}" stroke="${INK}" stroke-width=".6"/>`;
+  const tr = (a: Array<[number, number]>) => `<polyline points="${pts(a.map(([u, v]) => P(u, v, 0.2)))}" fill="none" stroke="${INK}" stroke-width=".8" opacity=".6"/>`;
+  g += tr([[0.3, 0.4], [0.36, 0.4]]) + tr([[0.68, 0.4], [0.74, 0.34]]) + tr([[0.68, 0.55], [0.82, 0.55]]) + tr([[0.5, 0.64], [0.5, 0.74]]) + tr([[0.1, 0.52], [0.1, 0.3], [0.2, 0.2]]);
+  for (const [u, v] of [[0.04, 0.9], [0.96, 0.9], [0.96, 0.08]]) {
+    const q = P(u, v, 0);
+    g += `<circle cx="${n(q[0])}" cy="${n(q[1])}" r="3.6" fill="rgba(207,230,242,.3)" stroke="${INK}" stroke-width=".7"/><circle cx="${n(q[0])}" cy="${n(q[1])}" r="1.6" fill="${BG}"/>`;
+  }
   // zlacze: rzad padow przy krawedzi
   for (let i = 0; i < 6; i++) {
     const a = 0.14 + i * 0.13;

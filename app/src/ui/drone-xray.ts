@@ -179,10 +179,150 @@ function bottomPlateRing(): Pt[] {
   return plateRing;
 }
 
+/* ---------- elementy wielokrotnego uzytku (symbole <g id> + <use>) ---------- */
+const COP = 'rgba(255,160,100,.3)'; // miedz: slaba domieszka (max .35)
+const COPS = 'rgba(255,160,100,.2)';
+const MET = X(0.42); // metal: jasniejszy
+const METS = X(0.28);
+const DARK = '#0E1822';
+const HOTF = 'rgba(255,74,46,.55)';
+
+const polyS = (a: Pt[], fill: string, sw = 0.6, stroke = INK, so = 0.85) =>
+  `<polygon points="${pts(a)}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-opacity="${so}" stroke-linejoin="round"/>`;
+const R = (a: number, u: number, v: number): Pt => [u * Math.cos(a) - v * Math.sin(a), u * Math.sin(a) + v * Math.cos(a)];
+
+/** Symbol rysowany w lokalnym ukladzie (0,0,0) i wstawiany przez <use>; -CX kasuje przesuniecie rzutu. */
+const sym = (id: string, inner: string) => `<g id="${id}"><g transform="translate(${-CX} 0)">${inner}</g></g>`;
+const useAt = (id: string, x: number, y: number, cy: number, z = 0, sc = 1) =>
+  `<use href="#${id}" transform="translate(${f(CX + y + K * x)} ${f(cy + SY * x - z)})${sc !== 1 ? ` scale(${sc})` : ''}"/>`;
+
+function annulus(cy: number, x: number, y: number, r1: number, r2: number, z: number, fill: string, n = 24): string {
+  const pr = proj(cy);
+  const ring = (r: number) => 'M' + circ(x, y, r, n).map((p) => pr(p[0], p[1], z)).map((p) => f(p[0]) + ',' + f(p[1])).join('L') + 'Z';
+  return `<path d="${ring(r1)}${ring(r2)}" fill-rule="evenodd" fill="${fill}" stroke="${INK}" stroke-width=".6" stroke-opacity=".85"/>`;
+}
+
+/** Silnik: podstawa, 3 przewody, stojan 12 zebow z uzwojeniem, os, lozyska, pierscien magnesow, dzwon z otworami. */
+function motorSym(hot: boolean): string {
+  const pr = proj(0);
+  const bell: Pal = hot ? HOT : [C.l3, C.l4, C.l3];
+  let s = '';
+  s += extrude(cham(-16, 16, -16, 16, 5), 0, 0, 2, C.l3, C.l5, C.l4);
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) s += hole(0, sx * 11.5, sy * 11.5, 2, 1.3);
+  for (let i = -1; i <= 1; i++) {
+    const a = pr(3, i * 2.4, 1);
+    const b = pr(14, i * 2.4, -2);
+    const c = pr(20, i * 5 - 8, -8);
+    const e = pr(32, i * 5 - 16, -12);
+    const d = `M${f(a[0])},${f(a[1])}C${f(b[0])},${f(b[1])} ${f(c[0])},${f(c[1])} ${f(e[0])},${f(e[1])}`;
+    s += `<path d="${d}" fill="none" stroke="${INK}" stroke-width="2.1" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${DARK}" stroke-width=".9" stroke-linecap="round"/><circle cx="${f(e[0])}" cy="${f(e[1])}" r="1.1" fill="${COP}"/>`;
+  }
+  s += cyl(0, 0, 0, 2, 3, 3.8, MET, METS);
+  const teeth = Array.from({ length: 12 }, (_, k) => (k * Math.PI) / 6).sort((p, q) => Math.cos(p) - K * Math.sin(p) - (Math.cos(q) - K * Math.sin(q)));
+  for (const a of teeth) {
+    s += extrude([R(a, 5.2, -1.2), R(a, 11.2, -1.4), R(a, 11.2, 1.4), R(a, 5.2, 1.2)], 0, 4, 5, MET, METS, METS);
+    s += extrude([R(a, 5.8, -2.6), R(a, 10.2, -2.9), R(a, 10.2, 2.9), R(a, 5.8, 2.6)], 0, 4.5, 4.2, COP, COPS, COPS);
+  }
+  s += cyl(0, 0, 0, 4, 5, 5.2, METS, X(0.2));
+  s += cyl(0, 0, 0, 0, 46, 1.5, MET, METS);
+  s += cyl(0, 0, 0, 9, 2.4, 3.2, MET, METS);
+  // pierscien magnesow
+  s += annulus(0, 0, 0, 12, 10.6, 21, X(0.34), 28);
+  let tick = '';
+  for (let k = 0; k < 14; k++) {
+    const a = (k * 2 * Math.PI) / 14;
+    const p = pr(10.6 * Math.cos(a), 10.6 * Math.sin(a), 21);
+    const q = pr(12 * Math.cos(a), 12 * Math.sin(a), 21);
+    tick += `M${f(p[0])},${f(p[1])}L${f(q[0])},${f(q[1])}`;
+  }
+  s += `<path d="${tick}" stroke="${INK}" stroke-width=".5" opacity=".7" fill="none"/>`;
+  s += cyl(0, 0, 0, 20, 15, 12.8, bell[0], bell[1]);
+  const t1 = Math.atan2(1, K);
+  for (let j = 0; j < 6; j++) {
+    const th = t1 - Math.PI + ((j + 0.5) * Math.PI) / 6;
+    const dl = 0.13;
+    const q = (t: number, z: number) => pr(12.8 * Math.cos(t), 12.8 * Math.sin(t), z);
+    s += polyS([q(th - dl, 24), q(th + dl, 24), q(th + dl, 31), q(th - dl, 31)], HOLE, 0.5);
+  }
+  for (let k = 0; k < 5; k++) {
+    const a = (k * 2 * Math.PI) / 5 + 0.35;
+    const w = 0.27;
+    const P: Pt[] = [];
+    for (let i = 0; i <= 3; i++) P.push(pr(11 * Math.cos(a - w + (2 * w * i) / 3), 11 * Math.sin(a - w + (2 * w * i) / 3), 35));
+    for (let i = 3; i >= 0; i--) P.push(pr(5.8 * Math.cos(a - w + (2 * w * i) / 3), 5.8 * Math.sin(a - w + (2 * w * i) / 3), 35));
+    s += polyS(P, HOLE, 0.5);
+  }
+  s += disc(0, 0, 0, 35, 4.4, X(0.22), 0.6);
+  s += cyl(0, 0, 0, 35, 11, 1.5, MET, METS);
+  return s;
+}
+
+/** Smiglo trojlopatowe: zakrzywione lopaty, piasta z nakretka (polprzezroczyste). */
+function propSym(mirror: boolean): string {
+  const pr = proj(0);
+  const sg = mirror ? -1 : 1;
+  const rot0 = ((mirror ? 80 : 20) * Math.PI) / 180;
+  let s = '';
+  const N = 12;
+  for (let k = 0; k < 3; k++) {
+    const a = rot0 + (k * 2 * Math.PI) / 3;
+    const Lp: Pt[] = [];
+    const Rp: Pt[] = [];
+    const Hp: Pt[] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const u = 6 + 68 * t;
+      const vc = 10 * t * t - 1.5;
+      const w = 2.4 + 9.5 * Math.sin(Math.PI * Math.pow(t, 0.62));
+      Lp.push(R(a, u, sg * (vc + 0.8 * w)));
+      Rp.push(R(a, u, sg * (vc - 1.15 * w)));
+      Hp.push(R(a, u, sg * (vc + 0.05 * w)));
+    }
+    const tip = R(a, 75.5, sg * 8.2);
+    const P = Lp.concat([tip], Rp.slice().reverse());
+    s += polyS(P.map((p) => pr(p[0], p[1], 0)), k === 0 ? C.l1 : C.l3, 0.8);
+    s += `<polygon points="${pts(Lp.concat(Hp.slice().reverse()).map((p) => pr(p[0], p[1], 0)))}" fill="${X(0.1)}"/>`;
+    s += `<polyline points="${pts(Hp.slice(1).map((p) => pr(p[0], p[1], 0)))}" fill="none" stroke="${INK}" stroke-width=".5" opacity=".5"/>`;
+  }
+  s += cyl(0, 0, 0, 0, 4, 6.8, X(0.24), X(0.16));
+  s += extrude(circ(0, 0, 3.6, 6), 0, 4, 2.6, MET, METS, METS);
+  s += disc(0, 0, 0, 6.6, 1.2, HOLE, 0.5);
+  return s;
+}
+
+/** MOSFET z trzema nozkami (wariant lewy/prawy); w ognisku czerwony. */
+function mosSym(left: boolean, hotE: boolean): string {
+  const pr = proj(0);
+  const sg = left ? 1 : -1;
+  let s = '';
+  for (let i = 0; i < 3; i++) s += polyS(rect(5 * sg, 8.6 * sg, 1.8 + i * 4.2, 3.2 + i * 4.2).map((p) => pr(p[0], p[1], 0.6)), hotE ? HOTF : MET, 0.5);
+  s += extrude(rect(-5, 5, 0, 13), 0, 0, 2.6, hotE ? HOTF : X(0.2), hotE ? 'rgba(255,74,46,.4)' : X(0.14), hotE ? 'rgba(255,74,46,.3)' : X(0.12));
+  s += polyS(rect(-3.4, 3.4, 8.6, 12).map((p) => pr(p[0], p[1], 2.6)), hotE ? 'rgba(255,120,90,.5)' : MET, 0.5);
+  const d = pr(-3.4, 2.2, 2.6);
+  s += `<circle cx="${f(d[0])}" cy="${f(d[1])}" r=".9" fill="${INK}"/>`;
+  return s;
+}
+
+const screwSym = () =>
+  cyl(0, 0, 0, 0, 12, 1.3, METS, METS) +
+  cyl(0, 0, 0, 12, 2.4, 3.4, MET, METS) +
+  (() => {
+    const a = proj(0)(-1.8, 0, 14.4);
+    const b = proj(0)(1.8, 0, 14.4);
+    const c = proj(0)(0, -1.8, 14.4);
+    const d = proj(0)(0, 1.8, 14.4);
+    return `<path d="M${f(a[0])},${f(a[1])}L${f(b[0])},${f(b[1])}M${f(c[0])},${f(c[1])}L${f(d[0])},${f(d[1])}" stroke="${INK}" stroke-width=".6" opacity=".7"/>`;
+  })();
+const standoffSym = () => cyl(0, 0, 0, 0, 30, 3.6, X(0.3), X(0.2)) + disc(0, 0, 0, 30, 1.3, HOLE, 0.5);
+const grommetSym = () => cyl(0, 0, 0, 0, 3.4, 4.8, C.l3, C.l2) + disc(0, 0, 0, 3.4, 2.2, HOLE, 0.5);
+
+const ringHole = (cy: number, x: number, y: number, z: number, ro: number, ri: number) => disc(cy, x, y, z, ro, X(0.3), 0.5) + hole(cy, x, y, z, ri);
+const carbonTop = (P: Pt[], cy: number, z: number) => `<polygon points="${pts(P.map((p) => proj(cy)(p[0], p[1], z)))}" fill="url(#cf)" stroke="none"/>`;
+
 /** Skladniki rysunku scenicznego (bez filtra glow), z podswietleniem jednej czesci. */
 function buildDrone(hot: Part | null): string {
   const pal = (part: Part, normal: Pal): Pal => (hot === part ? HOT : normal);
-  let out = '';
+  let out = `<defs>${sym('mot', motorSym(hot === 'motors'))}${sym('propA', propSym(false))}${sym('propB', propSym(true))}${sym('mosL', mosSym(true, hot === 'esc'))}${sym('mosR', mosSym(false, hot === 'esc'))}${sym('scr', screwSym())}${sym('sto', standoffSym())}${sym('grm', grommetSym())}</defs>`;
 
   // osie (za dronem)
   const ax: string[] = [];
@@ -202,7 +342,7 @@ function buildDrone(hot: Part | null): string {
     }
   out += ax.join('');
 
-  // bateria
+  // bateria 6S: 6 ogniw widocznych na czole, paski niklowe, pasek, przewod z XT60
   {
     const cy = Y.bat;
     const pr = proj(cy);
@@ -210,13 +350,28 @@ function buildDrone(hot: Part | null): string {
     const bx = 32;
     const by = 62;
     const l0 = pr(0, -by, 14);
-    const lead = `M${f(l0[0])},${f(l0[1])} C ${f(l0[0] - 40)},${f(l0[1] + 6)} ${f(l0[0] - 50)},${f(l0[1] + 20)} ${f(l0[0] - 72)},${f(l0[1] + 22)}`;
-    out += `<path d="${lead}" fill="none" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/><path d="${lead}" fill="none" stroke="${C.l4}" stroke-width="1.2" stroke-linecap="round"/>`;
+    const lx = l0[0] - 72;
+    const ly = l0[1] + 22;
+    const lead = `M${f(l0[0])},${f(l0[1])} C ${f(l0[0] - 40)},${f(l0[1] + 6)} ${f(l0[0] - 50)},${f(l0[1] + 20)} ${f(lx)},${f(ly)}`;
+    out += `<path d="${lead}" fill="none" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/><path d="${lead}" fill="none" stroke="${DARK}" stroke-width="1.3" stroke-linecap="round"/>`;
+    // XT60
+    out += polyS([[lx - 15, ly - 5], [lx, ly - 5], [lx, ly + 5], [lx - 15, ly + 5]], X(0.3), 0.8);
+    out += polyS([[lx - 15, ly - 5], [lx - 12, ly - 8], [lx + 3, ly - 8], [lx, ly - 5]], X(0.2), 0.8);
+    out += polyS([[lx - 13, ly - 3], [lx - 9, ly - 3], [lx - 9, ly + 3], [lx - 13, ly + 3]], MET, 0.5);
+    out += polyS([[lx - 7, ly - 3], [lx - 3, ly - 3], [lx - 3, ly + 3], [lx - 7, ly + 3]], MET, 0.5);
     const bp = pal('battery', [C.l2, C.l4, C.l5]);
     out += extrude(rect(-bx, bx, -by, by), cy, 0, H, bp[0], bp[1], bp[2]);
+    const cw = (2 * by) / 6;
     for (let i = 0; i < 6; i++) {
-      const y0 = -56 + i * 18.6;
-      out += poly(rect(-26, 26, y0, y0 + 16).map((p) => pr(p[0], p[1], H)), 'rgba(207,230,242,.2)');
+      const y0 = -by + 1 + i * cw;
+      out += poly(rect(-26, 26, y0, y0 + cw - 2).map((p) => pr(p[0], p[1], H)), X(0.14));
+      const c = pr(bx, -by + cw / 2 + i * cw, H / 2);
+      out += `<circle cx="${f(c[0])}" cy="${f(c[1])}" r="9" fill="${X(0.18)}" stroke="${INK}" stroke-width=".8"/><circle cx="${f(c[0])}" cy="${f(c[1])}" r="5.6" fill="${X(0.1)}" stroke="${INK}" stroke-width=".5" stroke-opacity=".7"/><circle cx="${f(c[0])}" cy="${f(c[1])}" r="2.1" fill="${MET}"/>`;
+    }
+    for (let i = 0; i < 5; i++) {
+      const y0 = -by + cw / 2 + i * cw;
+      const sx = i % 2 === 0 ? 1 : -1;
+      out += poly(rect(sx * 20, sx * 28, y0, y0 + cw).map((p) => pr(p[0], p[1], H + 0.7)).map((p) => p), X(0.42));
     }
     out += poly(rect(-8, 8, -62, -56).map((p) => pr(p[0], p[1], H)), X(0.35));
     const s0 = 22;
@@ -227,16 +382,18 @@ function buildDrone(hot: Part | null): string {
     out += extrude(rect(-9, 9, -by - 16, -by), cy, 8, 14, C.l3, C.l5, C.l4);
   }
 
-  // plyta dolna
+  // plyta dolna (rama z karbonu)
   {
     const cy = Y.bot;
     const pr = proj(cy);
     out += extrude(bottomPlateRing(), cy, 0, 4, C.l3, C.l5, C.l4);
     const z = 4;
+    out += carbonTop(bottomPlateRing(), cy, z);
     for (const sx of [-1, 1])
       for (const sy of [-1, 1]) {
-        out += hole(cy, sx * 30, sy * 33, z, 2.6);
+        out += ringHole(cy, sx * 30, sy * 33, z, 4.6, 2.4);
         out += hole(cy, A * sx, B * sy, z, 6.5);
+        out += disc(cy, A * sx, B * sy, z, 8.6, 'none', 0.5);
         for (let k = 0; k < 4; k++) {
           const a = Math.PI / 4 + (k * Math.PI) / 2;
           out += hole(cy, A * sx + 11.5 * Math.cos(a), B * sy + 11.5 * Math.sin(a), z, 1.6);
@@ -257,11 +414,30 @@ function buildDrone(hot: Part | null): string {
           [mx - dx * 11 - nx * 2.5, my - dy * 11 - ny * 2.5],
         ];
         out += poly(slot.map((p) => pr(p[0], p[1], z)), HOLE);
+        out += useAt('grm', sx * 30, sy * 33, cy, z);
       }
     out += poly(rect(-22, 22, -12, 12).map((p) => pr(p[0], p[1], z)), HOLE);
+    out += poly(rect(-22, 22, 24, 36).map((p) => pr(p[0], p[1], z)), HOLE);
+    out += poly(rect(-22, 22, -36, -24).map((p) => pr(p[0], p[1], z)), HOLE);
+
+    // kamera FPV w bocznych plytkach (z przodu)
+    for (const yy of [-17, 14]) out += extrude(rect(52, 86, yy, yy + 3), cy, 4, 26, C.l4, C.l5, C.l4);
+    out += extrude(rect(58, 76, -12, 12), cy, 10, 14, X(0.18), X(0.14), X(0.12));
+    out += extrude(rect(62, 70, -9, 9), cy, 24, 3, C.l5, C.l6, C.l6);
+    const lz = 17;
+    const ring = (r: number) => circ(0, 0, r, 18).map(([u, v]) => pr(76, u, lz + v));
+    out += poly(ring(7), X(0.28)) + poly(ring(5), 'rgba(7,11,16,.75)') + poly(ring(2.6), X(0.5));
+    out += poly([pr(76, -9, 24), pr(76, 9, 24), pr(76, 9, 26.5), pr(76, -9, 26.5)], C.l1);
+    for (const yy of [-17, 14]) {
+      const sc = pr(86, yy + 1.5, 21);
+      out += `<circle cx="${f(sc[0])}" cy="${f(sc[1])}" r="1.6" fill="${MET}" stroke="${INK}" stroke-width=".5"/>`;
+    }
   }
 
-  // odbiornik
+  // dystanse ramy -> ESC
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += useAt('sto', sx * 30, sy * 33, Y.bot, 14);
+
+  // odbiornik ELRS z antena T
   {
     const cy = Y.rx;
     const pr = proj(cy);
@@ -269,56 +445,93 @@ function buildDrone(hot: Part | null): string {
     const a1 = pr(-44, -34, 10);
     out += `<line x1="${f(a0[0])}" y1="${f(a0[1])}" x2="${f(a1[0])}" y2="${f(a1[1])}" stroke="${INK}" stroke-width="1.25"/>`;
     const a2 = pr(-70, -66, 26);
-    out += `<line x1="${f(a1[0])}" y1="${f(a1[1])}" x2="${f(a2[0])}" y2="${f(a2[1])}" stroke="${INK}" stroke-width="7" stroke-linecap="butt"/><line x1="${f(a1[0])}" y1="${f(a1[1])}" x2="${f(a2[0])}" y2="${f(a2[1])}" stroke="${C.l6}" stroke-width="4.6"/>`;
+    out += `<line x1="${f(a1[0])}" y1="${f(a1[1])}" x2="${f(a2[0])}" y2="${f(a2[1])}" stroke="${INK}" stroke-width="7" stroke-linecap="butt"/><line x1="${f(a1[0])}" y1="${f(a1[1])}" x2="${f(a2[0])}" y2="${f(a2[1])}" stroke="${C.l6}" stroke-width="4.6"/><line x1="${f(a1[0])}" y1="${f(a1[1])}" x2="${f(a2[0])}" y2="${f(a2[1])}" stroke="${DARK}" stroke-width="1.2"/>`;
     const p = pal('rx', NORMAL);
     out += extrude(rect(-15, 15, -22, 22), cy, 0, 2.4, p[0], p[1], p[2]);
-    out += extrude(rect(-6, 6, -10, 2), cy, 2.4, 2.5, C.l7, C.l6, C.l6);
+    out += extrude(rect(-6, 6, -10, 2), cy, 2.4, 2.5, X(0.14), C.l6, C.l6); // ukl. glowny
+    out += extrude(rect(-4, 5, 6, 14), cy, 2.4, 3, MET, METS, METS); // oslona (shield can)
     out += extrude(rect(8, 13, -18, -10), cy, 2.4, 1.6, C.l1, C.l3, C.l3);
     out += extrude(rect(-13, -9, 10, 18), cy, 2.4, 2, C.l1, C.l3, C.l3);
+    out += cyl(cy, -12, -6, 2.4, 1.6, 1.9, MET, METS); // zlacze u.FL
     out += hole(cy, 9, 16, 2.4, 1.6);
-    for (let i = 0; i < 4; i++) out += poly(rect(13.5, 15, 8 + i * 3.4, 10 + i * 3.4).map((q) => pr(q[0], q[1], 2.4)), C.l1, 'stroke-width=".8"');
+    out += ringHole(cy, -11, 18, 2.4, 2.8, 1.3) + ringHole(cy, 11, 18, 2.4, 2.8, 1.3);
+    for (let i = 0; i < 4; i++) out += poly(rect(13.5, 15, 8 + i * 3.4, 10 + i * 3.4).map((q) => pr(q[0], q[1], 2.4)), MET);
+    out += trace(cy, 2.4, [[-8, -10], [-8, -16], [4, -16]]) + trace(cy, 2.4, [[6, -4], [10, -4], [10, 6]]);
   }
 
-  // ESC
+  // ESC 4w1: 8 MOSFET, kondensator, pady silnikow, zlacze 8-pin
   {
     const cy = Y.esc;
     const pr = proj(cy);
+    const hotE = hot === 'esc';
     const p = pal('esc', NORMAL);
     out += extrude(cham(-40, 40, -44, 44, 6), cy, 0, 3, p[0], p[1], p[2]);
     const z = 3;
-    for (const x of [-26, 26])
-      for (let i = 0; i < 4; i++) {
-        const y0 = -38 + i * 20;
-        out += extrude(rect(x - 6, x + 6, y0, y0 + 14), cy, z, 2.6, C.l7, C.l6, C.l6);
-      }
-    out += cyl(cy, -2, 0, z, 16, 9.5, C.l5, C.l3);
-    for (const sx of [-1, 1])
-      for (const sy of [-1, 1]) out += poly(rect(sx * 36 - 3, sx * 36 + 3, sy * 40 - 3, sy * 40 + 3).map((q) => pr(q[0], q[1], z)), C.l1, 'stroke-width="1"');
-    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += hole(cy, sx * 30, sy * 33, z, 2.2);
     for (let i = 0; i < 4; i++) {
       const y0 = -30 + i * 20;
       out += trace(cy, z, [[-20, y0 + 7], [-8, y0 + 7], [-2, 0]]) + trace(cy, z, [[20, y0 + 7], [10, y0 + 7], [4, 0]]);
     }
-    for (let i = 0; i < 6; i++) out += poly(rect(36, 39, -16 + i * 6, -13 + i * 6).map((q) => pr(q[0], q[1], z)), C.l1, 'stroke-width=".8"');
+    for (const x of [-26, 26]) for (let i = 0; i < 4; i++) out += useAt(x < 0 ? 'mosL' : 'mosR', x, -38 + i * 20 + 0.5, cy, z);
+    out += cyl(cy, -2, 0, z, 16, 9.5, X(0.3), X(0.2));
+    out += disc(cy, -2, 0, z + 16, 7, 'none', 0.5);
+    {
+      const a = pr(-8.5, 0, z + 16);
+      const b = pr(4.5, 0, z + 16);
+      out += `<path d="M${f(a[0])},${f(a[1])}L${f(b[0])},${f(b[1])}" stroke="${INK}" stroke-width=".6" opacity=".7"/>`;
+    }
+    for (const sx of [-1, 1])
+      for (const sy of [-1, 1])
+        for (let i = 0; i < 3; i++) {
+          const x0 = sx * (18 + i * 7);
+          out += poly(rect(x0 - 2.5, x0 + 2.5, sy * 41 - 2.5, sy * 41 + 2.5).map((q) => pr(q[0], q[1], z)), hotE ? HOTF : X(0.42), 'stroke-opacity=".6"');
+        }
+    out += extrude(rect(-14, 14, 36, 42), cy, z, 3, X(0.2), X(0.14), X(0.12));
+    for (let i = 0; i < 8; i++) out += poly(rect(-13 + i * 3.45, -11.4 + i * 3.45, 37.5, 40.5).map((q) => pr(q[0], q[1], z + 3)), MET, 'stroke-opacity=".5"');
+    for (let i = 0; i < 6; i++) out += poly(rect(36, 39, -16 + i * 6, -13 + i * 6).map((q) => pr(q[0], q[1], z)), X(0.4));
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += ringHole(cy, sx * 30, sy * 33, z, 4.4, 2.2);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += useAt('grm', sx * 30, sy * 33, cy, z);
   }
 
-  // FC
+  // dystanse ESC -> FC i wiazka 8-pin (miedzy plytkami)
+  {
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += useAt('sto', sx * 30, sy * 33, Y.esc, 12);
+    let rib = '';
+    for (let i = 0; i < 8; i++) {
+      const xi = -14 + i * 4;
+      const e = proj(Y.esc)(xi, 39, 6);
+      const g = proj(Y.fc)(xi, 39, 0);
+      rib += `<path d="M${f(e[0])},${f(e[1])}C${f(e[0] + 30)},${f(e[1] - 8)} ${f(g[0] + 30)},${f(g[1] + 8)} ${f(g[0])},${f(g[1])}" fill="none" stroke="${INK}" stroke-width=".8" stroke-opacity=".7"/>`;
+    }
+    out += rib;
+  }
+
+  // FC: MCU, zyroskop, USB-C, pady, otwory
   {
     const cy = Y.fc;
     const pr = proj(cy);
     const p = pal('fc', NORMAL);
     out += extrude(cham(-40, 40, -44, 44, 6), cy, 0, 3, p[0], p[1], p[2]);
     const z = 3;
-    out += extrude(rect(40, 52, -12, 12), cy, z, 4, C.l1, C.l4, C.l3);
-    out += extrude(rect(-12, 12, -14, 14), cy, z, 3.4, C.l7, C.l6, C.l6);
+    // USB-C z otworem
+    out += extrude(rect(40, 52, -12, 12), cy, z, 4, MET, X(0.3), X(0.22));
+    out += poly([pr(52, -7, z + 1), pr(52, 7, z + 1), pr(52, 7, z + 3), pr(52, -7, z + 3)], 'rgba(7,11,16,.8)');
+    out += poly([pr(52, -4, z + 1.9), pr(52, 4, z + 1.9), pr(52, 4, z + 2.1), pr(52, -4, z + 2.1)], MET);
+    // MCU z wyprowadzeniami
+    out += poly(rect(-15, 15, -17, 17).map((q) => pr(q[0], q[1], z + 0.4)), 'none', 'stroke-dasharray=".8 1.2" stroke-opacity=".8"').replace('stroke-width="0.9"', 'stroke-width="2.4"');
+    out += extrude(rect(-12, 12, -14, 14), cy, z, 3.4, X(0.2), X(0.15), X(0.14));
     const dot = pr(-9, -11, z + 3.4);
-    out += `<circle cx="${f(dot[0])}" cy="${f(dot[1])}" r="1.1" fill="${C.l1}"/>`;
-    out += extrude(rect(-30, -20, 18, 30), cy, z, 2.4, C.l6, C.l5, C.l5);
-    out += extrude(rect(18, 30, -34, -22), cy, z, 1.8, C.l4, C.l5, C.l5);
-    for (let i = 0; i < 6; i++) out += extrude(rect(24, 27, 6 + i * 5, 9 + i * 5 > 43 ? 43 : 9 + i * 5), cy, z, 0.8, C.l1, C.l3, C.l3);
-    for (let i = 0; i < 8; i++) out += poly(rect(-36 + i * 8.6, -33 + i * 8.6, 38, 42).map((q) => pr(q[0], q[1], z)), C.l1, 'stroke-width=".9"');
-    for (let i = 0; i < 6; i++) out += poly(rect(33, 37, -38 + i * 7, -35 + i * 7).map((q) => pr(q[0], q[1], z)), C.l1, 'stroke-width=".9"');
-    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += hole(cy, sx * 30, sy * 33, z, 2.4);
+    out += `<circle cx="${f(dot[0])}" cy="${f(dot[1])}" r="1.1" fill="${INK}"/>`;
+    // zyroskop + flash + elementy SMD
+    out += extrude(rect(-30, -22, 18, 26), cy, z, 1.8, X(0.22), X(0.16), X(0.14));
+    const gd = pr(-28.5, 19.5, z + 1.8);
+    out += `<circle cx="${f(gd[0])}" cy="${f(gd[1])}" r=".8" fill="${INK}"/>`;
+    out += extrude(rect(18, 30, -34, -22), cy, z, 1.8, X(0.2), X(0.15), X(0.14));
+    for (let i = 0; i < 6; i++) out += extrude(rect(24, 27, 6 + i * 5, Math.min(9 + i * 5, 43)), cy, z, 0.8, X(0.26), C.l3, C.l3);
+    const smd: Array<[number, number, number, number]> = [[-34, 8, -30, 10], [-34, 12, -30, 14], [-20, 30, -16, 32], [-6, 28, -2, 30], [6, 28, 10, 30], [14, 22, 18, 24], [-18, -30, -14, -28], [-8, -34, -4, -32], [4, -34, 8, -32], [30, 14, 34, 16]];
+    for (const [a, b, c, d] of smd) out += poly(rect(a, c, b, d).map((q) => pr(q[0], q[1], z)), X(0.3), 'stroke-opacity=".6"');
+    for (let i = 0; i < 8; i++) out += poly(rect(-36 + i * 8.6, -33 + i * 8.6, 38, 42).map((q) => pr(q[0], q[1], z)), X(0.4));
+    for (let i = 0; i < 6; i++) out += poly(rect(33, 37, -38 + i * 7, -35 + i * 7).map((q) => pr(q[0], q[1], z)), X(0.4));
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += ringHole(cy, sx * 30, sy * 33, z, 4.6, 2.4);
     out +=
       trace(cy, z, [[-30, 38], [-30, 20], [-14, 14]]) +
       trace(cy, z, [[-8, 38], [-8, 24], [-14, 16]]) +
@@ -326,63 +539,30 @@ function buildDrone(hot: Part | null): string {
       trace(cy, z, [[14, 6], [26, 6], [26, 30], [33, 36]]) +
       trace(cy, z, [[-34, -30], [-20, -30], [-14, -16]]) +
       trace(cy, z, [[0, -14], [0, -36], [-16, -36]]);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += useAt('sto', sx * 30, sy * 33, Y.fc, 12);
   }
 
-  // plyta gorna
+  // plyta gorna (karbon) ze srubami
   {
     const cy = Y.top;
     const pr = proj(cy);
-    out += extrude(cham(-68, 68, -52, 52, 20), cy, 0, 4, C.l2, C.l4, C.l5);
+    const topP = cham(-68, 68, -52, 52, 20);
+    out += extrude(topP, cy, 0, 4, C.l2, C.l4, C.l5);
     const z = 4;
-    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += hole(cy, sx * 30, sy * 33, z, 3.2);
+    out += carbonTop(topP, cy, z);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += ringHole(cy, sx * 30, sy * 33, z, 5.2, 3.2);
     out += poly(rect(-8, 8, -44, -22).map((p) => pr(p[0], p[1], z)), HOLE);
     out += poly(rect(-8, 8, 22, 44).map((p) => pr(p[0], p[1], z)), HOLE);
     out += poly(rect(52, 60, -10, 10).map((p) => pr(p[0], p[1], z)), HOLE);
     out += poly(rect(-56, -46, -10, 10).map((p) => pr(p[0], p[1], z)), HOLE);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) out += useAt('scr', sx * 30, sy * 33, cy, 14);
   }
 
   // silniki
-  {
-    const cy = Y.motors;
-    const order: Array<[number, number]> = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
-    const mt = pal('motors', [C.l2, C.l3, C.l3]);
-    for (const [sx, sy] of order) {
-      const x = sx * A;
-      const y = sy * B;
-      out += cyl(cy, x, y, 0, 8, 14, hot === 'motors' ? HOT[0] : C.l3, hot === 'motors' ? HOT[1] : C.l4);
-      out += cyl(cy, x, y, 8, 15, 12.5, hot === 'motors' ? HOT[0] : mt[0], hot === 'motors' ? HOT[1] : mt[1]);
-      for (const rr of [5.5, 7.5, 9.5, 11.5]) out += disc(cy, x, y, 23, rr, 'none', 0.6);
-      for (const rr of [4, 6.5, 9, 11]) out += disc(cy, x, y, 10, rr, 'none', 0.5);
-      out += disc(cy, x, y, 23, 4, C.l4);
-      out += disc(cy, x, y, 23, 1.2, C.l7, 0.8);
-    }
-  }
+  for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]] as Array<[number, number]>) out += useAt('mot', sx * A, sy * B, Y.motors, 0, 1.2);
 
   // smigla
-  {
-    const cy = Y.props;
-    const pr = proj(cy);
-    const blade: Pt[] = [[7, -3], [18, -11], [38, -17], [58, -14], [72, -6], [74, 2], [62, 8], [40, 10], [18, 5]];
-    const order: Array<[number, number]> = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
-    for (const [sx, sy] of order) {
-      const x = sx * A;
-      const y = sy * B;
-      const rot0 = ((sx * sy > 0 ? 20 : 80) * Math.PI) / 180;
-      for (let k = 0; k < 3; k++) {
-        const a = rot0 + (k * 2 * Math.PI) / 3;
-        const P = blade.map(([u, v]) => {
-          const vv = sx * sy > 0 ? v : -v;
-          return [x + u * Math.cos(a) - vv * Math.sin(a), y + u * Math.sin(a) + vv * Math.cos(a)] as Pt;
-        });
-        out += poly(P.map((p) => pr(p[0], p[1], 0)), k === 0 ? C.l1 : C.l2);
-        const m1 = pr(x + 14 * Math.cos(a), y + 14 * Math.sin(a), 0);
-        const m2 = pr(x + 66 * Math.cos(a), y + 66 * Math.sin(a), 0);
-        out += `<line x1="${f(m1[0])}" y1="${f(m1[1])}" x2="${f(m2[0])}" y2="${f(m2[1])}" stroke="${INK}" stroke-width=".7" opacity=".5"/>`;
-      }
-      out += disc(cy, x, y, 0, 9, C.l3);
-      out += disc(cy, x, y, 0, 3, C.l7, 1);
-    }
-  }
+  for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]] as Array<[number, number]>) out += useAt(sx * sy > 0 ? 'propA' : 'propB', sx * A, sy * B, Y.props);
   return out;
 }
 
@@ -437,6 +617,7 @@ function hotMarkup(hot: Part, labels: XrayLabels, motorBracketY: number): { glow
 
 const DEFS = `<defs>
 <radialGradient id="hot"><stop offset="0" stop-color="#FF4A2E" stop-opacity=".5"/><stop offset=".5" stop-color="#FF4A2E" stop-opacity=".16"/><stop offset="1" stop-color="#FF4A2E" stop-opacity="0"/></radialGradient>
+<pattern id="cf" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="matrix(${K} ${SY} 1 0 0 0)"><path d="M0 0h2.5v2.5H0zM2.5 2.5H5V5H2.5z" fill="rgba(207,230,242,.11)"/><path d="M2.5 0H5v2.5H2.5zM0 2.5h2.5V5H0z" fill="rgba(207,230,242,.03)"/></pattern>
 <filter id="glow" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>`;
 

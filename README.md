@@ -29,6 +29,8 @@
 
 <p align="center"><b>English</b> · <a href="#polski">Polski</a> · <a href="CHANGELOG.md">Changelog</a></p>
 
+> **A hobby project made to make our work in the FPV hobby easier.** Free and open source, built by and for FPV pilots. Contributions are welcome through pull requests with screenshots, see [Contributing](#contributing).
+>
 > Formerly **Rotorlab**. Installs of Rotorlab 0.2.0 update to WorkspaceFPV from **Settings → Updates** and keep their settings.
 
 ## Features
@@ -117,6 +119,7 @@ npm install
 npm run dev            # app in the browser (Vite)
 npm run dev:electron   # app in Electron
 npm run build          # typecheck + build to dist/
+npm test               # all node tests
 npm run dist:win       # Windows installer to release/
 ```
 
@@ -156,6 +159,10 @@ Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI work
 - Flashing Betaflight firmware (DFU) and ELRS from inside the app
 - macOS and Linux
 
+## Contributing
+
+WorkspaceFPV is a hobby project made to make our work in the FPV hobby easier, and the repository is public. You can't push to it directly: **every change comes as a pull request from your fork, with screenshots of what changed** (before and after when you change something that exists), so we can review it and, if it fits, merge it into the project. The PR template, the automatic checks (title, screenshots, build, tests) and the safety rules for code that talks to a flight controller are described in [CONTRIBUTING.md](CONTRIBUTING.md). Bugs and ideas: open an [issue](https://github.com/0nskal/WorkspaceFPV/issues).
+
 ## License
 
 [MIT](LICENSE)
@@ -166,6 +173,8 @@ Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI work
 
 <p align="center"><a href="#features">English</a> · <b>Polski</b> · <a href="CHANGELOG.md">Historia zmian</a></p>
 
+> **Projekt hobbystyczny, który ma ułatwiać nam pracę w tym hobby (FPV).** Darmowy i otwarty, tworzony przez pilotów FPV dla pilotów FPV. Zmiany mile widziane przez pull requesty ze zrzutami ekranu, zobacz [Współpraca](#współpraca).
+>
 > Wcześniej **Rotorlab**. Instalacje Rotorlab 0.2.0 zaktualizują się do WorkspaceFPV z **Ustawienia → Aktualizacje** i zachowają ustawienia.
 
 ## Funkcje
@@ -247,6 +256,7 @@ npm install
 npm run dev            # appka w przeglądarce (Vite)
 npm run dev:electron   # appka w Electronie
 npm run build          # typecheck + build do dist/
+npm test               # wszystkie testy
 npm run dist:win       # instalator Windows do release/
 ```
 
@@ -279,6 +289,10 @@ Wypchnięcie tagu `v*` uruchamia GitHub Actions z automatycznymi notatkami wydan
 - Kierunek obrotów i kolejność silników per silnik (komendy DShot)
 - Wgrywanie firmware Betaflight (DFU) i ELRS z poziomu appki
 - macOS i Linux
+
+## Współpraca
+
+WorkspaceFPV to projekt hobbystyczny, który ma ułatwiać nam pracę w tym hobby, a repozytorium jest publiczne. Nie można pushować do niego bezpośrednio: **każda zmiana przychodzi jako pull request z Twojego forka, ze zrzutami ekranu tego, co się zmieniło** (przed i po, gdy zmieniasz coś istniejącego), żebyśmy mogli to sprawdzić i, jeśli pasuje, wprowadzić do projektu. Szablon PR, automatyczne sprawdzenia (tytuł, zrzuty, build, testy) i zasady bezpieczeństwa dla kodu rozmawiającego z kontrolerem lotu opisuje [CONTRIBUTING.md](CONTRIBUTING.md). Błędy i pomysły: otwórz [issue](https://github.com/0nskal/WorkspaceFPV/issues).
 
 ## Licencja
 

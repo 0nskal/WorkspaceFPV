@@ -1,0 +1,35 @@
+name: Bug report / Zgłoszenie błędu
+description: Something does not work or shows wrong values
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Co się stało?
+      description: What did you do, what did you expect, what happened instead? A screenshot helps a lot.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: WorkspaceFPV version / Wersja
+      description: Settings → Updates, or the website footer for the browser version.
+      placeholder: "0.4.0 (Windows app / browser)"
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware / Sprzęt
+      description: FC board, Betaflight version, ESC firmware, ELRS version (if relevant).
+      placeholder: "SpeedyBee F405 V4, Betaflight 4.5.1, Bluejay 0.21, ELRS 3.4.3"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Kroki
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I removed the props before testing anything that spins the motors.

@@ -182,7 +182,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         <div class="bf-osd-tabs" role="tablist">${TABS.map((x) => `<button type="button" role="tab" data-tab="${x}" aria-selected="${x === tab}" class="${x === tab ? 'on' : ''}">${t(`bfOsd.sub.${x}` as 'bfOsd.sub.elements')}</button>`).join('')}</div>
         <div class="bf-osd-body">${body}</div>
         <div class="bf-motors-bar">
-          <pre class="esc-cmds mono">${n ? escapeHtml(t('bfOsd.pending', { n })) : t('esc.noChanges')}</pre>
+          <pre class="esc-cmds mono${n ? '' : ' empty'}">${n ? escapeHtml(t('bfOsd.pending', { n })) : t('esc.noChanges')}</pre>
           <div class="bf-motors-btns">
             <button type="button" class="btn light" data-act="save" ${n === 0 || saving ? 'disabled' : ''}>${icon('check', 16)}${t('bfOsd.save')}</button>
             <button type="button" class="btn ghost" data-act="revert" ${n === 0 || saving ? 'disabled' : ''}>${t('bfMotors.revert')}</button>

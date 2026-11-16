@@ -204,7 +204,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       <div class="bf-blackbox-f${changed.debug ? ' bf-blackbox-changed' : ''}"><label><b>${t('bfBlackbox.debug')}</b><small class="mono" title="${escapeHtml(t('bfBlackbox.debugTip'))}">debug_mode</small></label>${debugField || `<span class="mono">${t('bfBlackbox.noValue')}</span>`}</div>
       ${armed() ? `<p class="bf-blackbox-err mono" role="alert">${t('bfBlackbox.armed')}</p>` : ''}
       <div class="bf-motors-bar">
-        <pre class="esc-cmds mono">${list.length ? escapeHtml(list.join('\n')) : t('esc.noChanges')}</pre>
+        <pre class="esc-cmds mono${list.length ? '' : ' empty'}">${list.length ? escapeHtml(list.join('\n')) : t('esc.noChanges')}</pre>
         <div class="bf-motors-btns">
           <button type="button" class="btn light" data-act="save" ${list.length === 0 || saving || armed() ? 'disabled' : ''}>${icon('check', 16)}${t('bfBlackbox.save')}</button>
           <button type="button" class="btn ghost" data-act="revert" ${list.length === 0 || saving ? 'disabled' : ''}>${t('bfMotors.revert')}</button>
@@ -364,9 +364,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     });
     if (!ok) return;
     try {
-      ctx.link()?.expectReboot('leave'); // the FC re-enumerates as a USB drive: no reconnect attempt
+      const link = ctx.link();
       const r = decodeMscReply(await ctx.bf.send(MSPB.REBOOT, Uint8Array.of(2), 3000));
       if (!r.ready) return ctx.toast(t('bfBlackbox.mscNotReady'), 'error');
+      link?.expectReboot('leave'); // the FC re-enumerates as a USB drive: report a plain close, no reconnect attempt
       ctx.toast(t('bfBlackbox.mscDone'), 'ok');
     } catch (e) {
       ctx.toast(t('bfBlackbox.mscFail', { msg: errMsg(e) }), 'error');

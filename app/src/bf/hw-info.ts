@@ -7,6 +7,7 @@
 import type { AppContext } from '../context';
 import { decodeAnalog, decodeMotors, decodeStatus } from '../fc/read';
 import { MSP } from '../serial/msp';
+import { C } from './codes';
 import { sleep } from '../serial/port';
 import { getReconnectStatus } from '../serial/reconnect-status';
 import { escapeHtml } from '../ui/dom';
@@ -174,7 +175,7 @@ export class HwInfo {
     const io = rawLink(this.ctx);
     if (!io) return true;
     try {
-      return decodeStatus(await this.ctx.bf.send(MSP.STATUS)).armed;
+      return decodeStatus(await this.ctx.bf.send(C.STATUS_EX), this.ctx.bf.get().api || 46).armed;
     } catch {
       return true; // cannot tell: do not touch the FC
     }
@@ -187,7 +188,7 @@ export class HwInfo {
     const demo = io.kind === 'demo';
     const apiMinor = this.ctx.state.get().info?.apiVersion.minor ?? 46;
     try {
-      let st = decodeStatus(await this.ctx.bf.send(MSP.STATUS));
+      let st = decodeStatus(await this.ctx.bf.send(C.STATUS_EX), this.ctx.bf.get().api || 46);
       if (st.armed) return 'armed';
       const analog = decodeAnalog(await this.ctx.bf.send(MSP.ANALOG), apiMinor);
       if (!batteryPresent(analog.vbat)) return 'noBattery';
@@ -195,7 +196,7 @@ export class HwInfo {
         // the failsafe flag appears a moment after the transmitter goes silent
         for (let i = 0; i < 12 && (st.armingDisableFlags & FLAG_RX_FAILSAFE) === 0; i++) {
           await sleep(500);
-          st = decodeStatus(await this.ctx.bf.send(MSP.STATUS));
+          st = decodeStatus(await this.ctx.bf.send(C.STATUS_EX), this.ctx.bf.get().api || 46);
           if (st.armed) return 'armed';
         }
         if ((st.armingDisableFlags & FLAG_RX_FAILSAFE) === 0) return 'radioOn';

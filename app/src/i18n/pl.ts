@@ -49,7 +49,7 @@ export const pl: Dict = {
   },
   tabs: {
     warsztat: 'Warsztat',
-    esc: 'ESC',
+    esc: 'Silniki',
     autotune: 'Autotune PID',
     elrs: 'ELRS',
     ustawienia: 'Ustawienia',
@@ -85,7 +85,7 @@ export const pl: Dict = {
   },
   updateToast: 'Dostępna wersja {version} – Ustawienia → Aktualizacje',
   parts: {
-    esc: 'ESC',
+    esc: 'Silniki',
     rx: 'Odbiornik',
     fc: 'FC',
     motors: 'Silniki',

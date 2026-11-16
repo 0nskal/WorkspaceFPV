@@ -260,7 +260,19 @@ export function createApp(root: HTMLElement): AppContext {
   let rssiEl!: HTMLElement;
   let gyroLine!: SVGPolylineElement;
 
-  /** (Re)builds the whole shell: top bar from the screen registry + empty screen area. Called on start and on language change. */
+  /** Second bar: every tab in registry order, a thin divider between groups (overview | FC setup | tuning | tools). */
+  function navHtml(): string {
+    let prev = '';
+    return SCREENS.filter((sc) => sc.nav !== false)
+      .map((sc) => {
+        const sep = prev && sc.group !== prev ? '<span class="nav-sep" aria-hidden="true"></span>' : '';
+        prev = sc.group;
+        return `${sep}<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`;
+      })
+      .join('');
+  }
+
+  /** (Re)builds the whole shell: top bar, tab bar from the screen registry, empty screen area. Called on start and on language change. */
   function buildShell(): void {
     root.innerHTML = `
     <header class="bar">
@@ -269,9 +281,6 @@ export function createApp(root: HTMLElement): AppContext {
       <div class="st"><i></i><span class="st-t">${t('shell.disconnected')}</span></div>
       <div class="sep dn-sep"></div>
       <div class="dn"></div>
-      <nav class="nav" aria-label="${t('shell.tabsAria')}">${SCREENS.filter((sc) => sc.nav !== false)
-        .map((sc) => `<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`)
-        .join('')}</nav>
       <div class="tel">
         <svg class="gyro" width="98" height="22" viewBox="0 0 98 22" aria-hidden="true"><polyline fill="none" stroke="#CFE6F2" stroke-width="1.1" points=""/></svg>
         <span class="rssi">RSSI <b>—</b></span>
@@ -279,6 +288,7 @@ export function createApp(root: HTMLElement): AppContext {
         <button class="ib" data-act="drawer" title="${t('shell.drawerToggle')}" aria-label="${t('shell.assistantAria')}">${icon('panel', 17)}</button>
       </div>
     </header>
+    <nav class="nav" aria-label="${t('shell.tabsAria')}">${navHtml()}</nav>
     <div class="body"><main class="screen" id="screen"></main></div>`;
     screenEl = root.querySelector<HTMLElement>('#screen') as HTMLElement;
     bodyEl = root.querySelector<HTMLElement>('.body') as HTMLElement;

@@ -169,7 +169,7 @@ export function mountMotorConfig(host: HTMLElement, ctx: AppContext, opts: { onR
       <p class="esc-note mono">${t('esc.bidirNote')}</p>
       ${bad.length ? `<p class="bf-motors-err mono" role="alert">${bad.map((k) => t(`bfMotors.err.${k}` as 'bfMotors.err.idle')).join(' · ')}</p>` : ''}
       <div class="bf-motors-bar">
-        <pre class="esc-cmds mono">${list.length ? escapeHtml(list.join('\n')) : t('esc.noChanges')}</pre>
+        <pre class="esc-cmds mono${list.length ? '' : ' empty'}">${list.length ? escapeHtml(list.join('\n')) : t('esc.noChanges')}</pre>
         <div class="bf-motors-btns">
           <button type="button" class="btn light" data-act="save" ${list.length === 0 || bad.length || saving ? 'disabled' : ''}>${icon('check', 16)}${reboot ? t('bfMotors.saveReboot') : t('bfMotors.save')}</button>
           <button type="button" class="btn ghost" data-act="revert" ${list.length === 0 || saving ? 'disabled' : ''}>${t('bfMotors.revert')}</button>

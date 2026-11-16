@@ -88,6 +88,7 @@ function makeRc(type: number): Uint8Array {
   else set([100, 100, 100], [10, 10, 0], [70, 70, 70]);
   b[6] = 50;
   b[7] = 0;
+  b[15] = 100; // throttle_limit_percent (firmware default)
   u16le(b, 16, 1998);
   u16le(b, 18, 1998);
   u16le(b, 20, 1998);

@@ -15,6 +15,7 @@ bf/codec.ts         tolerant byte Reader/Writer (short payloads read as 0, never
 bf/decode.ts        typed decoders + read-modify-write encoders for the core commands
 bf/arming.ts        arming-disable flag tables per API version
 bf/store.ts         BfData, BfStore, BfSession (= ctx.bf), the read-everything steps, saveSettings
+bf/steps.ts         read steps of the other tabs (tuning, receiver, modes, blackbox, OSD) + their area names
 bf/form.ts          declarative editable tab (fields, validation, red "changed" marks, Save bar, Ask AI)
 fc/state.ts         FcStore (the older shared state: conn, info, config, status, telemetry)
 fc/read.ts          readAll() = bf snapshot + first telemetry; the 100 ms telemetry loop; derives FcInfo/FcConfig from BfData
@@ -43,6 +44,15 @@ registerBfStep({ id: 'osd', area: 'osd', code: 92, minApi: 44, apply: (d, p, api
 ```
 
 Call it at module load (e.g. in your screen file). The step joins the connect-time snapshot and `refresh('osd')`; read the result with `ctx.bf.get().ext.osd` and the raw payload with `ctx.bf.get().raw.get('osd')`.
+
+`bf/steps.ts` does this for the PID Tuning, Receiver, Modes, Blackbox and OSD tabs (`STEP.*` ids, `AREA.*` area lists). Those tabs keep their own decoders (they need the API version), so their steps only store the raw payload. The pattern every hand-written tab follows:
+
+1. On mount render from `ctx.bf.get().raw` right away (the snapshot already read it; nobody presses "read").
+2. `await ctx.bf.refresh(AREA.x)` in the background; re-render only when the payloads changed (`rawKey`) and nothing is being edited.
+3. Save with `ctx.bf.saveSettings(writes, { reboot, areas: AREA.x })`, then decode from the store again.
+4. Live data (RC channels, STATUS_EX mode bits, motor telemetry, dataflash reads) goes through `ctx.bf.send(code)`.
+
+Raw sessions (4-way ESC interface, CRSF passthrough) use `ctx.link().raw(fn)` directly (`bf/hw-info.ts`); MSP is suspended meanwhile.
 
 ## Saving: `saveSettings`
 
@@ -87,7 +97,14 @@ The framework shows the value read from the FC, marks edited fields red, validat
 
 ## Tests
 
+Every `app/src/bf/test-*.mjs` and `app/src/analysis/test.mjs` runs the same way:
+
 ```
 npx esbuild app/src/bf/test-core.mjs --bundle --platform=node --format=esm --outfile=$TEMP/t.mjs && node $TEMP/t.mjs
-npx esbuild app/src/bf/test-session.mjs --bundle --platform=node --format=esm --outfile=$TEMP/t2.mjs && node $TEMP/t2.mjs
 ```
+
+`test-session.mjs` runs the snapshot/save/reset cycle against the demo FC and checks that every tab's data is read on connect. `test-firmware.mjs` holds reference values computed from a port of the firmware C code (rates for all five types, the throttle curve for 4.5 and 2025.12, arming flags, beepers, serial port ids, the STATUS_EX layout).
+
+## Tab bar
+
+`screens/registry.ts` orders the tabs like the Configurator and puts each in a `group` (overview, FC setup, tuning and logs, tools); the shell draws them in a second row under the top bar with a thin divider between groups.

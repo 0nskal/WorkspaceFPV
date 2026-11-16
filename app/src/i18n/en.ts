@@ -53,7 +53,7 @@ export const en = {
   },
   tabs: {
     warsztat: 'Workshop',
-    esc: 'ESC',
+    esc: 'Motors',
     autotune: 'PID Autotune',
     elrs: 'ELRS',
     ustawienia: 'Settings',
@@ -90,7 +90,7 @@ export const en = {
   },
   updateToast: 'Version {version} is available. Settings → Updates',
   parts: {
-    esc: 'ESC',
+    esc: 'Motors',
     rx: 'Receiver',
     fc: 'FC',
     motors: 'Motors',

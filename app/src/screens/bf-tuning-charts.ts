@@ -42,6 +42,7 @@ export function ratesChart(cur: Values, orig: Values): string {
   g += `<text x="${c.l + c.pw}" y="${c.t + c.ph + 27}" text-anchor="end" class="bf-tuning-tick">${t('bfTuning.rates.axisX')}</text>`;
   g += `<text x="${c.l + 6}" y="${c.t + 10}" class="bf-tuning-tick">${t('bfTuning.rates.axisY')}</text>`;
   const path = (p: readonly (readonly [number, number])[]) => p.map((q, i) => `${i ? 'L' : 'M'}${f1(x(q[0]))} ${f1(y(q[1]))}`).join('');
+  const labels: Array<{ v: number; y: number; hot: boolean }> = [];
   for (let a = 2; a >= 0; a--) {
     const r = rates(cur, a as 0 | 1 | 2);
     const o = rates(orig, a as 0 | 1 | 2);
@@ -49,8 +50,12 @@ export function ratesChart(cur: Values, orig: Values): string {
     if (changed) g += `<path d="${path(pts(otype, o))}" fill="none" stroke="${SUB}" stroke-width="1.2" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>`;
     g += `<path d="${path(pts(type, r))}" fill="none" stroke="${changed ? HOT : INK}" stroke-width="${a === 0 ? 2.2 : 1.8}" ${DASH[a] ? `stroke-dasharray="${DASH[a]}"` : ''}/>`;
     const mx = pts(type, r)[N]![1];
-    g += `<text x="${f1(x(1) - 4)}" y="${f1(y(mx) - 5)}" text-anchor="end" class="bf-tuning-tick ${changed ? 'hot' : 'ink'}">${Math.round(mx)}</text>`;
+    if (!labels.some((l) => l.v === Math.round(mx))) labels.push({ v: Math.round(mx), y: y(mx) - 5, hot: changed });
   }
+  // end-of-curve max labels: equal values once, close ones pushed apart so they never overlap
+  labels.sort((p, q) => p.y - q.y);
+  for (let i = 1; i < labels.length; i++) labels[i]!.y = Math.max(labels[i]!.y, labels[i - 1]!.y + 11);
+  for (const l of labels) g += `<text x="${f1(x(1) - 4)}" y="${f1(l.y)}" text-anchor="end" class="bf-tuning-tick ${l.hot ? 'hot' : 'ink'}">${l.v}</text>`;
   return `<svg class="bf-tuning-svg" viewBox="0 0 ${c.W} ${c.H}" role="img" aria-label="${t('bfTuning.rates.chartAria')}">${g}</svg>`;
 }
 

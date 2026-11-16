@@ -9,7 +9,8 @@ await build({
   platform: 'node',
   format: 'cjs',
   target: 'node22',
-  external: ['electron'],
+  // electron-updater zostaje zewnetrzny: electron-builder dokleja go z node_modules (dependencies) do app.asar.
+  external: ['electron', 'electron-updater'],
   sourcemap: false,
   logLevel: 'info',
 });

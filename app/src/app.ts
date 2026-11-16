@@ -14,6 +14,7 @@ import { downloadText, escapeHtml, stamp } from './ui/dom';
 import { createDrawer, type Drawer } from './ui/drawer';
 import { icon, logo } from './ui/icons';
 import { confirmDialog, toast } from './ui/modal';
+import { updatesApi } from './updates';
 import * as esc from './screens/esc';
 import * as autotune from './screens/autotune';
 import * as elrs from './screens/elrs';
@@ -378,6 +379,15 @@ export function createApp(root: HTMLElement): AppContext {
 
   // ?demo=1 od razu wchodzi w tryb demo (do zrzutow ekranu)
   if (new URLSearchParams(location.search).get('demo') === '1') void connectDemo();
+
+  // Aktualizacje (tylko Electron): przekaz ustawienie do main i pokaz dyskretny toast po automatycznym wykryciu nowej wersji.
+  const upd = updatesApi();
+  if (upd) {
+    void upd.setAutoCheck(settings.get().checkUpdates);
+    upd.onStatus((s) => {
+      if (s.state === 'available' && s.auto) toast(`Dostępna wersja ${s.version} – Ustawienia → Aktualizacje`, 'info');
+    });
+  }
 
   return ctx;
 }

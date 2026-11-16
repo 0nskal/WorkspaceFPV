@@ -10,10 +10,12 @@ export interface Settings {
   model: string;
   /** Wersja ELRS wpisana recznie (FC jej nie zna). */
   elrsVersion: string;
+  /** Sprawdzaj aktualizacje przy starcie (tylko wersja desktop). */
+  checkUpdates: boolean;
 }
 
 const KEY = 'rotorlab.settings.v1';
-const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, elrsVersion: '' };
+const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, elrsVersion: '', checkUpdates: true };
 
 export class SettingsStore {
   private s: Settings = { ...DEFAULTS };

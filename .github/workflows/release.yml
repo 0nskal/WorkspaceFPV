@@ -16,9 +16,21 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Tag zgodny z wersją w package.json
+        shell: bash
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "v${VER}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} nie pasuje do wersji ${VER} z package.json (oczekiwano v${VER})"
+            exit 1
+          fi
       - run: npm ci
       - run: npm run dist:win
       - uses: softprops/action-gh-release@v2
         with:
-          files: release/Rotorlab-Setup.exe
+          files: |
+            release/Rotorlab-Setup.exe
+            release/Rotorlab-Setup.exe.blockmap
+            release/latest.yml
+          fail_on_unmatched_files: true
           generate_release_notes: true

@@ -17,6 +17,9 @@
     "icons": "node scripts/make-icons.mjs",
     "typecheck": "tsc --noEmit -p app/tsconfig.json && tsc --noEmit -p electron/tsconfig.json"
   },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
   "devDependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
@@ -63,6 +66,14 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "Rotorlab"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "0nskal",
+        "repo": "rotorlab",
+        "releaseType": "release"
+      }
+    ]
   }
 }

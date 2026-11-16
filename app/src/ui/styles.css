@@ -879,6 +879,49 @@ svg.ck.info {
   font-size: 12px;
   color: var(--ok);
 }
+.upd-ver {
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.upd-chk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.upd-chk input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--dark);
+}
+.upd-bar {
+  height: 6px;
+  background: var(--surf);
+  border: 1px solid var(--card-edge);
+  margin-bottom: 10px;
+}
+.upd-fill {
+  height: 100%;
+  width: 0;
+  background: var(--dark);
+  transition: width 0.2s linear;
+}
+.upd-msg {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.btn[hidden],
+.upd-bar[hidden] {
+  display: none;
+}
+#upd a.btn {
+  text-decoration: none;
+  color: var(--dark);
+}
 .about {
   font-size: 14px;
   line-height: 1.5;

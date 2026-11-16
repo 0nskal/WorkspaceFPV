@@ -4,6 +4,8 @@
  * Strings may contain {name} placeholders (see t()) and, where noted, trusted HTML.
  * Plural entries use { one, few, many } (English only needs one + many, `few` repeats `many`).
  */
+import { enBfInfo } from './en/esc-elrs';
+
 export const en = {
   lang: {
     en: 'English',
@@ -263,10 +265,7 @@ export const en = {
     off: 'No connection to the FC. The receiver protocol and signal show up after you connect.',
     headTitle: 'ELRS UPDATE',
     s1: 'Major version match, TX and RX',
-    s1ph: 'e.g. 3.4.3',
     s1ph2: 'e.g. 3.5.1',
-    lblRx: 'Receiver',
-    lblTx: 'Transmitter',
     s2: 'Binding phrase saved',
     s2sub: 'without it you cannot rebind the transmitter and receiver after flashing',
     s2chk: 'I have the binding phrase written down outside the receiver',
@@ -417,10 +416,6 @@ export const en = {
     saved: 'Saved.',
     keyRemoved: 'Key removed.',
     chatCleared: 'Conversation cleared.',
-    elrsHead: 'ELRS version (entered manually)',
-    elrsField: 'Receiver firmware version',
-    elrsPh: 'e.g. 3.4.3',
-    elrsNote: 'The FC does not know the ELRS version. What you enter here appears on the drone layout.',
     dataHead: 'Data and demo',
     demo: 'Demo mode',
     backup: 'Download settings backup',
@@ -462,6 +457,7 @@ export const en = {
     cliNoReply: 'No reply from the FC to: {cmd}',
     demoUnsupported: 'Demo: unsupported MSP command {cmd}',
   },
+  bfInfo: enBfInfo,
 };
 
 export type Dict = typeof en;

@@ -1,4 +1,6 @@
 /** Model drona i magazyn stanu z eventami. */
+import type { ElrsInfo } from '../bf/elrs-flow';
+import type { EscScan } from '../bf/esc-flow';
 
 export type ConnState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
@@ -77,8 +79,8 @@ export interface FcState {
   diff: string | null;
   diffAt: number | null;
   error: string | null;
-  /** Dane reczne (np. wersja ELRS wpisana przez uzytkownika). */
-  meta: { elrsVersion?: string };
+  /** Read from the hardware (never typed in): ESC scan via the 4-way interface, ELRS receiver via CRSF. */
+  hw: { esc?: EscScan; elrs?: ElrsInfo };
 }
 
 export const initialState = (): FcState => ({
@@ -93,7 +95,7 @@ export const initialState = (): FcState => ({
   diff: null,
   diffAt: null,
   error: null,
-  meta: {},
+  hw: {},
 });
 
 type Listener = () => void;

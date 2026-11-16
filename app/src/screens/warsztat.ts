@@ -11,7 +11,7 @@ import { icon, logo } from '../ui/icons';
 function buildLabels(s: Readonly<FcState>, d: Diagnosis): XrayLabels {
   const tel = s.telemetry;
   const craft = (s.info?.craftName || t('common.drone')).toUpperCase();
-  const elrs = s.meta.elrsVersion;
+  const elrs = s.hw.elrs?.version;
   const rxProblem = d.checks.find((c) => c.part === 'rx' && (c.severity === 'fail' || c.severity === 'warn'));
   const focusCheck = d.focus ? d.checks.find((c) => c.part === d.focus && (c.severity === 'fail' || c.severity === 'warn')) : undefined;
   let hotText: string | undefined;

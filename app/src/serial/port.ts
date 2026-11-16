@@ -1,4 +1,5 @@
 import type { PortIdentity } from './types';
+import { setReconnectStatus, type ReconnectStatus } from './reconnect-status';
 import { t } from '../i18n';
 
 /** Czy przegladarka/Electron ma WebSerial. */
@@ -32,27 +33,42 @@ export class SerialTransport {
     return new SerialTransport(port);
   }
 
-  /** Po restarcie FC (USB sie rozlacza) czeka na ten sam port, bez gestu uzytkownika. */
-  static async reopen(identity: PortIdentity, timeoutMs = 15000): Promise<SerialTransport> {
+  /**
+   * After an FC reboot (USB re-enumerates) waits for the same port to come back and reopens it, no user gesture needed.
+   * Matches by VID/PID among the already permitted ports (Electron grants all serial devices, so getPorts() works there
+   * too). Reports progress through reconnect-status.ts; throws after `timeoutMs`.
+   */
+  static async reopen(identity: PortIdentity, timeoutMs = 20000): Promise<SerialTransport> {
     const t0 = Date.now();
-    await sleep(1200); // FC musi najpierw zniknac z listy, potem wrocic
+    let attempt = 0;
+    let lastError: string | undefined;
+    const report = (phase: ReconnectStatus['phase']) => setReconnectStatus({ phase, elapsedMs: Date.now() - t0, timeoutMs, attempt, lastError });
+    report('waiting');
+    await sleep(1000); // the FC has to disappear from the list first, then come back
     while (Date.now() - t0 < timeoutMs) {
+      report('waiting');
       const ports = await navigator.serial.getPorts();
-      const match = ports.find((p) => {
+      const sameDevice = (p: SerialPort) => {
         const i = p.getInfo();
-        return i.usbVendorId === identity.usbVendorId && i.usbProductId === identity.usbProductId && !p.readable;
-      });
+        return identity.usbVendorId === undefined ? true : i.usbVendorId === identity.usbVendorId && i.usbProductId === identity.usbProductId;
+      };
+      const match = ports.find((p) => sameDevice(p) && !p.readable);
       if (match) {
+        attempt++;
+        report('opening');
         try {
-          const t = new SerialTransport(match);
-          await t.open();
-          return t;
-        } catch {
-          /* port jeszcze nie gotowy */
+          const tr = new SerialTransport(match);
+          await tr.open();
+          report('done');
+          setTimeout(() => setReconnectStatus(null), 3000);
+          return tr;
+        } catch (e) {
+          lastError = e instanceof Error ? e.message : String(e); // port not ready yet: retry
         }
       }
-      await sleep(500);
+      await sleep(400);
     }
+    report('failed');
     throw new Error(t('serial.noReturn'));
   }
 
@@ -110,6 +126,15 @@ export class SerialTransport {
   async write(data: Uint8Array): Promise<void> {
     if (this.closed || !this.writer) throw new Error(t('serial.portClosed'));
     await this.writer.write(data);
+  }
+
+  /** Lowers DTR (and RTS) so a FC running `serialpassthrough ... reset` reboots. Best effort. */
+  async dropDtr(): Promise<void> {
+    try {
+      await this.port.setSignals({ dataTerminalReady: false, requestToSend: false });
+    } catch {
+      /* not supported by this driver: closing the port lowers DTR as well */
+    }
   }
 
   onData(cb: DataCb): () => void {

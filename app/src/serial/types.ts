@@ -25,6 +25,24 @@ export interface CliOptions {
   stopOnError?: boolean;
 }
 
+/**
+ * Raw byte access to the FC port for sessions that leave MSP (4-way ESC interface, CLI text, CRSF passthrough).
+ * While a raw session runs the MSP client is suspended and `FcLink.busy` is true.
+ */
+export interface RawIo {
+  write(data: Uint8Array): Promise<void>;
+  /** Waits for n bytes; returns them or null on timeout (nothing consumed). */
+  readExact(n: number, timeoutMs: number): Promise<Uint8Array | null>;
+  /** Waits up to timeoutMs for data; returns (and consumes) everything buffered, possibly empty. */
+  readSome(timeoutMs: number): Promise<Uint8Array>;
+  /** Drops buffered input. */
+  clear(): void;
+  /** Declares that the FC is about to reset (the port will drop): the link reports 'reboot' and the app reconnects. */
+  expectReboot(): void;
+  /** Lowers DTR and closes the port (`serialpassthrough ... reset` makes the FC reset on DTR drop). Implies expectReboot. */
+  dropDtrAndClose(): Promise<void>;
+}
+
 export type CloseReason = 'lost' | 'reboot' | 'closed';
 
 export interface FcLink {
@@ -37,6 +55,11 @@ export interface FcLink {
   request(cmd: number, payload?: Uint8Array, timeoutMs?: number): Promise<Uint8Array>;
   /** Wchodzi w tryb CLI, wykonuje komendy, konczy `save` albo `exit`. FC po tym sie restartuje. */
   cli(commands: string[], options?: CliOptions): Promise<CliResult>;
+  /**
+   * Raw session (see RawIo): MSP is suspended while `fn` runs and resumed afterwards, unless `fn` declared a reboot.
+   * Optional: only links that can do raw access implement it (SerialLink and DemoLink do).
+   */
+  raw?<T>(fn: (io: RawIo) => Promise<T>): Promise<T>;
   onClose(cb: (reason: CloseReason) => void): () => void;
   close(): Promise<void>;
 }

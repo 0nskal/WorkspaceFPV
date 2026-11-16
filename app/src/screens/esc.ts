@@ -5,6 +5,7 @@ import { isDshot, motorPct, protocolName } from '../fc/state';
 import { hasWebSerial } from '../serial/port';
 import { MSP } from '../serial/msp';
 import { escapeHtml } from '../ui/dom';
+import { mountEscInfo } from './bf-esc-info';
 import { icon } from '../ui/icons';
 
 /** Protokoly do wyboru: nazwa w CLI i enum Betaflight. */
@@ -147,6 +148,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let timer: ReturnType<typeof setInterval> | null = null;
   let inflight = false;
   let applying = false;
+  let offInfo: (() => void) | null = null; // ESC info panel (bf-esc-info.ts)
 
   const q = <T extends Element = HTMLElement>(sel: string): T | null => el.querySelector<T>(sel);
   const maxPct = () => (unlock ? 100 : SAFE_MAX);
@@ -353,6 +355,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         </div>
       </div>`;
     view = 'empty';
+    offInfo?.();
+    offInfo = null;
     droneKey = '';
     cfgKey = '';
   }
@@ -395,6 +399,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
             <pre class="esc-cmds mono"></pre>
             <div class="esc-actions"><button type="button" class="btn light esc-save">${icon('check', 16)}${t('esc.save')}</button></div>
           </section>
+          <div class="bf-esc-info-host"></div>
           <section class="esc-panel">
             <header><span class="mono">${t('esc.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
             <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>${t('esc.propsOff')}</span></label>
@@ -409,6 +414,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       </div>`;
     view = 'main';
     paintTest();
+    offInfo?.();
+    offInfo = mountEscInfo(q('.bf-esc-info-host') as HTMLElement, ctx);
   }
 
   function sync(): void {
@@ -544,6 +551,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   return () => {
     stopTest();
+    offInfo?.();
     off();
     offT();
     window.removeEventListener('keydown', onKey, true);

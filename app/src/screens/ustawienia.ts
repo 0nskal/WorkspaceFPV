@@ -45,12 +45,11 @@ export const mount: ScreenMount = (el, ctx) => {
       </section>
 
       <section class="card">
-        <div class="ch">${t('settings.elrsHead')}</div>
-        <label class="field">
-          <span>${t('settings.elrsField')}</span>
-          <div class="field-row"><input type="text" name="elrs" value="${escapeHtml(s.elrsVersion)}" placeholder="${t('settings.elrsPh')}" autocomplete="off" /></div>
-          <small>${t('settings.elrsNote')}</small>
-        </label>
+        <div class="ch">${t('bfInfo.settings.head')}</div>
+        <label class="upd-chk"><input type="checkbox" name="autoEscInfo" ${s.autoEscInfo ? 'checked' : ''} /><span>${t('bfInfo.settings.autoEsc')}</span></label>
+        <p class="about">${t('bfInfo.settings.autoEscNote')}</p>
+        <label class="upd-chk"><input type="checkbox" name="autoElrsInfo" ${s.autoElrsInfo ? 'checked' : ''} /><span>${t('bfInfo.settings.autoElrs')}</span></label>
+        <p class="about">${t('bfInfo.settings.autoElrsNote')}</p>
       </section>
 
       <section class="card">
@@ -89,7 +88,6 @@ export const mount: ScreenMount = (el, ctx) => {
 
   const keyInput = el.querySelector<HTMLInputElement>('input[name="key"]') as HTMLInputElement;
   const modelSel = el.querySelector<HTMLSelectElement>('select[name="model"]') as HTMLSelectElement;
-  const elrsInput = el.querySelector<HTMLInputElement>('input[name="elrs"]') as HTMLInputElement;
   const saved = el.querySelector<HTMLElement>('.saved') as HTMLElement;
 
   const flash = (t: string) => {
@@ -153,10 +151,14 @@ export const mount: ScreenMount = (el, ctx) => {
     });
   }
 
+  for (const name of ['autoEscInfo', 'autoElrsInfo'] as const) {
+    el.querySelector<HTMLInputElement>(`input[name="${name}"]`)?.addEventListener('change', (e) => ctx.settings.set({ [name]: (e.target as HTMLInputElement).checked }));
+  }
+
   // Language switches instantly: the shell and this screen are re-mounted by the app (onLanguageChange).
   el.querySelector<HTMLSelectElement>('select[name="lang"]')?.addEventListener('change', (e) => {
     // keep what was typed in the fields, so re-mounting does not lose it
-    ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value, elrsVersion: elrsInput.value.trim() });
+    ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value });
     setLang((e.target as HTMLSelectElement).value as Lang);
   });
 
@@ -168,7 +170,7 @@ export const mount: ScreenMount = (el, ctx) => {
       keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
       b.textContent = keyInput.type === 'password' ? t('settings.show') : t('settings.hide');
     } else if (act === 'save') {
-      ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value, elrsVersion: elrsInput.value.trim() });
+      ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value });
       flash(t('settings.saved'));
     } else if (act === 'clear') {
       keyInput.value = '';

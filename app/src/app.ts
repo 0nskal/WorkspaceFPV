@@ -1,6 +1,7 @@
 import { Assistant } from './ai/assistant';
 import { buildContext } from './ai/prompts';
 import type { AppContext, ApplyOptions, Route } from './context';
+import { initHwInfo } from './bf/hw-info';
 import { diagnose } from './fc/diagnose';
 import { readAll, startTelemetry } from './fc/read';
 import { FcStore, rssiPct, type FcState } from './fc/state';
@@ -37,11 +38,6 @@ export function createApp(root: HTMLElement): AppContext {
 
   /* ---------------- polaczenie ---------------- */
 
-  const mergeMeta = (mode: 'serial' | 'demo' | null): FcState['meta'] => {
-    const v = settings.get().elrsVersion.trim();
-    return { elrsVersion: v || (mode === 'demo' ? '3.4.3' : undefined) };
-  };
-
   async function attach(l: FcLink): Promise<void> {
     stopTelemetry?.();
     link = l;
@@ -50,7 +46,7 @@ export function createApp(root: HTMLElement): AppContext {
     store.patch({ conn: 'connecting', mode: l.kind, error: null });
     try {
       const data = await readAll(l);
-      store.patch({ ...data, conn: 'connected', mode: l.kind, meta: mergeMeta(l.kind), error: null });
+      store.patch({ ...data, conn: 'connected', mode: l.kind, error: null });
       stopTelemetry = startTelemetry(l, store);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -286,6 +282,8 @@ export function createApp(root: HTMLElement): AppContext {
     confirm: confirmDialog,
   };
 
+  initHwInfo(ctx); // ESC info (4-way) + ELRS version (CRSF): preconditions, auto-run after connect, status
+
   let drawer: Drawer | null = null;
 
   function drawerVisible(): boolean {
@@ -363,9 +361,6 @@ export function createApp(root: HTMLElement): AppContext {
 
   store.subscribe(renderBar);
   store.subscribeTelemetry(renderTelemetry);
-  settings.subscribe(() => {
-    store.patch({ meta: mergeMeta(store.get().mode) });
-  });
   window.addEventListener('hashchange', () => {
     const r = parseRoute();
     if (r !== current) {

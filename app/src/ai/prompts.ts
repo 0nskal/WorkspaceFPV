@@ -44,7 +44,13 @@ export function buildContext(state: Readonly<FcState>, diag: Diagnosis | null): 
     const p = state.pid;
     lines.push(`- PID (roll/pitch/yaw, P I D): ${p.roll.join('/')}  ${p.pitch.join('/')}  ${p.yaw.join('/')}`);
   }
-  if (state.meta.elrsVersion) lines.push(`- ELRS (entered manually): ${state.meta.elrsVersion}`);
+  if (state.hw.elrs) lines.push(`- ELRS receiver (read from the hardware): ${state.hw.elrs.version}, device "${state.hw.elrs.name}"`);
+  if (state.hw.esc) {
+    for (const e of state.hw.esc.escs) {
+      const fw = e.settings && e.settings.firmware !== 'unknown' ? `${e.settings.firmwareName} ${e.settings.version ?? ''}`.trim() : e.firmware === 'blheli_32' ? 'BLHeli_32 (settings not readable)' : e.status === 'no-response' ? 'no answer' : 'unknown layout';
+      lines.push(`- ESC ${e.index + 1} (read via 4-way): ${fw}${e.mcuName ? `, MCU ${e.mcuName}` : ''}`);
+    }
+  }
   if (diag) {
     lines.push('', 'RULE RESULTS (diagnosis without AI):');
     for (const ch of diag.checks) lines.push(`- [${ch.severity}] ${ch.label}${ch.detail ? ` - ${ch.detail}` : ''}`);

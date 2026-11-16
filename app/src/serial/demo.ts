@@ -1,6 +1,7 @@
 import { MSP } from './msp';
 import { sleep } from './port';
-import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink } from './types';
+import { DemoRawDevice } from './demo-escelrs';
+import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink, RawIo } from './types';
 import { t as tr } from '../i18n';
 
 /** Symulowany dron (SpeedyBee F405 V4, BF 4.5.1) z danymi z makiet. Odpowiada prawdziwymi ladunkami MSP. */
@@ -170,6 +171,17 @@ export class DemoLink implements FcLink {
       if (saved) this.cfg = pending;
       await sleep(saved ? 1200 : 700); // "restart FC"
       return { ok: !failed, entries, transcript, saved };
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Raw session against the byte-level simulator (4-way ESC interface, CRSF receiver): see demo-escelrs.ts. */
+  async raw<T>(fn: (io: RawIo) => Promise<T>): Promise<T> {
+    if (this.busy) throw new Error(tr('serial.mspSuspended'));
+    this.busy = true;
+    try {
+      return await fn(new DemoRawDevice({ latencyMs: 6 }));
     } finally {
       this.busy = false;
     }

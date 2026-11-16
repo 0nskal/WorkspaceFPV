@@ -1,5 +1,6 @@
 /** Polish dictionary. Must satisfy the same type as en.ts (Dict). */
 import type { Dict } from './en';
+import { plBfInfo } from './pl/esc-elrs';
 
 export const pl: Dict = {
   lang: {
@@ -258,10 +259,7 @@ export const pl: Dict = {
     off: 'Brak połączenia z FC. Protokół i sygnał odbiornika pojawią się po połączeniu.',
     headTitle: 'AKTUALIZACJA ELRS',
     s1: 'Zgodność głównej wersji TX i RX',
-    s1ph: 'np. 3.4.3',
     s1ph2: 'np. 3.5.1',
-    lblRx: 'Odbiornik',
-    lblTx: 'Nadajnik',
     s2: 'Binding phrase zapisana',
     s2sub: 'bez niej po wgraniu firmware nie połączysz nadajnika z odbiornikiem',
     s2chk: 'Mam binding phrase zapisaną poza odbiornikiem',
@@ -408,10 +406,6 @@ export const pl: Dict = {
     saved: 'Zapisano.',
     keyRemoved: 'Klucz usunięty.',
     chatCleared: 'Rozmowa wyczyszczona.',
-    elrsHead: 'Wersja ELRS (wpisana ręcznie)',
-    elrsField: 'Wersja firmware odbiornika',
-    elrsPh: 'np. 3.4.3',
-    elrsNote: 'FC nie zna wersji ELRS. Wpisana tutaj pojawi się na rozkładzie drona.',
     dataHead: 'Dane i demo',
     demo: 'Tryb demo',
     backup: 'Pobierz kopię ustawień',
@@ -453,4 +447,5 @@ export const pl: Dict = {
     cliNoReply: 'Brak odpowiedzi FC na: {cmd}',
     demoUnsupported: 'Demo: nieobsługiwana komenda MSP {cmd}',
   },
+  bfInfo: plBfInfo,
 };

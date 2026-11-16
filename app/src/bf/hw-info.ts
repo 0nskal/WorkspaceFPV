@@ -5,7 +5,7 @@
  * Results go to `state.hw` (read by diagnosis, drone view, AI context). Nothing here ever writes to the ESCs.
  */
 import type { AppContext } from '../context';
-import { decodeAnalog, decodeMotors, decodeRxConfig, decodeStatus } from '../fc/read';
+import { decodeAnalog, decodeMotors, decodeStatus } from '../fc/read';
 import { MSP } from '../serial/msp';
 import { sleep } from '../serial/port';
 import { getReconnectStatus } from '../serial/reconnect-status';
@@ -13,7 +13,14 @@ import { escapeHtml } from '../ui/dom';
 import { t } from '../i18n';
 import { ElrsFlowError, readElrsInfo, type ElrsStep } from './elrs-flow';
 import { EscFlowError, readEscInfo } from './esc-flow';
-import { currentToken, hwIo } from './io-esc';
+import type { FcLink, RawIo } from '../serial/types';
+
+/** The active link when it can run raw sessions (4-way ESC interface, CRSF passthrough); MSP goes through ctx.bf. */
+type RawLink = FcLink & { raw<T>(fn: (io: RawIo) => Promise<T>): Promise<T> };
+const rawLink = (ctx: AppContext): RawLink | null => {
+  const l = ctx.link();
+  return l && l.raw ? (l as RawLink) : null;
+};
 
 export type HwReason =
   | 'armed'
@@ -131,7 +138,7 @@ export class HwInfo {
   /** One automatic job at a time: ESC first (no reboot), then ELRS. Each is tried once per connection. */
   private async autoTick(): Promise<void> {
     const s = this.ctx.state.get();
-    if (this.busy || s.conn !== 'connected' || !hwIo(this.ctx) || s.status?.armed) return;
+    if (this.busy || s.conn !== 'connected' || !rawLink(this.ctx) || s.status?.armed) return;
     const cfg = this.ctx.settings.get();
     if (cfg.autoEscInfo && !this.escAttempted && this.batteryTicks >= 10) {
       this.escAttempted = true;
@@ -143,30 +150,15 @@ export class HwInfo {
     this.scheduleAuto(800); // the next pending job, if any
   }
 
-  /** Cheap pre-filter for the auto-run: only a UART CRSF receiver can answer (RX_CONFIG is read when the screen asks). */
-  private rxIsCrsf: boolean | null = null;
+  /** Cheap pre-filter for the auto-run: only a UART CRSF receiver can answer (RX_CONFIG comes from the connect-time read). */
   private elrsCandidate(): boolean {
-    if (this.rxIsCrsf === null) {
-      this.rxIsCrsf = false;
-      const io = hwIo(this.ctx);
-      if (io) {
-        void io
-          .request(MSP.RX_CONFIG)
-          .then((p) => {
-            this.rxIsCrsf = decodeRxConfig(p).serialRxProvider === 9;
-            if (this.rxIsCrsf) this.scheduleAuto(200);
-          })
-          .catch(() => (this.rxIsCrsf = null));
-      }
-      return false;
-    }
-    return this.rxIsCrsf;
+    return this.ctx.bf.get().rx?.serialRxProvider === 9;
   }
 
   /* ---------------- shared checks ---------------- */
 
   private async confirm(kind: 'esc' | 'elrs', source: 'auto' | 'manual'): Promise<boolean> {
-    if (hwIo(this.ctx)?.kind === 'demo') return true; // nothing can happen in the demo
+    if (rawLink(this.ctx)?.kind === 'demo') return true; // nothing can happen in the demo
     const items = kind === 'esc' ? [t('bfInfo.confirm.esc1'), t('bfInfo.confirm.esc2'), t('bfInfo.confirm.esc3')] : [t('bfInfo.confirm.elrs1'), t('bfInfo.confirm.elrs2')];
     return this.ctx.confirm({
       title: kind === 'esc' ? t('bfInfo.confirm.escTitle') : t('bfInfo.confirm.elrsTitle'),
@@ -179,10 +171,10 @@ export class HwInfo {
   }
 
   private async armed(): Promise<boolean> {
-    const io = hwIo(this.ctx);
+    const io = rawLink(this.ctx);
     if (!io) return true;
     try {
-      return decodeStatus(await io.request(MSP.STATUS)).armed;
+      return decodeStatus(await this.ctx.bf.send(MSP.STATUS)).armed;
     } catch {
       return true; // cannot tell: do not touch the FC
     }
@@ -190,24 +182,24 @@ export class HwInfo {
 
   /** Re-reads status/battery after the confirmation (the user may just have done what the dialog asked). */
   private async escPreconditions(): Promise<HwReason | null> {
-    const io = hwIo(this.ctx);
+    const io = rawLink(this.ctx);
     if (!io) return 'noRaw';
     const demo = io.kind === 'demo';
     const apiMinor = this.ctx.state.get().info?.apiVersion.minor ?? 46;
     try {
-      let st = decodeStatus(await io.request(MSP.STATUS));
+      let st = decodeStatus(await this.ctx.bf.send(MSP.STATUS));
       if (st.armed) return 'armed';
-      const analog = decodeAnalog(await io.request(MSP.ANALOG), apiMinor);
+      const analog = decodeAnalog(await this.ctx.bf.send(MSP.ANALOG), apiMinor);
       if (!batteryPresent(analog.vbat)) return 'noBattery';
       if (!demo) {
         // the failsafe flag appears a moment after the transmitter goes silent
         for (let i = 0; i < 12 && (st.armingDisableFlags & FLAG_RX_FAILSAFE) === 0; i++) {
           await sleep(500);
-          st = decodeStatus(await io.request(MSP.STATUS));
+          st = decodeStatus(await this.ctx.bf.send(MSP.STATUS));
           if (st.armed) return 'armed';
         }
         if ((st.armingDisableFlags & FLAG_RX_FAILSAFE) === 0) return 'radioOn';
-        const motors = decodeMotors(await io.request(MSP.MOTOR), this.ctx.state.get().config?.motorCount ?? 4);
+        const motors = decodeMotors(await this.ctx.bf.send(MSP.MOTOR), this.ctx.state.get().config?.motorCount ?? 4);
         if (motors.some((m) => m > 1100)) return 'motorsActive';
       }
     } catch {
@@ -219,7 +211,7 @@ export class HwInfo {
   /* ---------------- ESC info ---------------- */
 
   async runEsc(source: 'auto' | 'manual' = 'manual'): Promise<void> {
-    const io = hwIo(this.ctx);
+    const io = rawLink(this.ctx);
     if (this.busy) return;
     if (!io || this.ctx.state.get().conn !== 'connected') return this.setEsc({ phase: 'blocked', reason: 'noRaw' });
     this.busy = true;
@@ -254,19 +246,15 @@ export class HwInfo {
   /* ---------------- ELRS version ---------------- */
 
   async runElrs(source: 'auto' | 'manual' = 'manual'): Promise<void> {
-    const io = hwIo(this.ctx);
+    const io = rawLink(this.ctx);
     if (this.busy) return;
     if (!io || this.ctx.state.get().conn !== 'connected') return this.setElrs({ phase: 'blocked', reason: 'noRaw' });
     this.busy = true;
     try {
       this.setElrs({ phase: 'checking' });
       if (await this.armed()) return this.setElrs({ phase: 'blocked', reason: 'armed' });
-      try {
-        const rx = decodeRxConfig(await io.request(MSP.RX_CONFIG));
-        if (rx.serialRxProvider !== 9) return this.setElrs({ phase: 'blocked', reason: 'notCrsf' });
-      } catch {
-        /* cannot read the protocol: let the serial config decide */
-      }
+      const rx = this.ctx.bf.get().rx; // read on connect; null = unknown, let the serial config decide
+      if (rx && rx.serialRxProvider !== 9) return this.setElrs({ phase: 'blocked', reason: 'notCrsf' });
       if (!(await this.confirm('elrs', source))) return this.setElrs({ phase: 'blocked', reason: 'declined' });
 
       const demo = io.kind === 'demo';
@@ -283,7 +271,7 @@ export class HwInfo {
       // ok / no-answer both end with the FC reset: wait for the automatic reconnect
       if (res.kind === 'ok') this.ctx.state.patch({ hw: { ...this.ctx.state.get().hw, elrs: res.info } });
       this.setElrs({ phase: 'reconnecting', step: 'reconnecting' });
-      const back = demo ? (await sleep(1400), true) : await this.waitReconnect(io.token);
+      const back = demo ? (await sleep(1400), true) : await this.waitReconnect(io);
       if (!back) return this.setElrs({ phase: 'error', reason: 'reconnectFail' });
       if (res.kind === 'ok') this.setElrs({ phase: 'done' });
       else this.setElrs({ phase: 'blocked', reason: res.sawCrsf ? 'noAnswerSeen' : 'noAnswer' });
@@ -292,7 +280,7 @@ export class HwInfo {
       const reason: HwReason = code === 'serialConfig' ? 'serialConfig' : code === 'cli' ? 'cliFail' : code === 'passthrough' ? 'passthroughFail' : 'error';
       this.setElrs({ phase: 'error', reason, detail: e instanceof Error ? e.message : String(e) });
       // a failed passthrough leaves the FC rebooting (exit): the app reconnects by itself
-      if (code === 'passthrough' && io.kind !== 'demo') await this.waitReconnect(io.token).catch(() => false);
+      if (code === 'passthrough' && io.kind !== 'demo') await this.waitReconnect(io).catch(() => false);
     } finally {
       this.busy = false;
     }
@@ -313,7 +301,7 @@ export class HwInfo {
       const check = () => {
         const s = this.ctx.state.get();
         if (s.conn !== 'connected') sawGone = true;
-        if (s.conn === 'connected' && currentToken(this.ctx) && currentToken(this.ctx) !== old) finish(true);
+        if (s.conn === 'connected' && this.ctx.link() && this.ctx.link() !== old) finish(true);
         else if (s.conn === 'disconnected' && sawGone) finish(false); // reconnect gave up (error is on the start screen)
       };
       const off = this.ctx.state.subscribe(check);

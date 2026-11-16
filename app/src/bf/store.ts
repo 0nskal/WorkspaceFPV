@@ -242,7 +242,7 @@ export interface SaveOptions {
   /** Send MSP_REBOOT after EEPROM_WRITE and wait for the FC to come back (serial ports, motor protocol, ...). */
   reboot?: boolean;
   /** Areas to re-read afterwards (default: all). */
-  areas?: BfArea[];
+  areas?: Array<BfArea | string>;
 }
 
 export interface SaveResult {

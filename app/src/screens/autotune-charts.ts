@@ -5,7 +5,6 @@ import { t as tr } from '../i18n';
 
 const INK = '#DCEFF8';
 const HOT = '#FF4A2E';
-const SUB = '#8FA9B8';
 
 const defs = (id: string) => `<defs>
   <filter id="${id}-g" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>

@@ -126,6 +126,8 @@ export interface StatusEx {
   /** Bit 0 ACC, 1 BARO, 2 MAG, 3 GPS, 4 RANGEFINDER, 5 GYRO. */
   sensors: number;
   modeFlags: number;
+  /** Every flight-mode bit (first 32 boxes plus the extra bytes): bit k = k-th box of MSP_BOXIDS is active. */
+  modeBits: boolean[];
   pidProfile: number;
   /** Percent as reported by the FC (scaling UNVERIFIED on hardware, see spec section 11). */
   cpuLoad: number;
@@ -151,11 +153,16 @@ export function decodeStatusEx(p: Uint8Array, apiMinor: number): StatusEx {
   const pidProfileCount = r.u8();
   const rateProfile = r.u8();
   const extra = r.u8();
-  r.skip(extra);
+  const modeBits: boolean[] = [];
+  for (let i = 0; i < 32; i++) modeBits.push(((modeFlags >>> i) & 1) === 1);
+  for (let i = 0; i < extra; i++) {
+    const b = r.u8();
+    for (let k = 0; k < 8; k++) modeBits.push(((b >>> k) & 1) === 1);
+  }
   const armingFlagCount = r.u8();
   const armingFlags = r.u32();
   const cfgState = r.u8();
-  const out: StatusEx = { cycleTimeUs, i2cErrors, sensors, modeFlags, pidProfile, cpuLoad, pidProfileCount, rateProfile, armingFlagCount, armingFlags, rebootRequired: (cfgState & 1) === 1, cpuTempC: null, rateProfileCount: null };
+  const out: StatusEx = { cycleTimeUs, i2cErrors, sensors, modeFlags, modeBits, pidProfile, cpuLoad, pidProfileCount, rateProfile, armingFlagCount, armingFlags, rebootRequired: (cfgState & 1) === 1, cpuTempC: null, rateProfileCount: null };
   if (apiMinor >= API.BF45 && r.has(2)) out.cpuTempC = r.u16();
   if (apiMinor >= API.BF2025_12 && r.has(1)) out.rateProfileCount = r.u8();
   return out;

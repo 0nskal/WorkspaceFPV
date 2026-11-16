@@ -1,12 +1,14 @@
 /**
  * PID Tuning tab (Betaflight Configurator parity): PID table per profile, rates with live curves, filters with a
- * frequency-response sketch. Reads over MSP when the tab opens, edits are local until "Save" (SET_* + EEPROM_WRITE).
+ * frequency-response sketch. Values come from the Betaflight store (read on connect, refreshed when the tab opens);
+ * edits are local until "Save" (ctx.bf.saveSettings: SET_* + EEPROM_WRITE + re-read).
  */
 import type { AppContext, ScreenMount } from '../context';
-import { createIo, CMD, type BfIo } from '../bf/io';
+import { AREA, CMD, rawKey, rawOf, STEP } from '../bf/steps';
+import type { MspWrite } from '../bf/store';
 import { decodeFilterConfig, decodePid, decodePidAdvanced, decodeRcTuning, encodeFilterConfig, encodePid, encodePidAdvanced, encodeRcTuning, FILTER_TYPES, PID_AXES, RATES_TYPES } from '../bf/tuning';
 import { getSuggestion } from '../bf/autotune-link';
-import { decodeStatusEx, type StatusEx } from '../bf/statusex';
+import type { StatusEx } from '../bf/decode';
 import type { Values } from '../bf/fieldtable';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
@@ -31,7 +33,6 @@ const RATE_UI: Record<(typeof RATES_TYPES)[number], { rc: { scale: number; unit:
 };
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
-  const io: BfIo = createIo(ctx);
   const form = new Form();
   const root = document.createElement('div');
   root.className = 'bf-tuning';
@@ -50,8 +51,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const raws: { pid: Uint8Array; adv: Uint8Array | null; rc: Uint8Array; filter: Uint8Array | null } = { pid: new Uint8Array(0), adv: null, rc: new Uint8Array(0), filter: null };
   let hasAdv = false;
   let hasFilter = false;
+  let shownKey = '';
+  const IDS = [STEP.pid, STEP.pidAdv, STEP.rcTuning, STEP.filter];
 
-  const api = () => io.apiMinor();
+  const api = () => ctx.bf.get().api || 46;
+  const connected = () => ctx.state.get().conn === 'connected' && ctx.link() !== null;
 
   /* ---------------- field specs ---------------- */
   /** Tooltip text for a key when the dictionary has one (axis digit stripped: p0 -> p). */
@@ -157,44 +161,58 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const spec = (specs: FieldSpec[], g: string, k: string) => specs.find((x) => x.g === g && x.k === k)!;
 
   /* ---------------- load / save ---------------- */
+  /** Fills the form from the Betaflight store; false when the FC did not answer MSP_PID / MSP_RC_TUNING. */
+  function fromStore(): boolean {
+    const d = ctx.bf.get();
+    const pidRaw = rawOf(d, STEP.pid);
+    const rcRaw = rawOf(d, STEP.rcTuning);
+    if (!pidRaw || !rcRaw) return false;
+    const a = api();
+    status = d.status;
+    const pid = decodePid(pidRaw);
+    raws.pid = pid.raw;
+    const pv: Values = {};
+    pid.items.slice(0, 3).forEach((it, i) => {
+      pv[`p${i}`] = it[0];
+      pv[`i${i}`] = it[1];
+      pv[`d${i}`] = it[2];
+    });
+    form.load('pid', pv);
+    const advBytes = rawOf(d, STEP.pidAdv);
+    hasAdv = !!advBytes;
+    raws.adv = advBytes;
+    form.load('adv', advBytes ? decodePidAdvanced(advBytes, a).values : {});
+    const rc = decodeRcTuning(rcRaw, a);
+    raws.rc = rc.raw;
+    form.load('rc', rc.values);
+    const fb = rawOf(d, STEP.filter);
+    hasFilter = !!fb;
+    raws.filter = fb;
+    form.load('filter', fb ? decodeFilterConfig(fb, a).values : {});
+    shownKey = rawKey(d, IDS);
+    return true;
+  }
+
+  /** Shows what the connect-time read stored, then re-reads the tab's commands (changes made in the CLI etc.). */
   async function load(): Promise<void> {
-    if (!io.connected()) {
+    if (!connected()) {
       phase = 'idle';
       render();
       return;
     }
-    phase = 'loading';
-    render();
-    const a = api();
-    try {
-      status = decodeStatusEx(await io.read(CMD.STATUS_EX), a);
-      const pid = decodePid(await io.read(CMD.PID));
-      raws.pid = pid.raw;
-      const pv: Values = {};
-      pid.items.slice(0, 3).forEach((it, i) => {
-        pv[`p${i}`] = it[0];
-        pv[`i${i}`] = it[1];
-        pv[`d${i}`] = it[2];
-      });
-      form.load('pid', pv);
-      const advBytes = await io.tryRead(CMD.PID_ADVANCED);
-      hasAdv = !!advBytes;
-      raws.adv = advBytes;
-      form.load('adv', advBytes ? decodePidAdvanced(advBytes, a).values : {});
-      const rc = decodeRcTuning(await io.read(CMD.RC_TUNING), a);
-      raws.rc = rc.raw;
-      form.load('rc', rc.values);
-      const fb = await io.tryRead(CMD.FILTER_CONFIG);
-      hasFilter = !!fb;
-      raws.filter = fb;
-      form.load('filter', fb ? decodeFilterConfig(fb, a).values : {});
-      phase = 'ready';
-    } catch (e) {
-      phase = 'error';
-      error = errMsg(e);
-    }
     loadedLink = ctx.link();
-    if (!disposed) render();
+    phase = fromStore() ? 'ready' : 'loading';
+    render();
+    await ctx.bf.refresh(AREA.tuning);
+    if (disposed || busy || (phase === 'ready' && form.count())) return;
+    const st = ctx.bf.get().status;
+    const changed = phase !== 'ready' || rawKey(ctx.bf.get(), IDS) !== shownKey || st?.pidProfile !== status?.pidProfile || st?.rateProfile !== status?.rateProfile;
+    if (fromStore()) phase = 'ready';
+    else {
+      phase = 'error';
+      error = t('bfTuning.common.unsupported');
+    }
+    if (changed) render();
   }
 
   async function save(): Promise<void> {
@@ -202,23 +220,24 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     busy = true;
     updateBar(root, form.count(), { busy });
     const a = api();
-    try {
-      if (form.groupChanged('pid')) {
-        const items = [0, 1, 2].map((i) => [form.get('pid', `p${i}`), form.get('pid', `i${i}`), form.get('pid', `d${i}`)] as [number, number, number]);
-        await io.write(CMD.SET_PID, encodePid(raws.pid, items));
-      }
-      if (hasAdv && raws.adv && form.groupChanged('adv')) await io.write(CMD.SET_PID_ADVANCED, encodePidAdvanced(raws.adv, form.cur.adv!, a));
-      if (form.groupChanged('rc')) await io.write(CMD.SET_RC_TUNING, encodeRcTuning(raws.rc, form.cur.rc!, a));
-      if (hasFilter && raws.filter && form.groupChanged('filter')) await io.write(CMD.SET_FILTER_CONFIG, encodeFilterConfig(raws.filter, form.cur.filter!, a));
-      await io.save();
-      ctx.toast(t('bfTuning.common.saved'), 'ok');
-      busy = false;
-      await load(); // re-read: what the FC reports is what is shown
-    } catch (e) {
-      busy = false;
-      ctx.toast(t('bfTuning.common.saveFail', { msg: errMsg(e) }), 'error');
-      updateBar(root, form.count(), { busy });
+    const writes: MspWrite[] = [];
+    if (form.groupChanged('pid')) {
+      const items = [0, 1, 2].map((i) => [form.get('pid', `p${i}`), form.get('pid', `i${i}`), form.get('pid', `d${i}`)] as [number, number, number]);
+      writes.push({ code: CMD.SET_PID, payload: encodePid(raws.pid, items), label: 'SET_PID' });
     }
+    if (hasAdv && raws.adv && form.groupChanged('adv')) writes.push({ code: CMD.SET_PID_ADVANCED, payload: encodePidAdvanced(raws.adv, form.cur.adv!, a), label: 'SET_PID_ADVANCED' });
+    if (form.groupChanged('rc')) writes.push({ code: CMD.SET_RC_TUNING, payload: encodeRcTuning(raws.rc, form.cur.rc!, a), label: 'SET_RC_TUNING' });
+    if (hasFilter && raws.filter && form.groupChanged('filter')) writes.push({ code: CMD.SET_FILTER_CONFIG, payload: encodeFilterConfig(raws.filter, form.cur.filter!, a), label: 'SET_FILTER_CONFIG' });
+    const res = await ctx.bf.saveSettings(writes, { areas: AREA.tuning });
+    busy = false;
+    if (!res.ok) {
+      ctx.toast(t('bfTuning.common.saveFail', { msg: res.error ?? '' }), 'error');
+      updateBar(root, form.count(), { busy });
+      return;
+    }
+    ctx.toast(t('bfTuning.common.saved'), 'ok');
+    fromStore(); // saveSettings re-read the tab: what the FC reports is what is shown
+    if (!disposed) render();
   }
 
   async function selectProfile(kind: 'pid' | 'rate', idx: number): Promise<void> {
@@ -226,8 +245,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if ((kind === 'pid' ? status.pidProfile : status.rateProfile) === idx) return;
     if (form.count() && !(await ctx.confirm({ title: t('bfTuning.common.discardTitle'), body: `<p>${escapeHtml(t('bfTuning.common.discardBody'))}</p>`, confirmText: t('bfTuning.common.discard') }))) return;
     try {
-      await io.write(CMD.SELECT_SETTING, Uint8Array.from([kind === 'pid' ? idx : 0x80 | idx]));
-      await load();
+      await ctx.bf.send(CMD.SELECT_SETTING, Uint8Array.from([kind === 'pid' ? idx : 0x80 | idx]));
+      await ctx.bf.refresh(AREA.tuning);
+      form.clear();
+      if (!fromStore()) phase = 'error';
+      if (!disposed) render();
     } catch (e) {
       ctx.toast(t('bfTuning.common.selectFail', { msg: errMsg(e) }), 'error');
     }
@@ -235,12 +257,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   /* ---------------- views ---------------- */
   function profileBar(): string {
-    const st = status!;
+    const st = status;
+    if (!st) return '';
     const seg = (kind: 'pid' | 'rate', n: number, cur: number) =>
       Array.from({ length: n }, (_, i) => `<button class="bf-tuning-seg${i === cur ? ' on' : ''}" data-act="profile" data-kind="${kind}" data-i="${i}" aria-pressed="${i === cur}">${i + 1}</button>`).join('');
     return `<div class="bf-tuning-profiles">
       <span class="bf-tuning-pl mono">${t('bfTuning.common.pidProfile')}</span><span class="bf-tuning-segs">${seg('pid', st.pidProfileCount, st.pidProfile)}</span>
-      <span class="bf-tuning-pl mono">${t('bfTuning.common.rateProfile')}</span><span class="bf-tuning-segs">${seg('rate', st.rateProfileCount ?? 6, st.rateProfile)}</span>
+      <span class="bf-tuning-pl mono">${t('bfTuning.common.rateProfile')}</span><span class="bf-tuning-segs">${seg('rate', st.rateProfileCount ?? 4, st.rateProfile)}</span>
       <span class="bf-tuning-pnote dim">${t('bfTuning.common.profileNote')}</span>
     </div>`;
   }
@@ -334,7 +357,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function render(): void {
     if (disposed) return;
     const top = root.scrollTop;
-    if (!io.connected() || phase === 'idle') {
+    if (!connected() || phase === 'idle') {
       root.innerHTML = disconnectedHtml();
       return;
     }
@@ -424,9 +447,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   const off = ctx.state.subscribe(() => {
     if (disposed || busy) return;
-    const connected = io.connected();
-    if (connected && ctx.link() !== loadedLink && phase !== 'loading') void load();
-    else if (!connected && phase !== 'idle') {
+    const on = connected();
+    if (on && ctx.link() !== loadedLink) void load();
+    else if (!on && phase !== 'idle') {
       phase = 'idle';
       loadedLink = null;
       form.clear();

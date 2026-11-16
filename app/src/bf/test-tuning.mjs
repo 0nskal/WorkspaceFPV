@@ -4,7 +4,7 @@ import {
   decodePid, encodePid, decodePidAdvanced, encodePidAdvanced, decodeRcTuning, encodeRcTuning, decodeFilterConfig, encodeFilterConfig,
   rateAt, maxRate, throttleCurve, lowpassGain, notchGain, toDb, PID_ADV_FIELDS, FILTER_FIELDS,
 } from './tuning.ts';
-import { decodeStatusEx } from './statusex.ts';
+import { decodeStatusEx } from './decode.ts';
 
 let fails = 0;
 function check(name, ok, info = '') {
@@ -127,7 +127,7 @@ const near = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
   p[16 + 4] = 24; dv.setUint32(16 + 4 + 1, 0, true); p[16 + 4 + 1 + 4] = 1; p[p.length - 1] = 6;
   const s = decodeStatusEx(p, 47);
   check('status_ex profiles', s.pidProfile === 1 && s.pidProfileCount === 3 && s.rateProfile === 2 && s.rateProfileCount === 6 && s.rebootRequired);
-  check('status_ex mode flags', s.modeFlags[0] && !s.modeFlags[1] && s.modeFlags[2] && s.modeFlags.length === 64);
+  check('status_ex mode flags', s.modeBits[0] && !s.modeBits[1] && s.modeBits[2] && s.modeBits.length === 64 && s.modeFlags === 0b101);
   check('status_ex API 1.46 has no rate profile count', decodeStatusEx(p.subarray(0, p.length - 1), 46).rateProfileCount === null);
 }
 

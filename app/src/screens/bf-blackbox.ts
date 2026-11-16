@@ -25,15 +25,19 @@ import {
 } from '../bf/blackbox';
 import { summarizeBbl, type BblSummary } from '../bf/bbl';
 import { setPendingLog } from '../bf/log-handoff';
-import { errMsg, makeIo } from '../bf/io-motors';
+import { AREA, errMsg, rawOf, STEP } from '../bf/steps';
+import type { MspWrite } from '../bf/store';
 import { MSPM, DEBUG_MODES_45, decodeAdvancedConfig, encodeAdvancedConfig, debugModeName, type AdvancedConfig } from '../bf/motors';
 import { bindConnect, downloadBytes, emptyHtml, sleep } from '../bf/ui-bits';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 
-/** Bytes requested per MSP_DATAFLASH_READ: keeps the reply inside one v1 frame (<= 255 bytes). The demo FC has no such limit. */
-const CHUNK = 224;
-const CHUNK_DEMO = 4096;
+/**
+ * Bytes requested per MSP_DATAFLASH_READ. Betaflight builds with flash have a 4096 + 16 byte MSP reply buffer
+ * (msp_serial.h MSP_PORT_DATAFLASH_BUFFER_SIZE) and answer with an MSP v1 jumbo frame; smaller builds clamp the
+ * length themselves, and the loop below always advances by what actually came back.
+ */
+const CHUNK = 4096;
 
 type Dl =
   | { phase: 'idle' }
@@ -42,7 +46,8 @@ type Dl =
   | { phase: 'error'; msg: string };
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
-  const io = makeIo(ctx);
+  /** One request through the Betaflight session; null on an error reply or timeout. */
+  const tryRead = (cmd: number, payload?: Uint8Array, timeoutMs = 1000): Promise<Uint8Array | null> => ctx.bf.send(cmd, payload, timeoutMs).catch(() => null);
   const root = document.createElement('div');
   root.className = 'bf-blackbox';
   el.appendChild(root);
@@ -61,33 +66,38 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let connKey = '';
   const offConn = bindConnect(root, ctx);
 
-  const minor = () => io.apiMinor();
+  const minor = () => ctx.bf.get().api || 46;
   const armed = () => !!ctx.state.get().status?.armed;
   const pidUs = () => ctx.state.get().status?.cycleTimeUs ?? 0;
 
   /* ---------- load ---------- */
-  async function load(): Promise<void> {
-    loadState = 'loading';
-    paint();
-    try {
-      const f = await io.tryRead(MSPB.DATAFLASH_SUMMARY);
-      const s = await io.tryRead(MSPB.SDCARD_SUMMARY);
-      const c = await io.tryRead(MSPB.BLACKBOX_CONFIG);
-      const a = await io.tryRead(MSPM.ADVANCED_CONFIG);
-      if (disposed) return;
-      flash = f ? decodeFlashSummary(f) : null;
-      sd = s ? decodeSdSummary(s) : null;
-      cfg = c ? decodeBlackboxConfig(c, minor()) : null;
-      adv = a ? decodeAdvancedConfig(a) : null;
-      if (cfg) {
-        device = cfg.device;
-        rate = cfg.sampleRate;
-      }
-      if (adv) debug = adv.debugMode;
-      loadState = cfg ? 'ready' : 'unsupported';
-    } catch {
-      loadState = 'unsupported';
+  /** Decodes what the Betaflight store read (on connect, or by the refresh below). */
+  function fromStore(): void {
+    const d = ctx.bf.get();
+    const f = rawOf(d, STEP.flash);
+    const s = rawOf(d, STEP.sdcard);
+    const c = rawOf(d, STEP.bbConfig);
+    const a = rawOf(d, STEP.advanced);
+    flash = f ? decodeFlashSummary(f) : null;
+    sd = s ? decodeSdSummary(s) : null;
+    cfg = c ? decodeBlackboxConfig(c, minor()) : null;
+    adv = a ? decodeAdvancedConfig(a) : null;
+    if (cfg) {
+      device = cfg.device;
+      rate = cfg.sampleRate;
     }
+    if (adv) debug = adv.debugMode;
+  }
+
+  /** Shows the connect-time summary at once, then re-reads it (the flash fills up while flying). */
+  async function load(): Promise<void> {
+    fromStore();
+    loadState = cfg ? 'ready' : 'loading';
+    paint();
+    await ctx.bf.refresh(AREA.blackbox);
+    if (disposed || saving || dirty()) return;
+    fromStore();
+    loadState = cfg ? 'ready' : 'unsupported';
     paint();
   }
 
@@ -240,16 +250,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   }
 
   /* ---------- actions ---------- */
-  async function refreshFlash(): Promise<void> {
-    const f = await io.tryRead(MSPB.DATAFLASH_SUMMARY);
-    if (f) flash = decodeFlashSummary(f);
-  }
-
   async function download(): Promise<void> {
     if (!flash || dl.phase === 'run') return;
     if (armed()) return ctx.toast(t('bfBlackbox.armed'), 'error');
     const total = flash.usedSize;
-    const chunkSize = io.demo ? CHUNK_DEMO : CHUNK;
+    const chunkSize = CHUNK;
     const run: Extract<Dl, { phase: 'run' }> = { phase: 'run', bytes: 0, total, speed: 0, t0: performance.now(), cancel: false };
     dl = run;
     paint();
@@ -264,7 +269,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         let lastErr: unknown = null;
         for (let attempt = 0; attempt < 3 && !got; attempt++) {
           try {
-            const reply = await io.read(MSPB.DATAFLASH_READ, encodeFlashRead(addr, Math.min(chunkSize, total - addr)), 2000);
+            const reply = await ctx.bf.send(MSPB.DATAFLASH_READ, encodeFlashRead(addr, Math.min(chunkSize, total - addr)), 2000);
             const ch = decodeFlashRead(reply, addr);
             if (ch.ok) got = ch.data;
             else if (ch.reason === 'compressed') throw new Error(t('bfBlackbox.compressed'));
@@ -320,7 +325,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     });
     if (!ok) return;
     try {
-      await io.write(MSPB.DATAFLASH_ERASE, new Uint8Array(0), 5000);
+      await ctx.bf.send(MSPB.DATAFLASH_ERASE, new Uint8Array(0), 5000);
     } catch (e) {
       return ctx.toast(t('bfBlackbox.eraseFail', { msg: errMsg(e) }), 'error');
     }
@@ -335,7 +340,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       const until = Date.now() + 5 * 60_000;
       while (!disposed && Date.now() < until) {
         await sleep(1000);
-        const f = await io.tryRead(MSPB.DATAFLASH_SUMMARY, undefined, 4000);
+        const f = await tryRead(MSPB.DATAFLASH_SUMMARY, undefined, 4000);
         if (f) {
           const s = decodeFlashSummary(f);
           flash = s;
@@ -359,7 +364,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     });
     if (!ok) return;
     try {
-      const r = decodeMscReply(await io.write(MSPB.REBOOT, Uint8Array.of(2), 3000));
+      ctx.link()?.expectReboot('leave'); // the FC re-enumerates as a USB drive: no reconnect attempt
+      const r = decodeMscReply(await ctx.bf.send(MSPB.REBOOT, Uint8Array.of(2), 3000));
       if (!r.ready) return ctx.toast(t('bfBlackbox.mscNotReady'), 'error');
       ctx.toast(t('bfBlackbox.mscDone'), 'ok');
     } catch (e) {
@@ -377,18 +383,16 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (!ok) return;
     saving = true;
     paint();
-    try {
-      if (device !== cfg.device || rate !== cfg.sampleRate) await io.write(MSPB.SET_BLACKBOX_CONFIG, encodeBlackboxConfig(cfg, { device, sampleRate: rate }, minor()));
-      if (adv && debug !== adv.debugMode) await io.write(MSPM.SET_ADVANCED_CONFIG, encodeAdvancedConfig(adv, { debugMode: debug }));
-      await io.save({ reboot: false });
-      ctx.toast(t('bfBlackbox.saved'), 'ok');
-      saving = false;
-      await load();
-    } catch (e) {
-      ctx.toast(t('bfBlackbox.saveFail', { msg: errMsg(e) }), 'error');
-      saving = false;
-      await load();
-    }
+    const writes: MspWrite[] = [];
+    if (device !== cfg.device || rate !== cfg.sampleRate) writes.push({ code: MSPB.SET_BLACKBOX_CONFIG, payload: encodeBlackboxConfig(cfg, { device, sampleRate: rate }, minor()), label: 'SET_BLACKBOX_CONFIG' });
+    if (adv && debug !== adv.debugMode) writes.push({ code: MSPM.SET_ADVANCED_CONFIG, payload: encodeAdvancedConfig(adv, { debugMode: debug }), label: 'SET_ADVANCED_CONFIG' });
+    const res = await ctx.bf.saveSettings(writes, { areas: AREA.blackbox });
+    saving = false;
+    if (res.ok) ctx.toast(t('bfBlackbox.saved'), 'ok');
+    else ctx.toast(t('bfBlackbox.saveFail', { msg: res.error ?? '' }), 'error');
+    if (disposed) return;
+    fromStore();
+    paint();
   }
 
   function summary(): string {

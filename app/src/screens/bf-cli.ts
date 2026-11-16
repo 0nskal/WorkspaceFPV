@@ -6,7 +6,7 @@
  */
 import type { AppContext, ScreenMount } from '../context';
 import { t } from '../i18n';
-import { errMsg, makeIo } from '../bf/io-motors';
+import { errMsg } from '../bf/steps';
 import { bindConnect, downloadBytes, emptyHtml } from '../bf/ui-bits';
 import { copyText, escapeHtml, stamp } from '../ui/dom';
 import { icon } from '../ui/icons';
@@ -49,7 +49,6 @@ function commonPrefix(a: string[]): string {
 }
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
-  const io = makeIo(ctx);
   const root = document.createElement('div');
   root.className = 'bf-cli';
   el.appendChild(root);
@@ -128,7 +127,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     append(`\n# ${opts.label ?? t('bfCli.sessionStart')}\n`);
     try {
       const cmds = opts.backup ? ['diff all', ...lines] : lines;
-      const res = await io.cli(cmds, {
+      const res = await link.cli(cmds, {
         save: opts.save,
         onEntry: (e, i) => {
           if (opts.backup && i === 0) {

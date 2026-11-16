@@ -4,6 +4,7 @@ import { BfSession } from './store.ts';
 import { DemoLink } from '../serial/demo.ts';
 import * as D from './decode.ts';
 import { C } from './codes.ts';
+import { STEP, rawOf } from './steps.ts'; // registers the tuning / receiver / modes / blackbox / OSD read steps
 
 let fails = 0;
 const check = (name, ok, info = '') => {
@@ -26,6 +27,11 @@ check('board + gyro rate', d.board?.gyroRateHz === 8000 && d.board?.boardId === 
 check('serial ports (v2)', d.serial?.source === 'v2' && d.serial.ports.length === 7);
 check('craft/pilot names via GET_TEXT', d.craftName === '5" Freestyle' && d.pilotName === 'OSKAR');
 check('unsupported API-gated steps skipped (MCU info needs 1.47)', d.mcuName === '');
+
+// every tab's data is read on connect (nobody has to press "read")
+for (const id of [STEP.pid, STEP.pidAdv, STEP.rcTuning, STEP.filter, STEP.rx, STEP.rxMap, STEP.deadband, STEP.rssi, STEP.boxNames, STEP.boxIds, STEP.modeRanges, STEP.modeRangesExtra, STEP.bbConfig, STEP.flash, STEP.osd, STEP.osdCanvas, STEP.advanced, STEP.motor, STEP.mixer])
+  check(`snapshot read ${id}`, !!rawOf(d, id) && rawOf(d, id).length > 0);
+check('status mode bits decoded', Array.isArray(d.status?.modeBits) && d.status.modeBits.length >= 32);
 
 // typed read
 const att = await bf.read({ code: C.ATTITUDE, decode: (p) => D.decodeAttitude(p) });

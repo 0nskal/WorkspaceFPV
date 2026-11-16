@@ -38,7 +38,7 @@ function u16le(buf: Uint8Array, off: number, v: number): void {
 
 function makePid(k: number): Uint8Array {
   const base = [48, 82, 38, 52, 88, 42, 45, 90, 3, 50, 75, 0, 40, 0, 0];
-  const delta = [0, 4, -4][k]!;
+  const delta = [0, 4, -4, 8][k]!;
   return Uint8Array.from(base.map((v, i) => (i < 9 && i % 3 !== 1 ? Math.max(0, v + delta) : v)));
 }
 
@@ -142,8 +142,8 @@ function makeRxConfig(): Uint8Array {
 const st = {
   pidProfile: 0,
   rateProfile: 0,
-  pid: [makePid(0), makePid(1), makePid(2)],
-  adv: [makeAdv(0), makeAdv(1), makeAdv(2)],
+  pid: [makePid(0), makePid(1), makePid(2), makePid(3)],
+  adv: [makeAdv(0), makeAdv(1), makeAdv(2), makeAdv(3)],
   rc: [makeRc(3), makeRc(0), makeRc(4), makeRc(0)],
   filter: makeFilter(),
   rx: makeRxConfig(),
@@ -174,24 +174,6 @@ function rcChannels(t: number): number[] {
   ch[14] = Math.round(1000 + Math.min(100, 97 + wave(1.3) * 2.5) * 10); // LQ %
   ch[15] = Math.round(1000 + (0.83 + wave(0.8) * 0.04) * 1000); // RSSI
   return ch;
-}
-
-function statusEx(t: number): Uint8Array {
-  const b = new Uint8Array(16 + 4 + 1 + 4 + 1 + 2 + 1);
-  u16le(b, 0, 125);
-  u16le(b, 4, 0b100001);
-  const active = activeModeIds(st.ranges, rcChannels(t));
-  const flags = flagsFromActiveIds(BOX_IDS, active);
-  u16le(b, 6, flags & 0xffff);
-  u16le(b, 8, (flags >>> 16) & 0xffff);
-  b[10] = st.pidProfile;
-  u16le(b, 11, 140);
-  b[13] = 3;
-  b[14] = st.rateProfile;
-  b[15] = 4;
-  b[16 + 4] = 24;
-  b[b.length - 1] = 4; // rate profiles (API 1.47+ only; harmless extra byte for 1.46 decoders)
-  return b;
 }
 
 /** Active flight-mode flags and profile indices for the core's MSP_STATUS_EX reply (demo-bf.ts). */
@@ -252,12 +234,10 @@ export function demoTuning(cmd: number, payload: Uint8Array | undefined, t: numb
     case 218:
       st.deadband = p.slice();
       return none;
-    case 150:
-      return statusEx(t);
     case 210: {
       const v = p[0] ?? 0;
       if (v & 0x80) st.rateProfile = Math.min(3, v & 0x7f);
-      else st.pidProfile = Math.min(2, v);
+      else st.pidProfile = Math.min(3, v);
       return none;
     }
     case 34: {

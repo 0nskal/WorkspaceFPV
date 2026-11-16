@@ -20,7 +20,8 @@ import {
   type OsdConfig,
   type OsdGrid,
 } from '../bf/osd';
-import { errMsg, makeIo } from '../bf/io-motors';
+import { AREA, rawOf, STEP } from '../bf/steps';
+import type { MspWrite } from '../bf/store';
 import { bindConnect, emptyHtml } from '../bf/ui-bits';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
@@ -33,7 +34,6 @@ const VIDEO = ['auto', 'pal', 'ntsc', 'hd'];
 const clone = (c: OsdConfig): OsdConfig => ({ ...c, items: [...c.items], stats: [...c.stats], timers: [...c.timers] });
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
-  const io = makeIo(ctx);
   const root = document.createElement('div');
   root.className = 'bf-osd';
   el.appendChild(root);
@@ -54,25 +54,28 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const grid = (): OsdGrid => gridFor(edit?.video ?? 1, canvas);
   const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
 
+  /** Decodes the OSD layout the Betaflight store read; false when the FC has no OSD (or did not answer). */
+  function fromStore(): boolean {
+    const d = ctx.bf.get();
+    const p = rawOf(d, STEP.osd);
+    const c = p ? decodeOsdConfig(p) : null;
+    if (!c || !(c.flags & OSD_FLAG.supported)) return false;
+    cfg = c;
+    edit = clone(c);
+    prof = Math.min(c.profile, 2);
+    const cv = c.video === 3 || c.flags & OSD_FLAG.displayport ? rawOf(d, STEP.osdCanvas) : null;
+    canvas = cv ? decodeCanvas(cv) : null;
+    return true;
+  }
+
+  /** Shows the connect-time layout at once, then re-reads it (it may have changed in the goggles' OSD menu or the CLI). */
   async function load(): Promise<void> {
-    status = 'loading';
+    status = fromStore() ? 'ready' : 'loading';
     paint();
-    try {
-      const p = await io.read(MSPO.OSD_CONFIG);
-      const c = decodeOsdConfig(p);
-      if (!c || !(c.flags & OSD_FLAG.supported)) throw new Error('osd');
-      cfg = c;
-      edit = clone(c);
-      prof = Math.min(c.profile, 2);
-      if (c.video === 3 || c.flags & OSD_FLAG.displayport) {
-        const cv = await io.tryRead(MSPO.OSD_CANVAS);
-        canvas = cv ? decodeCanvas(cv) : null;
-      }
-      status = 'ready';
-    } catch {
-      status = 'unsupported';
-    }
-    if (!disposed) paint();
+    await ctx.bf.refresh(AREA.osd);
+    if (disposed || saving || nChanges()) return;
+    status = fromStore() ? 'ready' : 'unsupported';
+    paint();
   }
 
   const changedItem = (i: number) => !!cfg && !!edit && cfg.items[i] !== edit.items[i];
@@ -197,15 +200,14 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (!payloads.length) return;
     saving = true;
     paint();
-    try {
-      for (const p of payloads) await io.write(MSPO.SET_OSD_CONFIG, p);
-      await io.save({ reboot: false });
-      ctx.toast(t('bfOsd.saved'), 'ok');
-    } catch (e) {
-      ctx.toast(t('bfOsd.saveFail', { msg: errMsg(e) }), 'error');
-    }
+    const writes: MspWrite[] = payloads.map((payload) => ({ code: MSPO.SET_OSD_CONFIG, payload, label: 'SET_OSD_CONFIG' }));
+    const res = await ctx.bf.saveSettings(writes, { areas: AREA.osd });
     saving = false;
-    await load();
+    if (res.ok) ctx.toast(t('bfOsd.saved'), 'ok');
+    else ctx.toast(t('bfOsd.saveFail', { msg: res.error ?? '' }), 'error');
+    if (disposed) return;
+    status = fromStore() ? 'ready' : 'unsupported';
+    paint();
   }
 
   function summary(): string {

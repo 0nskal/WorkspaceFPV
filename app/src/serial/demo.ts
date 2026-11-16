@@ -28,10 +28,6 @@ function build(write: (dv: DataView) => void, size: number): Uint8Array {
   return buf;
 }
 
-function lenStr(s: string): number[] {
-  return [s.length, ...str(s)];
-}
-
 export class DemoLink implements FcLink {
   readonly kind = 'demo' as const;
   readonly label = 'Demo';

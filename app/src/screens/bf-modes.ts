@@ -3,16 +3,17 @@
  * active-mode flags (MSP_STATUS_EX). Ranges can be added, moved and removed; nothing is written until "Save".
  */
 import type { AppContext, ScreenMount } from '../context';
-import { createIo, CMD } from '../bf/io';
+import { AREA, CMD, rawKey, rawOf, STEP } from '../bf/steps';
+import { C } from '../bf/codes';
+import { decodeStatusEx } from '../bf/decode';
+import type { MspWrite } from '../bf/store';
 import { decodeBoxIds, decodeBoxNames, decodeModeRanges, emptyRange, encodeSetModeRange, FALLBACK_BOXES, isEmptyRange, MODE_SLOTS, STEP_COUNT, stepToUs, usToStep, activeIdsFromFlags, type ModeRange } from '../bf/modes';
 import { decodeRc } from '../bf/receiver';
-import { decodeStatusEx } from '../bf/statusex';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
-import { t, type Key } from '../i18n';
-import { barHtml, disconnectedHtml, errMsg, errorHtml, noticeHtml, updateBar } from './bf-tuning-ui';
+import { t } from '../i18n';
+import { barHtml, disconnectedHtml, errorHtml, noticeHtml, updateBar } from './bf-tuning-ui';
 
-const k = (x: string) => `bfModes.${x}` as Key;
 const US_MIN = 900;
 const US_MAX = 2100;
 const pct = (us: number) => ((Math.max(US_MIN, Math.min(US_MAX, us)) - US_MIN) / (US_MAX - US_MIN)) * 100;
@@ -25,7 +26,6 @@ interface Box {
 let onlyConfigured = false;
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
-  const io = createIo(ctx);
   const root = document.createElement('div');
   root.className = 'bf-tuning bf-modes';
   el.appendChild(root);
@@ -43,6 +43,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let tick = 0;
   let inflight = false;
   let poll: ReturnType<typeof setInterval> | null = null;
+  let shownKey = '';
+  const IDS = [STEP.boxNames, STEP.boxIds, STEP.modeRanges, STEP.modeRangesExtra];
+  const connected = () => ctx.state.get().conn === 'connected' && ctx.link() !== null;
 
   const boxName = (id: number) => boxes.find((b) => b.id === id)?.name ?? FALLBACK_BOXES[id] ?? `#${id}`;
   const live = () => ranges.filter((r) => !isEmptyRange(r));
@@ -51,34 +54,43 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const norm = (r: ModeRange) => (isEmptyRange(r) ? { empty: true } : r);
 
   /* ---------------- load / save ---------------- */
+  /** Fills boxes and ranges from the Betaflight store; false when the FC did not answer BOXNAMES / MODE_RANGES. */
+  function fromStore(): boolean {
+    const d = ctx.bf.get();
+    const namesRaw = rawOf(d, STEP.boxNames);
+    const base = rawOf(d, STEP.modeRanges);
+    if (!namesRaw || !base) return false;
+    const names = decodeBoxNames(namesRaw);
+    const idsRaw = rawOf(d, STEP.boxIds);
+    const ids = idsRaw ? decodeBoxIds(idsRaw) : [];
+    boxes = names.map((name, i) => ({ id: ids[i] ?? i, name }));
+    if (ids.length && ids.length !== names.length) boxes = ids.map((id, i) => ({ id, name: names[i] ?? FALLBACK_BOXES[id] ?? `#${id}` }));
+    const dec = decodeModeRanges(base, rawOf(d, STEP.modeRangesExtra) ?? undefined);
+    ranges = Array.from({ length: MODE_SLOTS }, (_, i) => dec[i] ?? emptyRange(i));
+    orig = ranges.map((r) => ({ ...r }));
+    shownKey = rawKey(d, IDS);
+    return true;
+  }
+
+  /** Shows what the connect-time read stored, then re-reads the tab's commands. Channels and active modes are polled live. */
   async function load(): Promise<void> {
-    if (!io.connected()) {
+    if (!connected()) {
       phase = 'idle';
       render();
       return;
     }
-    phase = 'loading';
-    render();
-    try {
-      const names = decodeBoxNames(await io.read(CMD.BOXNAMES));
-      const idsRaw = await io.tryRead(CMD.BOXIDS);
-      const ids = idsRaw ? decodeBoxIds(idsRaw) : [];
-      boxes = names.map((name, i) => ({ id: ids[i] ?? i, name }));
-      if (ids.length && ids.length !== names.length) boxes = ids.map((id, i) => ({ id, name: names[i] ?? FALLBACK_BOXES[id] ?? `#${id}` }));
-      const base = await io.read(CMD.MODE_RANGES);
-      const extra = await io.tryRead(CMD.MODE_RANGES_EXTRA);
-      const dec = decodeModeRanges(base, extra ?? undefined);
-      ranges = Array.from({ length: MODE_SLOTS }, (_, i) => dec[i] ?? emptyRange(i));
-      orig = ranges.map((r) => ({ ...r }));
-      const p = await io.tryRead(CMD.RC);
-      rc = p ? decodeRc(p) : [];
-      phase = 'ready';
-    } catch (e) {
-      phase = 'error';
-      error = errMsg(e);
-    }
     loadedLink = ctx.link();
-    if (!disposed) render();
+    phase = fromStore() ? 'ready' : 'loading';
+    render();
+    await ctx.bf.refresh(AREA.modes);
+    if (disposed || busy || (phase === 'ready' && changedSlots().length)) return;
+    const changed = phase !== 'ready' || rawKey(ctx.bf.get(), IDS) !== shownKey;
+    if (fromStore()) phase = 'ready';
+    else {
+      phase = 'error';
+      error = t('bfTuning.common.unsupported');
+    }
+    if (changed) render();
   }
 
   async function save(): Promise<void> {
@@ -86,17 +98,16 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (busy || !slots.length) return;
     busy = true;
     updateBar(root, slots.length, { busy });
-    try {
-      for (const i of slots) await io.write(CMD.SET_MODE_RANGE, encodeSetModeRange(isEmptyRange(ranges[i]!) ? emptyRange(i) : ranges[i]!));
-      await io.save();
-      ctx.toast(t('bfTuning.common.saved'), 'ok');
-      busy = false;
-      await load();
-    } catch (e) {
-      busy = false;
-      ctx.toast(t('bfTuning.common.saveFail', { msg: errMsg(e) }), 'error');
+    const writes: MspWrite[] = slots.map((i) => ({ code: CMD.SET_MODE_RANGE, payload: encodeSetModeRange(isEmptyRange(ranges[i]!) ? emptyRange(i) : ranges[i]!), label: `SET_MODE_RANGE ${i}` }));
+    const res = await ctx.bf.saveSettings(writes, { areas: AREA.modes });
+    busy = false;
+    if (!res.ok) {
+      ctx.toast(t('bfTuning.common.saveFail', { msg: res.error ?? '' }), 'error');
       updateBar(root, changedSlots().length, { busy });
+      return;
     }
+    ctx.toast(t('bfTuning.common.saved'), 'ok');
+    if (!disposed && fromStore()) render();
   }
 
   /* ---------------- view ---------------- */
@@ -133,7 +144,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function render(): void {
     if (disposed) return;
     const top = root.scrollTop;
-    if (!io.connected() || phase === 'idle') {
+    if (!connected() || phase === 'idle') {
       root.innerHTML = disconnectedHtml();
       return;
     }
@@ -187,15 +198,15 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function startPoll(): void {
     if (poll) return;
     poll = setInterval(() => {
-      if (inflight || disposed || phase !== 'ready' || !io.connected() || ctx.link()?.busy) return;
+      if (inflight || disposed || phase !== 'ready' || !connected() || ctx.link()?.busy) return;
       inflight = true;
       tick++;
       (async () => {
-        const p = await io.read(CMD.RC);
+        const p = await ctx.bf.send(C.RC);
         rc = decodeRc(p);
         if (tick % 3 === 0) {
-          const st = decodeStatusEx(await io.read(CMD.STATUS_EX), io.apiMinor());
-          active = activeIdsFromFlags(boxes.map((b) => b.id), st.modeFlags);
+          const st = decodeStatusEx(await ctx.bf.send(C.STATUS_EX), ctx.bf.get().api);
+          active = activeIdsFromFlags(boxes.map((b) => b.id), st.modeBits);
         }
       })()
         .catch(() => undefined)
@@ -305,9 +316,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   const off = ctx.state.subscribe(() => {
     if (disposed || busy) return;
-    const connected = io.connected();
-    if (connected && ctx.link() !== loadedLink && phase !== 'loading') void load();
-    else if (!connected && phase !== 'idle') {
+    const on = connected();
+    if (on && ctx.link() !== loadedLink) void load();
+    else if (!on && phase !== 'idle') {
       phase = 'idle';
       loadedLink = null;
       render();

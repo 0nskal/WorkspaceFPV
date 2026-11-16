@@ -3,7 +3,9 @@
  * a 2D stick view and ELRS link quality from channels 15/16. Edits stay local until "Save".
  */
 import type { AppContext, ScreenMount } from '../context';
-import { createIo, CMD } from '../bf/io';
+import { AREA, CMD, rawKey, rawOf, STEP } from '../bf/steps';
+import { C } from '../bf/codes';
+import type { MspWrite } from '../bf/store';
 import type { Values } from '../bf/fieldtable';
 import {
   channelName, decodeRc, decodeRssiChannel, decodeRxConfig, decodeRcDeadband, decodeRxMap, elrsLink, encodeRcDeadband, encodeRssiChannel, encodeRxConfig, encodeRxMap,
@@ -11,14 +13,13 @@ import {
 } from '../bf/receiver';
 import { escapeHtml } from '../ui/dom';
 import { fmtNum, t, type Key } from '../i18n';
-import { barHtml, bindForm, disconnectedHtml, errMsg, errorHtml, fieldHtml, Form, noticeHtml, sectionHtml, updateBar, type FieldSpec } from './bf-tuning-ui';
+import { barHtml, bindForm, disconnectedHtml, errorHtml, fieldHtml, Form, noticeHtml, sectionHtml, updateBar, type FieldSpec } from './bf-tuning-ui';
 
 const k = (x: string) => `bfReceiver.${x}` as Key;
 const CH_MIN = 1000;
 const CH_MAX = 2000;
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
-  const io = createIo(ctx);
   const form = new Form();
   const root = document.createElement('div');
   root.className = 'bf-tuning bf-receiver';
@@ -38,7 +39,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let poll: ReturnType<typeof setInterval> | null = null;
   let inflight = false;
 
-  const api = () => io.apiMinor();
+  let shownKey = '';
+  const IDS = [STEP.rx, STEP.rxMap, STEP.deadband, STEP.rssi];
+  const api = () => ctx.bf.get().api || 46;
+  const connected = () => ctx.state.get().conn === 'connected' && ctx.link() !== null;
   const map = (): number[] => Array.from({ length: 8 }, (_, i) => form.get('map', `m${i}`));
   const tipFor = (key: string) => {
     const v = t(k(`tips.${key}`));
@@ -71,38 +75,48 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const spec = (key: string, g = 'rx') => specs().find((x) => x.g === g && x.k === key)!;
 
   /* ---------------- load / save ---------------- */
+  /** Fills the form from the Betaflight store; false when the FC did not answer MSP_RX_CONFIG. */
+  function fromStore(): boolean {
+    const d = ctx.bf.get();
+    const rxBytes = rawOf(d, STEP.rx);
+    if (!rxBytes) return false;
+    const a = api();
+    const rx = decodeRxConfig(rxBytes, a);
+    rxRaw = rx.raw;
+    form.load('rx', rx.values);
+    mapRaw = rawOf(d, STEP.rxMap) ?? mapRaw;
+    const mv: Values = {};
+    decodeRxMap(mapRaw).forEach((v, i) => (mv[`m${i}`] = v));
+    form.load('map', mv);
+    const db = rawOf(d, STEP.deadband);
+    hasDb = !!db;
+    dbRaw = db ?? new Uint8Array(0);
+    form.load('db', db ? decodeRcDeadband(db, a).values : {});
+    const rs = rawOf(d, STEP.rssi);
+    form.load('rssi', rs ? { ch: decodeRssiChannel(rs) } : {});
+    shownKey = rawKey(d, IDS);
+    return true;
+  }
+
+  /** Shows what the connect-time read stored, then re-reads the tab's commands. Live channels come from the 10 Hz poll. */
   async function load(): Promise<void> {
-    if (!io.connected()) {
+    if (!connected()) {
       phase = 'idle';
       render();
       return;
     }
-    phase = 'loading';
-    render();
-    const a = api();
-    try {
-      const rx = decodeRxConfig(await io.read(CMD.RX_CONFIG), a);
-      rxRaw = rx.raw;
-      form.load('rx', rx.values);
-      mapRaw = (await io.tryRead(CMD.RX_MAP)) ?? mapRaw;
-      const mv: Values = {};
-      decodeRxMap(mapRaw).forEach((v, i) => (mv[`m${i}`] = v));
-      form.load('map', mv);
-      const db = await io.tryRead(CMD.RC_DEADBAND);
-      hasDb = !!db;
-      dbRaw = db ?? new Uint8Array(0);
-      form.load('db', db ? decodeRcDeadband(db, a).values : {});
-      const rs = await io.tryRead(CMD.RSSI_CONFIG);
-      form.load('rssi', rs ? { ch: decodeRssiChannel(rs) } : {});
-      const live = await io.tryRead(CMD.RC);
-      rc = live ? decodeRc(live) : [];
-      phase = 'ready';
-    } catch (e) {
-      phase = 'error';
-      error = errMsg(e);
-    }
     loadedLink = ctx.link();
-    if (!disposed) render();
+    phase = fromStore() ? 'ready' : 'loading';
+    render();
+    await ctx.bf.refresh(AREA.receiver);
+    if (disposed || busy || (phase === 'ready' && form.count())) return;
+    const changed = phase !== 'ready' || rawKey(ctx.bf.get(), IDS) !== shownKey;
+    if (fromStore()) phase = 'ready';
+    else {
+      phase = 'error';
+      error = t('bfTuning.common.unsupported');
+    }
+    if (changed) render();
   }
 
   const needsReboot = () => form.isChanged('rx', 'provider');
@@ -112,24 +126,21 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     busy = true;
     updateBar(root, form.count(), { busy });
     const a = api();
-    try {
-      if (form.groupChanged('rx')) await io.write(CMD.SET_RX_CONFIG, encodeRxConfig(rxRaw, form.cur.rx!, a));
-      if (form.groupChanged('map')) await io.write(CMD.SET_RX_MAP, encodeRxMap(map(), mapRaw));
-      if (hasDb && form.groupChanged('db')) await io.write(CMD.SET_RC_DEADBAND, encodeRcDeadband(dbRaw, form.cur.db!, a));
-      if (form.groupChanged('rssi')) await io.write(CMD.SET_RSSI_CONFIG, encodeRssiChannel(form.get('rssi', 'ch')));
-      const reboot = needsReboot();
-      await io.save({ reboot });
-      ctx.toast(reboot ? t('bfReceiver.savedReboot') : t('bfTuning.common.saved'), 'ok');
-      busy = false;
-      if (reboot) {
-        form.commit();
-        updateBar(root, 0, {});
-      } else await load();
-    } catch (e) {
-      busy = false;
-      ctx.toast(t('bfTuning.common.saveFail', { msg: errMsg(e) }), 'error');
-      updateBar(root, form.count(), { busy, reboot: needsReboot() });
+    const writes: MspWrite[] = [];
+    if (form.groupChanged('rx')) writes.push({ code: C.SET_RX_CONFIG, payload: encodeRxConfig(rxRaw, form.cur.rx!, a), label: 'SET_RX_CONFIG' });
+    if (form.groupChanged('map')) writes.push({ code: CMD.SET_RX_MAP, payload: encodeRxMap(map(), mapRaw), label: 'SET_RX_MAP' });
+    if (hasDb && form.groupChanged('db')) writes.push({ code: CMD.SET_RC_DEADBAND, payload: encodeRcDeadband(dbRaw, form.cur.db!, a), label: 'SET_RC_DEADBAND' });
+    if (form.groupChanged('rssi')) writes.push({ code: CMD.SET_RSSI_CONFIG, payload: encodeRssiChannel(form.get('rssi', 'ch')), label: 'SET_RSSI_CONFIG' });
+    const reboot = needsReboot();
+    const res = await ctx.bf.saveSettings(writes, { reboot, areas: AREA.receiver });
+    busy = false;
+    if (!res.ok) {
+      ctx.toast(t('bfTuning.common.saveFail', { msg: res.error ?? '' }), 'error');
+      updateBar(root, form.count(), { busy });
+      return;
     }
+    ctx.toast(reboot ? t('bfReceiver.savedReboot') : t('bfTuning.common.saved'), 'ok');
+    if (!disposed && fromStore()) render();
   }
 
   /* ---------------- live view ---------------- */
@@ -194,9 +205,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function startPoll(): void {
     if (poll) return;
     poll = setInterval(() => {
-      if (inflight || disposed || phase !== 'ready' || !io.connected() || ctx.link()?.busy) return;
+      if (inflight || disposed || phase !== 'ready' || !connected() || ctx.link()?.busy) return;
       inflight = true;
-      io.read(CMD.RC)
+      ctx.bf
+        .send(C.RC)
         .then((p) => {
           rc = decodeRc(p);
           stale = 0;
@@ -214,7 +226,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function render(): void {
     if (disposed) return;
     const top = root.scrollTop;
-    if (!io.connected() || phase === 'idle') {
+    if (!connected() || phase === 'idle') {
       root.innerHTML = disconnectedHtml();
       return;
     }
@@ -288,9 +300,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   const off = ctx.state.subscribe(() => {
     if (disposed || busy) return;
-    const connected = io.connected();
-    if (connected && ctx.link() !== loadedLink && phase !== 'loading') void load();
-    else if (!connected && phase !== 'idle') {
+    const on = connected();
+    if (on && ctx.link() !== loadedLink) void load();
+    else if (!on && phase !== 'idle') {
       phase = 'idle';
       loadedLink = null;
       form.clear();

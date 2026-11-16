@@ -198,4 +198,4 @@ export function errorHtml(msg: string): string {
   return `<div class="bf-tuning-empty"><div class="bf-tuning-film mono">${escapeHtml(t('bfTuning.common.film'))}</div><h1>${escapeHtml(t('bfTuning.common.readFailTitle'))}</h1><p class="bf-tuning-err" role="alert">${escapeHtml(msg)}</p><div class="bf-tuning-btns"><button class="btn light" data-act="reload">${t('bfTuning.common.retry')}</button></div></div>`;
 }
 
-export const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+export { errMsg } from '../bf/steps';

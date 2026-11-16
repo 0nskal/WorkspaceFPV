@@ -6,7 +6,7 @@
 import type { AppContext } from '../context';
 import { t, fmtNum } from '../i18n';
 import { MSPM, decodeEscSensor, decodeMotorTelemetry, telemetryActive, type MotorTel } from '../bf/motors';
-import { makeIo } from '../bf/io-motors';
+
 
 export interface MotorTelHandle {
   destroy(): void;
@@ -16,7 +16,8 @@ export interface MotorTelHandle {
 const POLL_MS = 400;
 
 export function mountMotorTelemetry(host: HTMLElement, ctx: AppContext, onData: (m: MotorTel[]) => void): MotorTelHandle {
-  const io = makeIo(ctx);
+  /** Live poll through the Betaflight session; null when the FC rejects the command (older firmware) or times out. */
+  const tryRead = (cmd: number): Promise<Uint8Array | null> => ctx.bf.send(cmd, undefined, 600).catch(() => null);
   let latest: MotorTel[] = [];
   let timer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
@@ -56,17 +57,17 @@ export function mountMotorTelemetry(host: HTMLElement, ctx: AppContext, onData: 
       try {
         let list: MotorTel[] = [];
         if (!legacy) {
-          const p = await io.tryRead(MSPM.MOTOR_TELEMETRY, undefined, 600);
+          const p = await tryRead(MSPM.MOTOR_TELEMETRY);
           if (p) list = decodeMotorTelemetry(p);
           else {
-            const e = await io.tryRead(MSPM.ESC_SENSOR_DATA, undefined, 600);
+            const e = await tryRead(MSPM.ESC_SENSOR_DATA);
             if (e) {
               legacy = true;
               list = decodeEscSensor(e);
             }
           }
         } else {
-          const e = await io.tryRead(MSPM.ESC_SENSOR_DATA, undefined, 600);
+          const e = await tryRead(MSPM.ESC_SENSOR_DATA);
           if (e) list = decodeEscSensor(e);
         }
         if (disposed) return;

@@ -20,7 +20,8 @@ import {
   type MixerConfig,
   type MotorConfig,
 } from '../bf/motors';
-import { errMsg, makeIo, type BfIo } from '../bf/io-motors';
+import { AREA, rawOf, STEP } from '../bf/steps';
+import type { MspWrite } from '../bf/store';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 
@@ -44,7 +45,7 @@ interface Edit {
 const SHOWN = [0, 1, 3, 5, 6, 7];
 
 export function mountMotorConfig(host: HTMLElement, ctx: AppContext, opts: { onReversed: (v: boolean) => void; stopTest: () => void }): MotorCfgHandle {
-  const io: BfIo = makeIo(ctx);
+  const apiMinor = () => ctx.bf.get().api || 46;
   let adv: AdvancedConfig | null = null;
   let mot: MotorConfig | null = null;
   let mix: MixerConfig | null = null;
@@ -85,23 +86,30 @@ export function mountMotorConfig(host: HTMLElement, ctx: AppContext, opts: { onR
     return validateMotorEdit({ idlePercent: num(edit.idle), poles: num(edit.poles), protocol: edit.protocol, bidir: edit.bidir });
   }
 
+  /** Decodes the payloads the Betaflight store read on connect; false when one of them is missing. */
+  function fromStore(): boolean {
+    const d = ctx.bf.get();
+    const a = rawOf(d, STEP.advanced);
+    const m = rawOf(d, STEP.motor);
+    const x = rawOf(d, STEP.mixer);
+    if (!a || !m || !x) return false;
+    adv = decodeAdvancedConfig(a);
+    mot = decodeMotorConfig(m, apiMinor());
+    mix = decodeMixerConfig(x);
+    edit = base();
+    opts.onReversed(edit!.reversed);
+    return true;
+  }
+
+  /** Shows the connect-time values at once, then re-reads them (they may have changed in the CLI or the Config tab). */
   async function load(): Promise<void> {
-    status = 'loading';
+    const cached = fromStore();
+    status = cached ? 'ready' : 'loading';
     paint();
-    try {
-      const minor = io.apiMinor();
-      const [a, m, x] = await Promise.all([io.read(MSPM.ADVANCED_CONFIG), io.read(MSPM.MOTOR_CONFIG), io.read(MSPM.MIXER_CONFIG)]);
-      if (disposed) return;
-      adv = decodeAdvancedConfig(a);
-      mot = decodeMotorConfig(m, minor);
-      mix = decodeMixerConfig(x);
-      edit = base();
-      status = 'ready';
-      opts.onReversed(edit!.reversed);
-    } catch {
-      if (disposed) return;
-      status = ctx.state.get().conn === 'connected' ? 'unsupported' : 'error';
-    }
+    await ctx.bf.refresh(AREA.motors);
+    if (disposed || saving || changes().length) return;
+    if (fromStore()) status = 'ready';
+    else status = ctx.state.get().conn === 'connected' ? 'unsupported' : 'error';
     paint();
   }
 
@@ -135,7 +143,7 @@ export function mountMotorConfig(host: HTMLElement, ctx: AppContext, opts: { onR
     const idleBad = bad.includes('idle');
     const polesBad = bad.includes('poles');
     host.innerHTML = `
-      <header><span class="mono">${t('bfMotors.head')}</span><span class="mono esc-key">MSP · API 1.${io.apiMinor()}</span></header>
+      <header><span class="mono">${t('bfMotors.head')}</span><span class="mono esc-key">MSP · API 1.${apiMinor()}</span></header>
       <div class="esc-seg bf-motors-seg" role="radiogroup" aria-label="${t('esc.protoAria')}">${seg}</div>
       <div class="esc-bidir${fieldCls(edit.bidir !== b.bidir)}">
         <div><b>${t('esc.bidirTitle')}</b><small class="mono" title="${escapeHtml(t('bfMotors.bidirTip'))}">dshot_bidir</small></div>
@@ -191,28 +199,19 @@ export function mountMotorConfig(host: HTMLElement, ctx: AppContext, opts: { onR
     if (!ok) return;
     saving = true;
     paint();
-    try {
-      const minor = io.apiMinor();
-      const b = base()!;
-      const advChanged = edit.protocol !== b.protocol || num(edit.idle) !== num(b.idle);
-      const motChanged = edit.bidir !== b.bidir || num(edit.poles) !== num(b.poles);
-      const mixChanged = edit.reversed !== b.reversed;
-      if (advChanged) await io.write(MSPM.SET_ADVANCED_CONFIG, encodeAdvancedConfig(adv, { protocol: edit.protocol, idlePercent: num(edit.idle) }));
-      if (motChanged) await io.write(MSPM.SET_MOTOR_CONFIG, encodeMotorConfig(mot, { poles: num(edit.poles), bidir: edit.bidir }, minor));
-      if (mixChanged) await io.write(MSPM.SET_MIXER_CONFIG, encodeMixerConfig({ mixer: mix.mixer, reversed: edit.reversed }));
-      await io.save({ reboot });
-      ctx.toast(reboot ? t('bfMotors.savedReboot') : t('bfMotors.saved'), 'ok');
-      if (!reboot) {
-        await load();
-        void ctx.refresh();
-      }
-    } catch (e) {
-      ctx.toast(t('bfMotors.saveFail', { msg: errMsg(e) }), 'error');
-      await load();
-    } finally {
-      saving = false;
-      paint();
-    }
+    const b = base()!;
+    const writes: MspWrite[] = [];
+    if (edit.protocol !== b.protocol || num(edit.idle) !== num(b.idle))
+      writes.push({ code: MSPM.SET_ADVANCED_CONFIG, payload: encodeAdvancedConfig(adv, { protocol: edit.protocol, idlePercent: num(edit.idle) }), label: 'SET_ADVANCED_CONFIG' });
+    if (edit.bidir !== b.bidir || num(edit.poles) !== num(b.poles))
+      writes.push({ code: MSPM.SET_MOTOR_CONFIG, payload: encodeMotorConfig(mot, { poles: num(edit.poles), bidir: edit.bidir }, apiMinor()), label: 'SET_MOTOR_CONFIG' });
+    if (edit.reversed !== b.reversed) writes.push({ code: MSPM.SET_MIXER_CONFIG, payload: encodeMixerConfig({ mixer: mix.mixer, reversed: edit.reversed }), label: 'SET_MIXER_CONFIG' });
+    const res = await ctx.bf.saveSettings(writes, { reboot, areas: AREA.motors });
+    saving = false;
+    if (res.ok) ctx.toast(reboot ? t('bfMotors.savedReboot') : t('bfMotors.saved'), 'ok');
+    else ctx.toast(t('bfMotors.saveFail', { msg: res.error ?? '' }), 'error');
+    if (!disposed && fromStore()) status = 'ready';
+    paint();
   }
 
   function onClick(e: MouseEvent): void {

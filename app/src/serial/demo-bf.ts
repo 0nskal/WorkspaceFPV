@@ -119,7 +119,7 @@ export class DemoBf {
       .u32(m.modeFlags) // active flight modes (first 32 boxes)
       .u8(m.pidProfile) // PID profile
       .u16(14 + Math.round(Math.sin(t) * 2)) // CPU load
-      .u8(3) // PID profile count
+      .u8(4) // PID profile count (PID_PROFILE_COUNT)
       .u8(m.rateProfile) // rate profile
       .u8(0) // extra flight-mode bytes
       .u8(26) // arming flag count

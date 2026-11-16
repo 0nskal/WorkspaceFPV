@@ -28,7 +28,7 @@ export function icon(name: IconName, size = 15, extra = ''): string {
   return `<svg class="i" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" ${extra}>${PATHS[name] ?? ''}</svg>`;
 }
 
-/** Logo Rotorlab (kwadrat z pierscieniem i krzyzem). */
+/** Logo Rotorlab: ikona aplikacji (cztery wirniki w ukladzie X, jeden w ognisku). */
 export function logo(size = 24): string {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" fill="#CFE6F2"/><circle cx="12" cy="12" r="5.2" fill="none" stroke="#0B1016" stroke-width="1.6"/><path d="M12 2.5v4.3M12 17.2v4.3M2.5 12h4.3M17.2 12h4.3" stroke="#0B1016" stroke-width="1.6"/></svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 512 512" aria-hidden="true"><rect x="8" y="8" width="496" height="496" rx="120" fill="#0A1119" stroke="#3A5266" stroke-width="10"/><path d="M152 152L360 360M360 152L152 360" stroke="#DCEFF8" stroke-opacity=".5" stroke-width="56" stroke-linecap="round"/><g fill="none" stroke="#DCEFF8" stroke-width="46"><circle cx="152" cy="152" r="84"/><circle cx="152" cy="360" r="84"/><circle cx="360" cy="360" r="84"/></g><circle cx="360" cy="152" r="84" fill="none" stroke="#FF4A2E" stroke-width="46"/></svg>`;
 }

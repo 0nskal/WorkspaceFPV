@@ -70,31 +70,40 @@ function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string
   const arms = MOTORS.map((m) => {
     const ang = (Math.atan2(m.y - CY, m.x - CX) * 180) / Math.PI;
     const len = Math.hypot(m.x - CX, m.y - CY);
-    return `<g transform="translate(${CX} ${CY}) rotate(${f(ang)})"><rect x="40" y="-9" width="${f(len - 40)}" height="18" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".9"/><path d="M52 -3H${f(len - 28)}M52 3H${f(len - 28)}" stroke="${INK}" stroke-width=".6" opacity=".4"/></g>`;
+    return `<g transform="translate(${CX} ${CY}) rotate(${f(ang)})"><rect x="40" y="-9" width="${f(len - 40)}" height="18" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".9"/><rect x="40" y="-9" width="${f(len - 40)}" height="18" fill="url(#esc-cf)"/><rect x="${f(len - 62)}" y="-3" width="26" height="6" rx="3" fill="rgba(7,11,16,.6)" stroke="${INK}" stroke-width=".6" opacity=".7"/><circle cx="${f(len - 22)}" cy="0" r="5" fill="rgba(7,11,16,.6)" stroke="${INK}" stroke-width=".7"/></g>`;
   }).join('');
   const props = MOTORS.map((m) => {
     const cw = spinsCw(m.n, propsOut);
     return (
       `<g data-m="${m.n - 1}">` +
       `<circle class="esc-disc" cx="${m.x}" cy="${m.y}" r="105" fill="rgba(207,230,242,.07)" stroke="${INK}" stroke-width=".9" stroke-dasharray="4 5" opacity="1"/>` +
-      `<g transform="rotate(${m.n * 37} ${m.x} ${m.y})" opacity=".55"><ellipse cx="${m.x + 52}" cy="${m.y}" rx="50" ry="9" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".7" transform="rotate(14 ${m.x + 52} ${m.y})"/><ellipse cx="${m.x - 52}" cy="${m.y}" rx="50" ry="9" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".7" transform="rotate(14 ${m.x - 52} ${m.y})"/></g>` +
+      `<g transform="translate(${m.x} ${m.y}) rotate(${m.n * 37}) scale(1 ${cw ? 1 : -1})" opacity=".6">${[0, 120, 240].map((a) => `<use href="#esc-blade" transform="rotate(${a})"/>`).join('')}</g>` +
       spinArrow(m, cw) +
       `<circle class="esc-hub" cx="${m.x}" cy="${m.y}" r="26" fill="#0B1016" stroke="${INK}" stroke-width="1.2"/>` +
+      `<g transform="translate(${m.x} ${m.y})"><use href="#esc-motor"/></g>` +
       `<text x="${m.x}" y="${m.y + 5}" text-anchor="middle" class="esc-mid">M${m.n}</text>` +
       `<text x="${m.x}" y="${m.y + 48}" text-anchor="middle" class="esc-pct" data-pct="${m.n - 1}">--</text>` +
       `</g>`
     );
   }).join('');
-  const body = `<polygon points="248,250 352,250 366,266 366,374 352,390 248,390 234,374 234,266" fill="rgba(207,230,242,.1)" stroke="${INK}" stroke-width="1" filter="url(#esc-glow)"/>`;
-  const board = hot
-    ? `<rect x="266" y="288" width="68" height="64" fill="rgba(255,74,46,.5)" stroke="${HOT}" stroke-width="1.6" filter="url(#esc-hotglow)"/>` +
-      `<circle cx="300" cy="320" r="11" fill="#0B1016" stroke="${HOT}" stroke-width="1.4"/>` +
-      `<circle cx="300" cy="320" r="46" fill="url(#esc-focus)"/>`
-    : `<rect x="266" y="288" width="68" height="64" fill="rgba(207,230,242,.2)" stroke="${INK}" stroke-width="1.2"/>` +
-      `<circle cx="300" cy="320" r="11" fill="#0B1016" stroke="${INK}" stroke-width="1.2"/>`;
-  const pads = [276, 292, 308, 324]
-    .map((x) => `<rect x="${x}" y="296" width="8" height="10" fill="none" stroke="${hot ? HOT : INK}" stroke-width=".8"/><rect x="${x}" y="334" width="8" height="10" fill="none" stroke="${hot ? HOT : INK}" stroke-width=".8"/>`)
-    .join('');
+  const bodyPts = '248,250 352,250 366,266 366,374 352,390 248,390 234,374 234,266';
+  const body = `<polygon points="${bodyPts}" fill="rgba(207,230,242,.1)" stroke="${INK}" stroke-width="1" filter="url(#esc-glow)"/><polygon points="${bodyPts}" fill="url(#esc-cf)"/>` +
+    [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sy]) => `<circle cx="${CX + sx * 54}" cy="${CY + sy * 58}" r="6.5" fill="rgba(207,230,242,.3)" stroke="${INK}" stroke-width=".7"/><circle cx="${CX + sx * 54}" cy="${CY + sy * 58}" r="3" fill="#0B1016" stroke="${INK}" stroke-width=".6"/>`).join('');
+  const ink = hot ? HOT : INK;
+  const mos = (x: number, y: number, left: boolean) =>
+    `<g transform="translate(${x} ${y})"><rect width="12" height="9" fill="${hot ? 'rgba(255,74,46,.55)' : 'rgba(207,230,242,.22)'}" stroke="${ink}" stroke-width=".8"/><rect x="${left ? 12 : -4}" y="1" width="4" height="1.8" fill="${ink}" opacity=".7"/><rect x="${left ? 12 : -4}" y="3.6" width="4" height="1.8" fill="${ink}" opacity=".7"/><rect x="${left ? 12 : -4}" y="6.2" width="4" height="1.8" fill="${ink}" opacity=".7"/><rect x="${left ? 2 : 3}" y="1.6" width="7" height="2.6" fill="${hot ? 'rgba(255,120,90,.6)' : 'rgba(207,230,242,.4)'}"/></g>`;
+  let mosAll = '';
+  for (let i = 0; i < 4; i++) mosAll += mos(268, 291 + i * 15, true) + mos(320, 291 + i * 15, false);
+  const board =
+    `<rect x="262" y="284" width="76" height="72" fill="${hot ? 'rgba(255,74,46,.34)' : 'rgba(207,230,242,.2)'}" stroke="${ink}" stroke-width="1.3"${hot ? ' filter="url(#esc-hotglow)"' : ''}/>` +
+    (hot ? `<circle cx="300" cy="320" r="52" fill="url(#esc-focus)"/>` : '') +
+    mosAll +
+    `<circle cx="300" cy="320" r="11" fill="#0B1016" stroke="${ink}" stroke-width="1.2"/><circle cx="300" cy="320" r="7" fill="none" stroke="${ink}" stroke-width=".6" opacity=".7"/><path d="M293 320H307" stroke="${ink}" stroke-width=".6" opacity=".7"/>`;
+  const pads = [-1, 1]
+    .map((sy) => [0, 1, 2].map((i) => `<rect x="${278 + i * 16}" y="${sy < 0 ? 280 : 358}" width="9" height="8" fill="${hot ? 'rgba(255,74,46,.45)' : 'rgba(207,230,242,.4)'}" stroke="${ink}" stroke-width=".7"/>`).join(''))
+    .join('') +
+    `<rect x="288" y="340" width="24" height="9" fill="rgba(207,230,242,.12)" stroke="${ink}" stroke-width=".7"/>` +
+    [0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<rect x="${290 + i * 3}" y="342" width="1.8" height="5" fill="${ink}" opacity=".8"/>`).join('');
   const leader = hot
     ? `<line x1="266" y1="320" x2="22" y2="320" stroke="${HOT}" stroke-width="1"/><circle cx="266" cy="320" r="3" fill="${HOT}"/>` +
       `<rect x="22" y="283" width="7" height="7" fill="${HOT}"/><text x="36" y="290" class="esc-hotlbl">ESC</text>` +
@@ -104,6 +113,9 @@ function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string
     <defs>
       <filter id="esc-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <filter id="esc-hotglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <pattern id="esc-cf" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0h3v3H0zM3 3h3v3H3z" fill="rgba(207,230,242,.11)"/></pattern>
+      <path id="esc-blade" d="M17 -4C36 -20 66 -24 92 -11C101 -6 100 2 89 6C64 13 38 11 17 5Z" fill="rgba(207,230,242,.13)" stroke="${INK}" stroke-width=".8"/>
+      <g id="esc-motor" fill="none" stroke="${INK}">${Array.from({ length: 12 }, (_, k) => `<rect x="17" y="-2.2" width="6.5" height="4.4" transform="rotate(${k * 30})" fill="rgba(255,160,100,.2)" stroke-width=".5" opacity=".8"/>`).join('')}<circle r="14.5" stroke-width=".5" stroke-dasharray="1.6 1.9" opacity=".7"/>${Array.from({ length: 6 }, (_, k) => `<path d="M24.6 0A24.6 24.6 0 0 1 22 7" transform="rotate(${k * 60 + 12})" stroke-width="1.3" opacity=".55"/>`).join('')}</g>
       <radialGradient id="esc-focus"><stop offset="0" stop-color="${HOT}" stop-opacity=".45"/><stop offset="1" stop-color="${HOT}" stop-opacity="0"/></radialGradient>
     </defs>
     <g class="esc-film">

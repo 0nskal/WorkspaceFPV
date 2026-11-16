@@ -2,6 +2,7 @@ import type { SerialTransport } from './port';
 import type { MspClient } from './msp';
 import type { CliEntry, CliOptions, CliResult } from './types';
 import { sleep } from './port';
+import { t } from '../i18n';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -72,7 +73,7 @@ export async function runCliSession(
       await transport.write(enc.encode('\r\n#'));
       banner = await col.untilPrompt(3000);
     }
-    if (banner === null) throw new Error('FC nie odpowiada w trybie CLI.');
+    if (banner === null) throw new Error(t('serial.cliNoResponse'));
     transcript += banner;
 
     for (let i = 0; i < commands.length; i++) {
@@ -81,7 +82,7 @@ export async function runCliSession(
       await transport.write(enc.encode(cmd + '\n'));
       const slow = /^(diff|dump)(\s|$)/i.test(cmd);
       const raw = await col.untilPrompt(slow ? 30000 : 8000);
-      if (raw === null) throw new Error(`Brak odpowiedzi FC na: ${cmd}`);
+      if (raw === null) throw new Error(t('serial.cliNoReply', { cmd }));
       transcript += raw;
       const lines = raw.replace(/\r/g, '').split('\n');
       if (lines[0]?.trim() === cmd) lines.shift(); // echo komendy

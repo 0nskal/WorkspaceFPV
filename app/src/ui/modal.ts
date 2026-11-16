@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { escapeHtml } from './dom';
 
 export interface ConfirmOptions {
@@ -19,8 +20,8 @@ export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
       <div class="modal-h"><i></i>${escapeHtml(opts.title)}</div>
       <div class="modal-b"></div>
       <div class="modal-f">
-        <button class="btn s" data-act="cancel">${escapeHtml(opts.cancelText ?? 'Anuluj')}</button>
-        <button class="btn p${opts.danger ? ' danger' : ''}" data-act="ok">${escapeHtml(opts.confirmText ?? 'Potwierdź')}</button>
+        <button class="btn s" data-act="cancel">${escapeHtml(opts.cancelText ?? t('common.cancel'))}</button>
+        <button class="btn p${opts.danger ? ' danger' : ''}" data-act="ok">${escapeHtml(opts.confirmText ?? t('common.confirm'))}</button>
       </div></div>`;
     const body = overlay.querySelector('.modal-b') as HTMLElement;
     if (typeof opts.body === 'string') body.innerHTML = opts.body;

@@ -1,7 +1,7 @@
 {
   "name": "rotorlab",
   "version": "0.1.0",
-  "description": "Rotorlab - diagnoza i naprawa dronow FPV z Betaflight, z asystentem AI",
+  "description": "Rotorlab - diagnose and fix FPV drones running Betaflight, with an AI assistant",
   "private": true,
   "type": "module",
   "license": "MIT",

@@ -1,4 +1,5 @@
 import type { PortIdentity } from './types';
+import { t } from '../i18n';
 
 /** Czy przegladarka/Electron ma WebSerial. */
 export function hasWebSerial(): boolean {
@@ -26,7 +27,7 @@ export class SerialTransport {
 
   /** Pokazuje wybor portu (wymaga gestu uzytkownika). W Electronie wybor robi proces glowny. */
   static async request(): Promise<SerialTransport> {
-    if (!hasWebSerial()) throw new Error('Brak WebSerial. Użyj Chrome/Edge albo aplikacji na Windows.');
+    if (!hasWebSerial()) throw new Error(t('serial.noWebSerial'));
     const port = await navigator.serial.requestPort();
     return new SerialTransport(port);
   }
@@ -52,12 +53,12 @@ export class SerialTransport {
       }
       await sleep(500);
     }
-    throw new Error('FC nie wrócił po restarcie. Połącz ponownie ręcznie.');
+    throw new Error(t('serial.noReturn'));
   }
 
   async open(baudRate = 115200): Promise<void> {
     await this.port.open({ baudRate, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none', bufferSize: 4096 });
-    if (!this.port.readable || !this.port.writable) throw new Error('Port szeregowy nie jest dostępny.');
+    if (!this.port.readable || !this.port.writable) throw new Error(t('serial.portUnavailable'));
     this.writer = this.port.writable.getWriter();
     this.reader = this.port.readable.getReader();
     navigator.serial.addEventListener('disconnect', this.onDisconnect);
@@ -107,7 +108,7 @@ export class SerialTransport {
   }
 
   async write(data: Uint8Array): Promise<void> {
-    if (this.closed || !this.writer) throw new Error('Port jest zamknięty.');
+    if (this.closed || !this.writer) throw new Error(t('serial.portClosed'));
     await this.writer.write(data);
   }
 

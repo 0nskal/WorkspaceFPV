@@ -1,6 +1,7 @@
 /** Wykresy SVG ekranu Autotune (styl Rentgen: linie #DCEFF8 z glow, czerwien #FF4A2E dla Roll/zmian). */
 import { DB_FLOOR } from '../analysis/analyze';
 import type { AnalysisResult } from '../analysis/types';
+import { t as tr } from '../i18n';
 
 const INK = '#DCEFF8';
 const HOT = '#FF4A2E';
@@ -16,7 +17,7 @@ const f1 = (v: number) => v.toFixed(1);
 /** Wykres odpowiedzi skokowej 0-300 ms z wymiarowanym przeregulowaniem Roll. */
 export function stepChart(res: AnalysisResult): string {
   const W = 740;
-  const H = 226;
+  const H = 190;
   const l = 46;
   const r = 70;
   const t = 16;
@@ -68,15 +69,15 @@ export function stepChart(res: AnalysisResult): string {
     g += `<text x="${f1(dx + 10)}" y="${f1((py + y1) / 2 + 4)}" class="at-dim" fill="${HOT}">${roll.overshoot!.toFixed(0)}%</text>`;
   }
   if (!roll?.step && !pitch?.step && !yaw?.step) {
-    g += `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" class="at-tick">Za mało ruchu drążka w logu, aby policzyć odpowiedź skokową.</text>`;
+    g += `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" class="at-tick">${tr('at.stepNoData')}</text>`;
   }
-  return `<svg class="at-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Odpowiedź skokowa Roll, Pitch, Yaw">${g}</svg>`;
+  return `<svg class="at-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${tr('at.stepAria')}">${g}</svg>`;
 }
 
 /** Widmo gyro 0-500 Hz z opisanymi pikami. */
 export function spectrumChart(res: AnalysisResult): string {
   const W = 740;
-  const H = 200;
+  const H = 168;
   const l = 46;
   const r = 20;
   const t = 14;
@@ -120,7 +121,7 @@ export function spectrumChart(res: AnalysisResult): string {
     );
   };
   const { motor, frame } = res.peaks;
-  if (frame) g += mark(frame.hz, `rama · ${frame.hz.toFixed(0)} Hz`, false, t + 40);
-  if (motor) g += mark(motor.hz, `silniki · ${motor.hz.toFixed(0)} Hz`, true, t + 14);
-  return `<svg class="at-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Widmo szumu gyro 0-${maxHz} Hz">${g}</svg>`;
+  if (frame) g += mark(frame.hz, tr('at.frameMark', { hz: frame.hz.toFixed(0) }), false, t + 40);
+  if (motor) g += mark(motor.hz, tr('at.motorMark', { hz: motor.hz.toFixed(0) }), true, t + 14);
+  return `<svg class="at-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${tr('at.spectrumAria', { max: maxHz })}">${g}</svg>`;
 }

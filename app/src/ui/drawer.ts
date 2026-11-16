@@ -1,5 +1,6 @@
 import type { AppContext } from '../context';
-import { PART_LABEL, type Check } from '../fc/diagnose';
+import { partLabel, type Check } from '../fc/diagnose';
+import { t } from '../i18n';
 import { copyText, escapeHtml } from './dom';
 import { icon } from './icons';
 
@@ -92,7 +93,7 @@ function cliBlockHtml(code: string, closed: boolean, caveat?: string): string {
   const cmds = cliLines(code);
   const data = escapeHtml(JSON.stringify(cmds));
   const buttons = closed
-    ? `<div class="btns"><button class="btn p" data-act="apply" data-cmds="${data}">${icon('check', 15)}Zastosuj w FC</button><button class="btn s" data-act="copy" data-cmds="${data}">${icon('copy', 15)}Kopiuj</button></div>`
+    ? `<div class="btns"><button class="btn p" data-act="apply" data-cmds="${data}">${icon('check', 15)}${t('drawer.apply')}</button><button class="btn s" data-act="copy" data-cmds="${data}">${icon('copy', 15)}${t('drawer.copy')}</button></div>`
     : '';
   return `<div class="code">${highlightCli(code)}</div>${caveat ? `<div class="caveat">${escapeHtml(caveat)}</div>` : ''}${buttons}`;
 }
@@ -133,25 +134,25 @@ export interface Drawer {
 export function createDrawer(ctx: AppContext): Drawer {
   const el = document.createElement('aside');
   el.className = 'drawer';
-  el.setAttribute('aria-label', 'Asystent AI');
+  el.setAttribute('aria-label', t('shell.assistantAria'));
   el.innerHTML = `
     <div class="tab" aria-hidden="true"></div>
-    <div class="dh"><i></i><span class="dh-t">Asystent</span><span class="r">karta pacjenta</span></div>
+    <div class="dh"><i></i><span class="dh-t">${t('drawer.title')}</span><span class="r">${t('drawer.r')}</span></div>
     <div class="scroll">
       <div class="chat"></div>
       <div class="chk"></div>
     </div>
     <div class="bottom">
       <div class="qa">
-        <button data-nav="elrs">${icon('download')}Aktualizuj ELRS</button>
-        <button data-nav="esc">${icon('chip')}Protokół ESC</button>
-        <button data-nav="autotune">${icon('sliders')}Autotune PID</button>
+        <button data-nav="elrs">${icon('download')}${t('drawer.updateElrs')}</button>
+        <button data-nav="esc">${icon('chip')}${t('drawer.escProtocol')}</button>
+        <button data-nav="autotune">${icon('sliders')}${t('drawer.autotune')}</button>
       </div>
       <div class="attach" hidden></div>
       <form class="in">
-        <button type="button" class="clip" title="Załącz plik tekstowy (log, CSV, diff)" aria-label="Załącz plik">${icon('paperclip', 18)}</button>
-        <input type="text" name="q" placeholder="Opisz problem albo wrzuć log" autocomplete="off" aria-label="Pytanie do asystenta" />
-        <button type="submit" class="send" aria-label="Wyślij">${icon('arrowUp', 18)}</button>
+        <button type="button" class="clip" title="${t('drawer.attachTitle')}" aria-label="${t('drawer.attachAria')}">${icon('paperclip', 18)}</button>
+        <input type="text" name="q" placeholder="${t('drawer.placeholder')}" autocomplete="off" aria-label="${t('drawer.inputAria')}" />
+        <button type="submit" class="send" aria-label="${t('drawer.sendAria')}">${icon('arrowUp', 18)}</button>
         <input type="file" hidden accept=".txt,.csv,.log,.json,.md,.cli" />
       </form>
     </div>`;
@@ -169,7 +170,7 @@ export function createDrawer(ctx: AppContext): Drawer {
 
   function renderAttach() {
     attachEl.hidden = !attachment;
-    attachEl.innerHTML = attachment ? `${icon('paperclip', 13)}<span>${escapeHtml(attachment.name)}</span><button type="button" data-act="detach" aria-label="Usuń załącznik">${icon('x', 13)}</button>` : '';
+    attachEl.innerHTML = attachment ? `${icon('paperclip', 13)}<span>${escapeHtml(attachment.name)}</span><button type="button" data-act="detach" aria-label="${t('drawer.detachAria')}">${icon('x', 13)}</button>` : '';
   }
 
   function renderRulesCard(): string {
@@ -182,11 +183,11 @@ export function createDrawer(ctx: AppContext): Drawer {
       const caveats = [...new Set(d.suggestions.map((x) => x.caveat).filter(Boolean) as string[])].join(' ');
       body = `<div class="tx">${escapeHtml(text)}</div>${cliBlockHtml(d.commands.join('\n'), true, caveats)}`;
     } else if (d.checks.some((c) => c.severity === 'fail' || c.severity === 'warn')) {
-      body = `<div class="tx">${escapeHtml(d.summary)} Opisz problem, a podpowiem co zrobić.</div>`;
+      body = `<div class="tx">${escapeHtml(d.summary)} ${t('drawer.rulesCardProblems')}</div>`;
     } else {
-      body = `<div class="tx">Reguły nie znalazły problemów. Opisz, co nie działa, a przeanalizuję konfigurację.</div>`;
+      body = `<div class="tx">${t('drawer.rulesCardOk')}</div>`;
     }
-    const hint = ctx.ai.hasKey() ? '' : `<div class="hint">Asystent AI wymaga klucza API. <a href="#ustawienia">Dodaj go w Ustawieniach</a>. Reguły działają bez klucza.</div>`;
+    const hint = ctx.ai.hasKey() ? '' : `<div class="hint">${t('drawer.keyHint')}</div>`;
     return `<div class="ai">${AV}<div class="ai-b">${body}${hint}</div></div>`;
   }
 
@@ -198,7 +199,7 @@ export function createDrawer(ctx: AppContext): Drawer {
       else {
         const streaming = ctx.ai.busy && i === hist.length - 1;
         const inner = m.text ? renderMessageBody(m.text, streaming) : '';
-        const think = streaming && ctx.ai.thinking ? `<div class="thinking"><span></span><span></span><span></span>Analizuję…</div>` : '';
+        const think = streaming && ctx.ai.thinking ? `<div class="thinking"><span></span><span></span><span></span>${t('drawer.thinking')}</div>` : '';
         parts.push(`<div class="ai${m.note ? ' note' : ''}">${AV}<div class="ai-b">${inner}${think}</div></div>`);
       }
     });
@@ -217,21 +218,21 @@ export function createDrawer(ctx: AppContext): Drawer {
     const rows = d.checks
       .map((c) => `<div class="row sev-${c.severity}">${checkIcon(c)}<div class="row-t"><span>${escapeHtml(c.label)}</span>${showDetails && c.detail ? `<small>${escapeHtml(c.detail)}</small>` : ''}</div></div>`)
       .join('');
-    chk.innerHTML = `<div class="ch">Co sprawdziłem</div>${rows}<button class="lnk" data-act="details">${showDetails ? 'Ukryj log diagnostyki' : 'Zobacz log diagnostyki'} ${icon('arrowRight', 13)}</button>${
-      s.diff ? '' : `<button class="lnk" data-act="fetchdiff">Pobierz pełną konfigurację (diff all) dla AI ${icon('download', 13)}</button>`
+    chk.innerHTML = `<div class="ch">${t('drawer.checked')}</div>${rows}<button class="lnk" data-act="details">${showDetails ? t('drawer.hideLog') : t('drawer.showLog')} ${icon('arrowRight', 13)}</button>${
+      s.diff ? '' : `<button class="lnk" data-act="fetchdiff">${t('drawer.fetchDiff')} ${icon('download', 13)}</button>`
     }`;
   }
 
   function renderHeader() {
     const s = ctx.state.get();
     const d = s.conn === 'connected' ? ctx.diagnosis() : null;
-    const t = $('.dh-t');
+    const title = $('.dh-t');
     const dot = $('.dh i');
     if (d?.focus) {
-      t.textContent = PART_LABEL[d.focus];
+      title.textContent = partLabel(d.focus);
       dot.className = 'hot';
     } else {
-      t.textContent = d ? 'Wszystko OK' : 'Asystent';
+      title.textContent = d ? t('drawer.allOk') : t('drawer.title');
       dot.className = '';
     }
   }
@@ -251,13 +252,13 @@ export function createDrawer(ctx: AppContext): Drawer {
 
   /* zdarzenia */
   el.addEventListener('click', (e) => {
-    const t = e.target as HTMLElement;
-    const nav = t.closest<HTMLElement>('[data-nav]')?.dataset.nav;
+    const tg = e.target as HTMLElement;
+    const nav = tg.closest<HTMLElement>('[data-nav]')?.dataset.nav;
     if (nav) {
       ctx.navigate(nav as never);
       return;
     }
-    const btn = t.closest<HTMLElement>('[data-act]');
+    const btn = tg.closest<HTMLElement>('[data-act]');
     if (!btn) return;
     const act = btn.dataset.act;
     if (act === 'details') {
@@ -270,7 +271,7 @@ export function createDrawer(ctx: AppContext): Drawer {
       void ctx.applyCommands(cmds);
     } else if (act === 'copy') {
       const cmds = JSON.parse(btn.dataset.cmds ?? '[]') as string[];
-      void copyText(cmds.join('\n')).then((ok) => ctx.toast(ok ? 'Skopiowano komendy.' : 'Nie udało się skopiować.', ok ? 'ok' : 'error'));
+      void copyText(cmds.join('\n')).then((ok) => ctx.toast(ok ? t('drawer.copied') : t('drawer.copyFail'), ok ? 'ok' : 'error'));
     } else if (act === 'detach') {
       attachment = null;
       renderAttach();
@@ -283,11 +284,11 @@ export function createDrawer(ctx: AppContext): Drawer {
     fileInput.value = '';
     if (!f) return;
     if (/\.(bbl|bfl)$/i.test(f.name)) {
-      ctx.toast('Pliki .bbl nie są obsługiwane. Wyeksportuj CSV w Blackbox Explorer i użyj zakładki Autotune PID.', 'info');
+      ctx.toast(t('drawer.bblUnsupported'), 'info');
       return;
     }
     void f.text().then((txt) => {
-      attachment = { name: f.name, text: txt.slice(0, 12000) + (txt.length > 12000 ? '\n[...ucięto...]' : '') };
+      attachment = { name: f.name, text: txt.slice(0, 12000) + (txt.length > 12000 ? '\n' + t('drawer.truncated') : '') };
       renderAttach();
     });
   });
@@ -296,8 +297,8 @@ export function createDrawer(ctx: AppContext): Drawer {
     e.preventDefault();
     const q = input.value.trim();
     if (!q && !attachment) return;
-    let text = q || 'Przeanalizuj załączony plik.';
-    if (attachment) text += `\n\nZałączony plik ${attachment.name}:\n\`\`\`\n${attachment.text}\n\`\`\``;
+    let text = q || t('drawer.analyseFile');
+    if (attachment) text += `\n\n${t('drawer.attachedFile', { name: attachment.name })}\n\`\`\`\n${attachment.text}\n\`\`\``;
     input.value = '';
     attachment = null;
     renderAttach();

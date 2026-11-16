@@ -1,9 +1,10 @@
 import type { AppContext, ScreenMount } from '../context';
-import { PART_LABEL } from '../fc/diagnose';
+import { partLabel } from '../fc/diagnose';
+import { fmtDate, t } from '../i18n';
 import { isDshot, motorPct, protocolName } from '../fc/state';
 import { hasWebSerial } from '../serial/port';
 import { MSP } from '../serial/msp';
-import { escapeHtml, plDate } from '../ui/dom';
+import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 
 /** Protokoly do wyboru: nazwa w CLI i enum Betaflight. */
@@ -108,8 +109,8 @@ function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string
     ? `<line x1="266" y1="320" x2="22" y2="320" stroke="${HOT}" stroke-width="1"/><circle cx="266" cy="320" r="3" fill="${HOT}"/>` +
       `<rect x="22" y="283" width="7" height="7" fill="${HOT}"/><text x="36" y="290" class="esc-hotlbl">ESC</text>` +
       `<text x="22" y="312" class="esc-hottxt">${escapeHtml(opts.hotText)}</text>`
-    : `<text x="300" y="418" text-anchor="middle" class="esc-sub">płytka ESC</text>`;
-  return `<svg class="esc-svg" viewBox="0 0 ${VB_W} ${VB_H}" role="img" aria-label="Widok drona z góry z numeracją silników M1 do M4">
+    : `<text x="300" y="418" text-anchor="middle" class="esc-sub">${escapeHtml(t('esc.boardLabel'))}</text>`;
+  return `<svg class="esc-svg" viewBox="0 0 ${VB_W} ${VB_H}" role="img" aria-label="${escapeHtml(t('esc.droneAria'))}">
     <defs>
       <filter id="esc-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <filter id="esc-hotglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -122,7 +123,7 @@ function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string
       <line x1="${CX}" y1="62" x2="${CX}" y2="${VB_H - 14}" stroke="${INK}" stroke-width=".6" stroke-dasharray="3 7" opacity=".28"/>
       <line x1="12" y1="${CY}" x2="${VB_W - 12}" y2="${CY}" stroke="${INK}" stroke-width=".6" stroke-dasharray="3 7" opacity=".2"/>
       <path d="M${CX} 44V12M${CX - 6} 22l6-8 6 8" fill="none" stroke="${INK}" stroke-width="1" opacity=".8"/>
-      <text x="${CX + 14}" y="24" class="esc-film-t">PRZÓD</text>
+      <text x="${CX + 14}" y="24" class="esc-film-t">${escapeHtml(t('esc.film'))}</text>
       <text x="14" y="16" class="esc-film-t">L</text>
       <text x="14" y="${VB_H - 8}" class="esc-film-t">${escapeHtml(opts.film)}</text>
       <text x="${VB_W - 14}" y="${VB_H - 8}" text-anchor="end" class="esc-film-t">kV 60 · mAs 2</text>
@@ -234,12 +235,12 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function paintTest(): void {
     const status = q('.esc-test-state');
     if (status) {
-      status.textContent = !propsOff ? 'zablokowany' : anyActive() ? 'AKTYWNY' : 'gotowy';
+      status.textContent = !propsOff ? t('esc.stateLocked') : anyActive() ? t('esc.stateLive') : t('esc.stateReady');
       status.classList.toggle('live', propsOff && anyActive());
     }
     const warn = q('.esc-warn');
     if (warn) {
-      warn.innerHTML = `${icon('alert', 18)}<span>${propsOff ? 'Silniki mogą się rozpędzić. Trzymaj ręce z dala od wirników.' : 'Zdejmij śmigła przed testem'}</span>`;
+      warn.innerHTML = `${icon('alert', 18)}<span>${propsOff ? t('esc.warnOn') : t('esc.warnOff')}</span>`;
     }
     const max = maxPct();
     el.querySelectorAll<HTMLInputElement>('input.esc-range').forEach((r) => {
@@ -267,7 +268,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       seg.innerHTML = PROTOCOLS.map((p) => {
         const isCur = p.id === cur;
         const isSel = p.id === selProto;
-        const tag = isCur ? 'OBECNY' : isSel ? 'NOWY' : '';
+        const tag = isCur ? t('esc.tagCurrent') : isSel ? t('esc.tagNew') : '';
         return `<button type="button" class="esc-seg-b${isSel ? ' sel' : ''}${isCur && !isSel ? ' cur' : ''}" role="radio" aria-checked="${isSel}" data-proto="${p.id}"><span class="${isCur && !isSel ? 'strike' : ''}">${p.label}</span><small>${tag || '&nbsp;'}</small></button>`;
       }).join('');
     }
@@ -286,7 +287,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const save = q<HTMLButtonElement>('.esc-save');
     if (save) save.disabled = cmds.length === 0 || applying || s.conn !== 'connected';
     const cmdBox = q('.esc-cmds');
-    if (cmdBox) cmdBox.textContent = cmds.length ? cmds.join('\n') : 'Brak zmian do zapisania.';
+    if (cmdBox) cmdBox.textContent = cmds.length ? cmds.join('\n') : t('esc.noChanges');
   }
 
   function changedCommands(): string[] {
@@ -307,10 +308,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const hot = d.focus === 'esc';
     let hotText = '';
     if (hot && s.config) {
-      const bidirOff = isDshot(s.config.motorPwmProtocol) && !s.config.bidir ? ' · bidir OFF' : '';
-      hotText = `${PART_LABEL.esc} · ${protocolName(s.config.motorPwmProtocol).replace(/^DSHOT/, 'DShot')}${bidirOff}`;
+      const bidirOff = isDshot(s.config.motorPwmProtocol) && !s.config.bidir ? ` · ${t('xray.bidirOff')}` : '';
+      hotText = `${partLabel('esc')} · ${protocolName(s.config.motorPwmProtocol).replace(/^DSHOT/, 'DShot')}${bidirOff}`;
     }
-    const film = `ROTORLAB · ${(s.info?.craftName ?? 'DRON').toUpperCase()} · ${plDate()}`;
+    const film = `ROTORLAB · ${(s.info?.craftName || t('common.drone')).toUpperCase()} · ${fmtDate()}`;
     const key = JSON.stringify([hot, hotText, propsOut, film]);
     if (key === droneKey) return;
     droneKey = key;
@@ -340,14 +341,14 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     el.innerHTML = `
       <div class="esc-empty">
         <div class="esc-empty-card">
-          <div class="esc-empty-t mono">ESC · brak połączenia</div>
-          <h1>Podłącz drona, żeby ustawić ESC</h1>
-          <p>Protokół silników, Bidirectional DShot i test silników wymagają połączenia z płytką FC. Bez drona możesz obejrzeć ekran w trybie demo.</p>
+          <div class="esc-empty-t mono">${t('esc.emptyTag')}</div>
+          <h1>${t('esc.emptyTitle')}</h1>
+          <p>${t('esc.emptyLead')}</p>
           <div class="start-btns">
-            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? 'Łączenie…' : 'Połącz'}</button>
-            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}Tryb demo</button>
+            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('common.connect')}</button>
+            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('common.demo')}</button>
           </div>
-          ${noSerial ? `<div class="start-msg warn">Ta przeglądarka nie obsługuje WebSerial. Użyj Chrome/Edge albo aplikacji na Windows.</div>` : ''}
+          ${noSerial ? `<div class="start-msg warn">${t('conn.noWebSerial')}</div>` : ''}
           ${s.error ? `<div class="start-msg err" role="alert">${escapeHtml(s.error)}</div>` : ''}
         </div>
       </div>`;
@@ -367,7 +368,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const rows = [0, 1, 2, 3]
       .map(
         (i) =>
-          `<label class="esc-slider dis"><span class="esc-sl-n mono">M${i + 1}</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="${i}" disabled aria-label="Moc silnika M${i + 1}"><span class="esc-val mono">0%</span></label>`,
+          `<label class="esc-slider dis"><span class="esc-sl-n mono">M${i + 1}</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="${i}" disabled aria-label="${t('esc.motorPower', { n: i + 1 })}"><span class="esc-val mono">0%</span></label>`,
       )
       .join('');
     el.innerHTML = `
@@ -375,36 +376,36 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         <div class="esc-left">
           <div class="esc-art"></div>
           <div class="esc-info">
-            <div><small class="mono">WIDOK</small><b>z góry · przód u góry</b></div>
-            <div><small class="mono">ŚMIGŁA · podgląd</small>
+            <div><small class="mono">${t('esc.infoView')}</small><b>${t('esc.infoViewVal')}</b></div>
+            <div><small class="mono">${t('esc.infoProps')}</small>
               <span class="esc-tog"><button type="button" data-props="in" aria-pressed="true">props in</button><button type="button" data-props="out" aria-pressed="false">props out</button></span></div>
-            <div><small class="mono">NUMERACJA</small><b>Betaflight M1–M4</b></div>
+            <div><small class="mono">${t('esc.infoNumbering')}</small><b>${t('esc.infoNumberingVal')}</b></div>
           </div>
         </div>
         <div class="esc-side">
           <section class="esc-panel">
-            <header><span class="mono">PROTOKÓŁ ESC</span><span class="mono esc-key">motor_pwm_protocol</span></header>
-            <div class="esc-seg" role="radiogroup" aria-label="Protokół ESC"></div>
+            <header><span class="mono">${t('esc.protoHead')}</span><span class="mono esc-key">motor_pwm_protocol</span></header>
+            <div class="esc-seg" role="radiogroup" aria-label="${t('esc.protoAria')}"></div>
             <div class="esc-bidir">
-              <div><b>Bidirectional DShot (RPM)</b><small class="mono">dshot_bidir</small></div>
-              <button type="button" class="esc-sw" role="switch" aria-checked="false" aria-label="Bidirectional DShot"><span class="esc-sw-t mono">OFF</span><i></i></button>
+              <div><b>${t('esc.bidirTitle')}</b><small class="mono">dshot_bidir</small></div>
+              <button type="button" class="esc-sw" role="switch" aria-checked="false" aria-label="${t('esc.bidirAria')}"><span class="esc-sw-t mono">OFF</span><i></i></button>
             </div>
-            <p class="esc-note mono">Bidir wymaga ESC z Bluejay, BLHeli_32 lub AM32 (nie działa na gołym BLHeli_S).</p>
-            <p class="esc-note esc-bidir-note mono" hidden>Bidir działa tylko z DSHOT. Wybierz DSHOT150/300/600.</p>
+            <p class="esc-note mono">${t('esc.bidirNote')}</p>
+            <p class="esc-note esc-bidir-note mono" hidden>${t('esc.bidirDshotOnly')}</p>
             <pre class="esc-cmds mono"></pre>
-            <div class="esc-actions"><button type="button" class="btn light esc-save">${icon('check', 16)}Zapisz w FC</button></div>
+            <div class="esc-actions"><button type="button" class="btn light esc-save">${icon('check', 16)}${t('esc.save')}</button></div>
           </section>
           <section class="esc-panel">
-            <header><span class="mono">TEST SILNIKÓW</span><span class="mono esc-test-state">zablokowany</span></header>
-            <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>Śmigła zdjęte</span></label>
+            <header><span class="mono">${t('esc.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
+            <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>${t('esc.propsOff')}</span></label>
             <div class="esc-warn" role="alert"></div>
             ${rows}
-            <label class="esc-slider all dis"><span class="esc-sl-n">Wszystkie</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="all" disabled aria-label="Moc wszystkich silników"><span class="esc-val mono">0%</span></label>
-            <label class="esc-check small"><input type="checkbox" id="esc-unlock" disabled><span>Odblokuj zakres do 100% (domyślnie maks. ${SAFE_MAX}%)</span></label>
-            <button type="button" class="esc-stop">${icon('stop', 20)}<span>STOP</span><kbd class="mono">Spacja</kbd></button>
+            <label class="esc-slider all dis"><span class="esc-sl-n">${t('esc.all')}</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="all" disabled aria-label="${t('esc.allPower')}"><span class="esc-val mono">0%</span></label>
+            <label class="esc-check small"><input type="checkbox" id="esc-unlock" disabled><span>${t('esc.unlock', { max: SAFE_MAX })}</span></label>
+            <button type="button" class="esc-stop">${icon('stop', 20)}<span>${t('esc.stop')}</span><kbd class="mono">${t('esc.space')}</kbd></button>
           </section>
         </div>
-        <div class="esc-overlay" hidden><div class="mono">FC się restartuje. Łączę ponownie…</div></div>
+        <div class="esc-overlay" hidden><div class="mono">${t('esc.restarting')}</div></div>
       </div>`;
     view = 'main';
     paintTest();
@@ -445,40 +446,40 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   }
 
   el.addEventListener('click', (e) => {
-    const t = e.target as HTMLElement;
-    const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
+    const tg = e.target as HTMLElement;
+    const act = tg.closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'connect') return void ctx.connect();
     if (act === 'demo') return void ctx.connectDemo();
-    const proto = t.closest<HTMLElement>('[data-proto]');
+    const proto = tg.closest<HTMLElement>('[data-proto]');
     if (proto) {
       selProto = Number(proto.dataset.proto);
       if (!isDshot(selProto)) selBidir = false;
       paintProto();
       return;
     }
-    const pv = t.closest<HTMLElement>('[data-props]');
+    const pv = tg.closest<HTMLElement>('[data-props]');
     if (pv) {
       propsOut = pv.dataset.props === 'out';
       paintPropsToggle();
       paintDrone();
       return;
     }
-    if (t.closest('.esc-sw')) {
+    if (tg.closest('.esc-sw')) {
       if (isDshot(selProto)) {
         selBidir = !selBidir;
         paintProto();
       }
       return;
     }
-    if (t.closest('.esc-stop')) return stopTest();
-    if (t.closest('.esc-save')) {
+    if (tg.closest('.esc-stop')) return stopTest();
+    if (tg.closest('.esc-save')) {
       const cmds = changedCommands();
       if (!cmds.length || applying) return;
       stopTest();
       applying = true;
       paintProto();
       void ctx
-        .applyCommands(cmds, { title: 'Zapis ustawień ESC' })
+        .applyCommands(cmds, { title: t('esc.saveTitle') })
         .catch(() => false)
         .finally(() => {
           applying = false;

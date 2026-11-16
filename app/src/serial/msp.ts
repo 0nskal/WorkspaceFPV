@@ -1,4 +1,5 @@
 import type { SerialTransport } from './port';
+import { t } from '../i18n';
 
 /** Numery komend MSP v1 uzywane przez Rotorlab. */
 export const MSP = {
@@ -27,7 +28,7 @@ export interface MspFrame {
 
 /** Buduje ramke zadania `$M<` [size][cmd][payload][xor]. */
 export function encodeMspV1(cmd: number, payload: Uint8Array = new Uint8Array(0)): Uint8Array {
-  if (payload.length > 254) throw new Error('Za duży ładunek MSP v1');
+  if (payload.length > 254) throw new Error(t('serial.mspTooBig'));
   const out = new Uint8Array(6 + payload.length);
   out[0] = 0x24; // $
   out[1] = 0x4d; // M
@@ -128,7 +129,7 @@ export class MspClient {
   }
 
   request(cmd: number, payload: Uint8Array = new Uint8Array(0), timeoutMs = 1000): Promise<Uint8Array> {
-    if (this.suspended) return Promise.reject(new Error('Tryb CLI aktywny - MSP wstrzymane.'));
+    if (this.suspended) return Promise.reject(new Error(t('serial.mspSuspended')));
     return new Promise((resolve, reject) => {
       this.queue.push({ cmd, payload, timeoutMs, resolve, reject });
       this.pump();
@@ -138,7 +139,7 @@ export class MspClient {
   /** Wstrzymuje MSP (odrzuca kolejke) - na czas sesji CLI. */
   suspend(): void {
     this.suspended = true;
-    this.failAll(new Error('MSP wstrzymane (CLI).'));
+    this.failAll(new Error(t('serial.mspPaused')));
     this.parser.reset();
   }
 
@@ -149,7 +150,7 @@ export class MspClient {
 
   dispose(): void {
     this.off();
-    this.failAll(new Error('Połączenie zamknięte.'));
+    this.failAll(new Error(t('serial.closed')));
   }
 
   private failAll(err: Error): void {
@@ -170,7 +171,7 @@ export class MspClient {
       this.timer = null;
       const cur = this.current;
       this.current = null;
-      cur?.reject(new Error(`Timeout MSP (komenda ${next.cmd})`));
+      cur?.reject(new Error(t('serial.mspTimeout', { cmd: next.cmd })));
       this.pump();
     }, next.timeoutMs);
     this.transport.write(encodeMspV1(next.cmd, next.payload)).catch((e: unknown) => {
@@ -192,7 +193,7 @@ export class MspClient {
       if (this.timer) clearTimeout(this.timer);
       this.timer = null;
       this.current = null;
-      if (f.error) cur.reject(new Error(`FC odrzucił komendę MSP ${cur.cmd}`));
+      if (f.error) cur.reject(new Error(t('serial.mspRejected', { cmd: cur.cmd })));
       else cur.resolve(f.payload);
       this.pump();
     }

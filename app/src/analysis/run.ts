@@ -1,12 +1,14 @@
 import { processSource, type Source, type WorkerMsg } from './run-core';
 import type { AnalysisResult } from './types';
 
+/** Analysis error; `key` is an i18n key (at.err.*) that the screen translates. */
 export class RunError extends Error {
   constructor(
     public code: string,
-    message: string,
+    public key: string,
+    public params?: Record<string, string | number>,
   ) {
-    super(message);
+    super(key);
   }
 }
 
@@ -16,7 +18,10 @@ export function runAnalysis(src: Source, onProgress: (frac: number) => void): Pr
     let worker: Worker | null = null;
     let started = false;
     const fallback = () => {
-      processSource(src, onProgress).then(resolve, (err: unknown) => reject(new RunError((err as { code?: string }).code ?? 'error', err instanceof Error ? err.message : String(err))));
+      processSource(src, onProgress).then(resolve, (err: unknown) => {
+        const e = err as { code?: string; key?: string; params?: Record<string, string | number> };
+        reject(new RunError(e.code ?? 'error', e.key ?? 'at.err.generic', e.params));
+      });
     };
     try {
       worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
@@ -31,12 +36,12 @@ export function runAnalysis(src: Source, onProgress: (frac: number) => void): Pr
       else {
         worker?.terminate();
         if (m.type === 'done') resolve(m.result);
-        else reject(new RunError(m.code, m.message));
+        else reject(new RunError(m.code, m.key, m.params));
       }
     };
     worker.onerror = () => {
       worker?.terminate();
-      if (started) reject(new RunError('error', 'Błąd analizy w tle.'));
+      if (started) reject(new RunError('error', 'at.err.worker'));
       else fallback();
     };
     worker.postMessage(src);

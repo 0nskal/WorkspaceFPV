@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { renderDrone } from '../ui/drone-xray';
 
 /**
@@ -75,11 +76,11 @@ function detail(): string {
     `<text x="${x}" y="${y}" text-anchor="${anchor}" ${mono} font-size="11.5" letter-spacing=".1em" fill="${INK}">${t}</text>`;
   g +=
     `<path d="M${n(chip[0])},${n(chip[1])}L${n(chip[0])},-84" stroke="${INK}" stroke-width=".8" fill="none"/><circle cx="${n(chip[0])}" cy="${n(chip[1])}" r="2.6" fill="${INK}" stroke="${BG}"/>` +
-    lbl(n(chip[0]), -92, 'CHIP', 'middle');
-  g += `<path d="M${n(fm[0] - 6)},${n(fm[1] + 8)}L-100,64" stroke="${INK}" stroke-width=".8" fill="none"/>` + lbl(-104, 80, 'ANTENA T');
+    lbl(n(chip[0]), -92, t('elrs.chip'), 'middle');
+  g += `<path d="M${n(fm[0] - 6)},${n(fm[1] + 8)}L-100,64" stroke="${INK}" stroke-width=".8" fill="none"/>` + lbl(-104, 80, t('elrs.antenna'));
   g +=
     `<path d="M${n(pad[0])},${n(pad[1])}L${n(pad[0] - 14)},104" stroke="${INK}" stroke-width=".8" fill="none"/><circle cx="${n(pad[0])}" cy="${n(pad[1])}" r="2.6" fill="${INK}" stroke="${BG}"/>` +
-    lbl(n(pad[0] - 14), 118, 'ZŁĄCZE', 'middle');
+    lbl(n(pad[0] - 14), 118, t('elrs.connector'), 'middle');
   return g;
 }
 
@@ -106,7 +107,7 @@ export function renderElrsScene(rxLabel: string): string {
     `<clipPath id="elrs-clip"><circle cx="${cx}" cy="${cy}" r="${DR}"/></clipPath>` +
     `<circle cx="${cx}" cy="${cy}" r="${DR}" fill="#0a121a" stroke="${INK}" stroke-width="1.2"/>` +
     `<g clip-path="url(#elrs-clip)"><path d="M${cx - DR},${cy}H${cx + DR}M${cx},${cy - DR}V${cy + DR}" stroke="${sec}" stroke-width=".6" stroke-dasharray="4 5" opacity=".5"/><g transform="translate(${cx} ${cy}) scale(1.1)">${detail()}</g></g>` +
-    `<rect x="${cx - 78}" y="${cy + DR + 26}" width="7" height="7" fill="${RED}"/><text x="${cx - 62}" y="${cy + DR + 34}" ${mono} font-size="12.5" letter-spacing=".1em" fill="${INK}">DETAL A · 3:1</text>`;
+    `<rect x="${cx - 78}" y="${cy + DR + 26}" width="7" height="7" fill="${RED}"/><text x="${cx - 62}" y="${cy + DR + 34}" ${mono} font-size="12.5" letter-spacing=".1em" fill="${INK}">${t('elrs.detail')}</text>`;
   const lead = `<path d="M${n(p1[0])},${n(p1[1])}L${n(p2[0])},${n(p2[1])}" stroke="${RED}" stroke-width="1.5" fill="none"/><circle cx="${n(p1[0])}" cy="${n(p1[1])}" r="3.4" fill="${RED}" stroke="${BG}" stroke-width="1.5"/>`;
-  return `<svg class="elrs-svg" viewBox="${x} ${y} ${w} ${h}" preserveAspectRatio="xMaxYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rozkład drona z powiększeniem odbiornika"><g class="elrs-dim">${inner ?? ''}</g>${ring}${lead}${det}${tag}${mk(x + 22, 30)}${mk(x + w - 22, 30)}${mk(x + 22, 818)}${mk(x + w - 22, 818)}</svg>`;
+  return `<svg class="elrs-svg" viewBox="${x} ${y} ${w} ${h}" preserveAspectRatio="xMaxYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${t('elrs.sceneAria')}"><g class="elrs-dim">${inner ?? ''}</g>${ring}${lead}${det}${tag}${mk(x + 22, 30)}${mk(x + w - 22, 30)}${mk(x + 22, 818)}${mk(x + w - 22, 818)}</svg>`;
 }

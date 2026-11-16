@@ -1,5 +1,6 @@
 import type { ScreenMount } from '../context';
 import { MODELS } from '../settings';
+import { LANGS, fmtNum, getLang, setLang, t, type Lang } from '../i18n';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { APP_VERSION, updatesApi, type UpdateStatus } from '../updates';
@@ -11,70 +12,78 @@ export const mount: ScreenMount = (el, ctx) => {
 
   el.innerHTML = `
     <div class="page">
-      <h1>Ustawienia</h1>
+      <h1>${t('settings.title')}</h1>
 
       <section class="card">
-        <div class="ch">Asystent AI</div>
+        <div class="ch">${t('settings.appTitle')}</div>
         <label class="field">
-          <span>Klucz API Anthropic</span>
+          <span>${t('lang.label')}</span>
+          <div class="field-row"><select name="lang">${LANGS.map((l) => `<option value="${l}" ${l === getLang() ? 'selected' : ''}>${t(`lang.${l}`)}</option>`).join('')}</select></div>
+        </label>
+      </section>
+
+      <section class="card">
+        <div class="ch">${t('settings.ai')}</div>
+        <label class="field">
+          <span>${t('settings.apiKey')}</span>
           <div class="field-row">
             <input type="password" name="key" value="${escapeHtml(s.apiKey)}" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" />
-            <button class="btn s" type="button" data-act="toggle">Pokaż</button>
+            <button class="btn s" type="button" data-act="toggle">${t('settings.show')}</button>
           </div>
-          <small>Klucz zapisuje się tylko lokalnie na tym komputerze (localStorage) i jest wysyłany wyłącznie do API Anthropic. Klucz wygenerujesz w console.anthropic.com. Bez klucza działają same reguły diagnostyczne.</small>
+          <small>${t('settings.keyNote')}</small>
         </label>
         <label class="field">
-          <span>Model</span>
-          <select name="model">${MODELS.map((m) => `<option value="${m.id}" ${m.id === s.model ? 'selected' : ''}>${escapeHtml(m.label)}</option>`).join('')}</select>
+          <span>${t('settings.model')}</span>
+          <select name="model">${MODELS.map((m) => `<option value="${m.id}" ${m.id === s.model ? 'selected' : ''}>${escapeHtml(t(m.labelKey))}</option>`).join('')}</select>
         </label>
         <div class="field-row actions">
-          <button class="btn p" type="button" data-act="save">${icon('check')}Zapisz</button>
-          <button class="btn s" type="button" data-act="clear">Wyczyść klucz</button>
-          <button class="btn s" type="button" data-act="chat">Wyczyść rozmowę</button>
+          <button class="btn p" type="button" data-act="save">${icon('check')}${t('settings.save')}</button>
+          <button class="btn s" type="button" data-act="clear">${t('settings.clearKey')}</button>
+          <button class="btn s" type="button" data-act="chat">${t('settings.clearChat')}</button>
           <span class="saved mono" aria-live="polite"></span>
         </div>
       </section>
 
       <section class="card">
-        <div class="ch">Wersja ELRS (wpisana ręcznie)</div>
+        <div class="ch">${t('settings.elrsHead')}</div>
         <label class="field">
-          <span>Wersja firmware odbiornika</span>
-          <div class="field-row"><input type="text" name="elrs" value="${escapeHtml(s.elrsVersion)}" placeholder="np. 3.4.3" autocomplete="off" /></div>
-          <small>FC nie zna wersji ELRS. Wpisana tutaj pojawi się na rozkładzie drona.</small>
+          <span>${t('settings.elrsField')}</span>
+          <div class="field-row"><input type="text" name="elrs" value="${escapeHtml(s.elrsVersion)}" placeholder="${t('settings.elrsPh')}" autocomplete="off" /></div>
+          <small>${t('settings.elrsNote')}</small>
         </label>
       </section>
 
       <section class="card">
-        <div class="ch">Dane i demo</div>
+        <div class="ch">${t('settings.dataHead')}</div>
         <div class="field-row actions">
-          <button class="btn s" type="button" data-act="demo">Tryb demo</button>
-          <button class="btn s" type="button" data-act="backup">${icon('download')}Pobierz kopię ustawień</button>
-          <button class="btn s" type="button" data-act="fetch" ${connected() ? '' : 'disabled'}>Odczytaj konfigurację z FC</button>
+          <button class="btn s" type="button" data-act="demo">${t('settings.demo')}</button>
+          <button class="btn s" type="button" data-act="backup">${icon('download')}${t('settings.backup')}</button>
+          <button class="btn s" type="button" data-act="fetch" ${connected() ? '' : 'disabled'}>${t('settings.fetch')}</button>
         </div>
-        <small>Kopia to ostatni zapisany wynik <code>diff all</code>. Rotorlab zapisuje ją automatycznie przed każdą zmianą w FC. Odczyt z FC restartuje płytkę (CLI Betaflight kończy się restartem).</small>
+        <small>${t('settings.dataNote')}</small>
       </section>
 
       <section class="card" id="upd">
-        <div class="ch">Aktualizacje</div>
-        <p class="upd-ver">Wersja: <b class="mono" data-upd="ver">${escapeHtml(APP_VERSION)}</b></p>
+        <div class="ch">${t('settings.updHead')}</div>
+        <p class="upd-ver">${t('settings.updVersion')} <b class="mono" data-upd="ver">${escapeHtml(APP_VERSION)}</b></p>
         ${
           upd
-            ? `<label class="upd-chk"><input type="checkbox" name="checkUpdates" ${s.checkUpdates ? 'checked' : ''} /><span>Sprawdzaj przy starcie</span></label>
+            ? `<label class="upd-chk"><input type="checkbox" name="checkUpdates" ${s.checkUpdates ? 'checked' : ''} /><span>${t('settings.updAuto')}</span></label>
         <div class="upd-bar" data-upd="bar" hidden><div class="upd-fill" data-upd="fill"></div></div>
-        <p class="upd-msg" data-upd="msg" aria-live="polite">Nie sprawdzano w tej sesji.</p>
+        <p class="upd-msg" data-upd="msg" aria-live="polite">${t('settings.updNever')}</p>
         <div class="field-row actions">
-          <button class="btn s" type="button" data-act="upd-check">Sprawdź aktualizacje</button>
-          <button class="btn p" type="button" data-act="upd-download" hidden>Pobierz aktualizację</button>
-          <button class="btn p" type="button" data-act="upd-install" hidden>Zainstaluj i uruchom ponownie</button>
-          <a class="btn s" href="https://github.com/0nskal/rotorlab/releases" target="_blank" rel="noopener">Notatki wydania</a>
+          <button class="btn s" type="button" data-act="upd-check">${t('settings.updCheck')}</button>
+          <button class="btn p" type="button" data-act="upd-download" hidden>${t('settings.updDownload')}</button>
+          <button class="btn p" type="button" data-act="upd-install" hidden>${t('settings.updInstall')}</button>
+          <a class="btn s" href="https://github.com/0nskal/rotorlab/releases" target="_blank" rel="noopener">${t('settings.updNotes')}</a>
         </div>`
-            : `<p class="about">Wersja w przeglądarce aktualizuje się sama po odświeżeniu strony.</p>`
+            : `<p class="about">${t('settings.updWeb')}</p>`
         }
       </section>
 
       <section class="card">
-        <div class="ch">O programie</div>
-        <p class="about">Rotorlab ${escapeHtml(APP_VERSION)} · MIT · aplikacja działa lokalnie, a dane z drona nie opuszczają komputera poza pytaniami do asystenta AI.</p>
+        <div class="ch">${t('settings.about')}</div>
+        <p class="about">${escapeHtml(t('settings.aboutText', { version: APP_VERSION }))}</p>
       </section>
     </div>`;
 
@@ -91,7 +100,7 @@ export const mount: ScreenMount = (el, ctx) => {
   // --- Aktualizacje ---
   const q = (k: string) => el.querySelector<HTMLElement>(`[data-upd="${k}"]`);
   const btn = (a: string) => el.querySelector<HTMLElement>(`[data-act="${a}"]`);
-  const fmtMB = (n: number) => `${(n / 1048576).toFixed(1)} MB`;
+  const fmtMB = (n: number) => t('settings.mb', { n: fmtNum(n / 1048576, 1) });
   const renderUpd = (st: UpdateStatus) => {
     const msg = q('msg');
     const bar = q('bar');
@@ -106,26 +115,26 @@ export const mount: ScreenMount = (el, ctx) => {
     if (bCheck) (bCheck as HTMLButtonElement).disabled = st.state === 'checking' || st.state === 'downloading';
     switch (st.state) {
       case 'dev':
-        msg.textContent = 'Wersja deweloperska: aktualizacje działają tylko w zainstalowanej aplikacji.';
+        msg.textContent = t('settings.updDev');
         break;
       case 'checking':
-        msg.textContent = 'Sprawdzam…';
+        msg.textContent = t('settings.updChecking');
         break;
       case 'available':
-        msg.textContent = `Dostępna wersja ${st.version}.`;
+        msg.textContent = t('settings.updAvailable', { version: st.version });
         break;
       case 'not-available':
-        msg.textContent = 'Masz najnowszą wersję.';
+        msg.textContent = t('settings.updLatest');
         break;
       case 'downloading':
         fill.style.width = `${Math.round(st.percent)}%`;
-        msg.textContent = `Pobieranie: ${Math.round(st.percent)}% (${fmtMB(st.bytesPerSecond)}/s, razem ${fmtMB(st.total)})`;
+        msg.textContent = t('settings.updDownloading', { pct: Math.round(st.percent), speed: fmtMB(st.bytesPerSecond), total: fmtMB(st.total) });
         break;
       case 'downloaded':
-        msg.textContent = `Wersja ${st.version} jest pobrana. Zainstaluje się też automatycznie po zamknięciu aplikacji.`;
+        msg.textContent = t('settings.updDownloaded', { version: st.version });
         break;
       case 'error':
-        msg.textContent = `Nie udało się sprawdzić aktualizacji: ${st.message}`;
+        msg.textContent = t('settings.updError', { msg: st.message });
         break;
     }
   };
@@ -144,23 +153,30 @@ export const mount: ScreenMount = (el, ctx) => {
     });
   }
 
+  // Language switches instantly: the shell and this screen are re-mounted by the app (onLanguageChange).
+  el.querySelector<HTMLSelectElement>('select[name="lang"]')?.addEventListener('change', (e) => {
+    // keep what was typed in the fields, so re-mounting does not lose it
+    ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value, elrsVersion: elrsInput.value.trim() });
+    setLang((e.target as HTMLSelectElement).value as Lang);
+  });
+
   el.addEventListener('click', (e) => {
     const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
     if (!act) return;
     if (act === 'toggle') {
       const b = e.target as HTMLElement;
       keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
-      b.textContent = keyInput.type === 'password' ? 'Pokaż' : 'Ukryj';
+      b.textContent = keyInput.type === 'password' ? t('settings.show') : t('settings.hide');
     } else if (act === 'save') {
       ctx.settings.set({ apiKey: keyInput.value.trim(), model: modelSel.value, elrsVersion: elrsInput.value.trim() });
-      flash('Zapisano.');
+      flash(t('settings.saved'));
     } else if (act === 'clear') {
       keyInput.value = '';
       ctx.settings.set({ apiKey: '' });
-      flash('Klucz usunięty.');
+      flash(t('settings.keyRemoved'));
     } else if (act === 'chat') {
       ctx.ai.clear();
-      flash('Rozmowa wyczyszczona.');
+      flash(t('settings.chatCleared'));
     } else if (act === 'upd-check') {
       void upd?.check().then(renderUpd);
     } else if (act === 'upd-download') {
@@ -170,7 +186,7 @@ export const mount: ScreenMount = (el, ctx) => {
     } else if (act === 'demo') {
       void ctx.connectDemo().then(() => ctx.navigate('warsztat'));
     } else if (act === 'backup') {
-      if (!ctx.downloadBackup()) ctx.toast('Nie ma jeszcze kopii. Połącz się z FC i zastosuj zmianę albo odczytaj konfigurację.', 'info');
+      if (!ctx.downloadBackup()) ctx.toast(t('settings.noBackup'), 'info');
     } else if (act === 'fetch') {
       void ctx.fetchDiff().then((t) => t && ctx.downloadBackup());
     }

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPT } from './prompts';
+import { t, type Lang } from '../i18n';
+import { systemPrompt } from './prompts';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -11,6 +12,8 @@ export interface ChatMessage {
 export interface AssistantConfig {
   apiKey: string;
   model: string;
+  /** UI language: the assistant is told to answer in it. */
+  lang: Lang;
 }
 
 type Listener = () => void;
@@ -62,7 +65,7 @@ export class Assistant {
     const cfg = this.getConfig();
     this.history.push({ role: 'user', text: q });
     if (!cfg.apiKey.trim()) {
-      this.history.push({ role: 'assistant', note: true, text: 'Brak klucza API. Dodaj go w Ustawieniach, żeby rozmawiać z asystentem. Reguły diagnostyczne działają bez klucza.' });
+      this.history.push({ role: 'assistant', note: true, text: t('ai.noKey') });
       this.emit();
       return;
     }
@@ -88,7 +91,7 @@ export class Assistant {
           thinking: { type: 'adaptive' },
           output_config: { effort: 'medium' },
           system: [
-            { type: 'text', text: SYSTEM_PROMPT },
+            { type: 'text', text: systemPrompt(cfg.lang) },
             { type: 'text', text: this.getContext(), cache_control: { type: 'ephemeral' } },
           ],
           messages,
@@ -114,18 +117,18 @@ export class Assistant {
       const final = await stream.finalMessage();
       // stop_reason sprawdzamy przed uzyciem tresci
       if (final.stop_reason === 'refusal') {
-        reply.text = reply.text || 'Model odmówił odpowiedzi na to pytanie. Spróbuj je przeformułować.';
+        reply.text = reply.text || t('ai.refusal');
         reply.note = true;
       } else if (final.stop_reason === 'max_tokens') {
-        reply.text += '\n\n(Odpowiedź została ucięta - limit długości.)';
+        reply.text += '\n\n' + t('ai.cutOff');
       } else if (!reply.text.trim()) {
         const text = final.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('');
-        reply.text = text || '(Pusta odpowiedź.)';
+        reply.text = text || t('ai.empty');
       }
     } catch (e) {
       if (this.abortCtl?.signal.aborted) {
-        reply.text = reply.text || '(Przerwano.)';
-        reply.note = !reply.text.trim() || reply.text === '(Przerwano.)';
+        reply.text = reply.text || t('ai.aborted');
+        reply.note = !reply.text.trim() || reply.text === t('ai.aborted');
       } else {
         reply.note = true;
         reply.text = (reply.text ? reply.text + '\n\n' : '') + describeError(e);
@@ -140,11 +143,11 @@ export class Assistant {
 }
 
 export function describeError(e: unknown): string {
-  if (e instanceof Anthropic.AuthenticationError) return 'Nieprawidłowy klucz API. Sprawdź go w Ustawieniach.';
-  if (e instanceof Anthropic.PermissionDeniedError) return 'Brak uprawnień do tego modelu dla podanego klucza.';
-  if (e instanceof Anthropic.RateLimitError) return 'Limit zapytań został przekroczony. Spróbuj za chwilę.';
-  if (e instanceof Anthropic.BadRequestError) return `Zapytanie odrzucone przez API: ${e.message}`;
-  if (e instanceof Anthropic.APIConnectionError) return 'Brak połączenia z API Anthropic. Sprawdź internet.';
-  if (e instanceof Anthropic.APIError) return `Błąd API (${e.status ?? '?'}): ${e.message}`;
+  if (e instanceof Anthropic.AuthenticationError) return t('ai.errAuth');
+  if (e instanceof Anthropic.PermissionDeniedError) return t('ai.errPermission');
+  if (e instanceof Anthropic.RateLimitError) return t('ai.errRate');
+  if (e instanceof Anthropic.BadRequestError) return t('ai.errBadRequest', { msg: e.message });
+  if (e instanceof Anthropic.APIConnectionError) return t('ai.errConnection');
+  if (e instanceof Anthropic.APIError) return t('ai.errApi', { status: e.status ?? '?', msg: e.message });
   return e instanceof Error ? e.message : String(e);
 }

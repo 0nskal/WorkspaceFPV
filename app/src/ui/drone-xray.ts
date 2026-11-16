@@ -4,6 +4,7 @@
  */
 import polygonClipping from 'polygon-clipping';
 import type { Part } from '../fc/diagnose';
+import { t } from '../i18n';
 
 type Pt = [number, number];
 type Pal = [top: string, sideF: string, sideL: string];
@@ -19,7 +20,7 @@ export interface XrayLabels {
   batteryText: string; // np. "6S 24.9 V"
   /** Procenty mocy silnikow M1..M4; null = brak danych. */
   motors: number[] | null;
-  /** Tekst przy czerwonym ognisku (po prawej), np. "ESC · DShot300 · bidir wyłączony". */
+  /** Tekst przy czerwonym ognisku (po prawej), np. "ESC · DShot300 · bidir off". */
   hotText?: string;
 }
 
@@ -642,7 +643,7 @@ export function renderDrone(opts: RenderOptions): string {
   {
     const [ax, ay] = prL(Y.rx)(0, -22, 1.2);
     lab += hair(LX, ay, ax, ay) + anchorDot(ax, ay);
-    lab += `<text x="${LX}" y="${f(ay - 52)}" ${mono} font-size="12" fill="${INK}" letter-spacing=".06em">Odbiornik</text>`;
+    lab += `<text x="${LX}" y="${f(ay - 52)}" ${mono} font-size="12" fill="${INK}" letter-spacing=".06em">${esc(t('xray.rx'))}</text>`;
     lab += `<text x="${LX}" y="${f(ay - 28)}" ${sans(18, 600)} fill="${INK}">${esc(labels.rxTitle)}</text>`;
     if (labels.rxSub) lab += dotMark(LX + 4, ay - 14, AMB) + `<text x="${LX + 14}" y="${f(ay - 9)}" ${mono} font-size="12.5" fill="${AMB}">${esc(labels.rxSub)}</text>`;
   }
@@ -650,7 +651,7 @@ export function renderDrone(opts: RenderOptions): string {
   {
     const [ax, ay] = prL(Y.bat)(0, -62, 18);
     lab += hair(LX, ay, ax, ay) + anchorDot(ax, ay);
-    lab += `<text x="${LX}" y="${f(ay - 33)}" ${mono} font-size="12" fill="${INK}" letter-spacing=".06em">Bateria</text>`;
+    lab += `<text x="${LX}" y="${f(ay - 33)}" ${mono} font-size="12" fill="${INK}" letter-spacing=".06em">${esc(t('xray.battery'))}</text>`;
     lab += `<text x="${LX}" y="${f(ay - 9)}" ${sans(18, 600)} fill="${INK}">${esc(labels.batteryText)}</text>`;
   }
   // Silniki (po prawej, slupki)
@@ -661,7 +662,7 @@ export function renderDrone(opts: RenderOptions): string {
   {
     lab += hair(m1[0] + 15, m1[1], bx, m1[1]) + hair(m2[0] + 15, m2[1], bx, m2[1]) + hair(bx, m1[1], bx, m2[1]) + hair(bx, my, 960, my);
     lab += anchorDot(m1[0] + 15, m1[1]) + anchorDot(m2[0] + 15, m2[1]);
-    lab += `<text x="${RX}" y="${f(my - 12)}" ${mono} font-size="12" fill="${highlight === 'motors' ? REDS : INK}" letter-spacing=".06em">Silniki</text>`;
+    lab += `<text x="${RX}" y="${f(my - 12)}" ${mono} font-size="12" fill="${highlight === 'motors' ? REDS : INK}" letter-spacing=".06em">${esc(t('xray.motors'))}</text>`;
     const base = my + 62;
     for (let i = 0; i < 4; i++) {
       const v = labels.motors?.[i];
@@ -691,7 +692,7 @@ export function renderDrone(opts: RenderOptions): string {
     `<text x="${x}" y="${y}" text-anchor="${a}" ${mono} font-size="12" letter-spacing=".08em" fill="#fff" fill-opacity=".6">${esc(t)}</text>`;
   const film = fm(26, 36, 'L') + fm(500, 13, labels.filmTop, 'middle') + fm(940, 838, labels.filmBottom, 'end');
 
-  return `<svg class="xray" viewBox="0 0 ${VIEW_W} ${VIEW_H}" preserveAspectRatio="xMaxYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rozkład drona w stylu rentgena">${DEFS}${marks}${glow}<g filter="url(#glow)" transform="translate(${CX + DX} ${TY}) scale(${SC}) translate(${-CX} 0)">${out}</g>${lab}${over}${film}</svg>`;
+  return `<svg class="xray" viewBox="0 0 ${VIEW_W} ${VIEW_H}" preserveAspectRatio="xMaxYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(t('xray.aria'))}">${DEFS}${marks}${glow}<g filter="url(#glow)" transform="translate(${CX + DX} ${TY}) scale(${SC}) translate(${-CX} 0)">${out}</g>${lab}${over}${film}</svg>`;
 }
 
 /** Aktualizuje slupki silnikow w istniejacym SVG bez przerysowywania sceny (telemetria 10 Hz). */

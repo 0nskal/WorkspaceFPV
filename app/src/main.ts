@@ -14,5 +14,5 @@ import './ui/styles.css';
 import { createApp } from './app';
 
 const root = document.getElementById('app');
-if (!root) throw new Error('Brak #app');
+if (!root) throw new Error('Missing #app');
 createApp(root);

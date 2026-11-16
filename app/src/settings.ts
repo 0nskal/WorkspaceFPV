@@ -1,8 +1,8 @@
 /** Ustawienia uzytkownika - tylko lokalnie (localStorage), klucz API nigdy nie opuszcza maszyny poza zapytaniami do API Anthropic. */
 
-export const MODELS: Array<{ id: string; label: string }> = [
-  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5 (domyślny, najdokładniejszy)' },
-  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (szybszy i tańszy)' },
+export const MODELS: Array<{ id: string; labelKey: 'settings.modelOpus' | 'settings.modelSonnet' }> = [
+  { id: 'claude-opus-5-5', labelKey: 'settings.modelOpus' },
+  { id: 'claude-sonnet-5-5', labelKey: 'settings.modelSonnet' },
 ];
 
 export interface Settings {

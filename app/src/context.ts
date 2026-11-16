@@ -20,9 +20,8 @@ import type { FcLink } from './serial/types';
 import type { SettingsStore } from './settings';
 import type { ConfirmOptions } from './ui/modal';
 
-export type Route = 'warsztat' | 'esc' | 'autotune' | 'elrs' | 'ustawienia';
-
-export const ROUTES: Route[] = ['warsztat', 'esc', 'autotune', 'elrs', 'ustawienia'];
+/** Screen id (hash route). The list of valid ids lives in screens/registry.ts. */
+export type Route = string;
 
 export interface ApplyOptions {
   /** Tytul okna potwierdzenia. */

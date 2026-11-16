@@ -1,6 +1,7 @@
 import { MSP } from './msp';
 import { sleep } from './port';
 import type { CliEntry, CliOptions, CliResult, CloseReason, FcLink } from './types';
+import { t as tr } from '../i18n';
 
 /** Symulowany dron (SpeedyBee F405 V4, BF 4.5.1) z danymi z makiet. Odpowiada prawdziwymi ladunkami MSP. */
 interface DemoConfig {
@@ -36,7 +37,7 @@ export class DemoLink implements FcLink {
 
   async request(cmd: number, payload?: Uint8Array): Promise<Uint8Array> {
     await sleep(4); // opoznienie "linii"
-    if (this.busy) throw new Error('Tryb CLI aktywny - MSP wstrzymane.');
+    if (this.busy) throw new Error(tr('serial.mspSuspended'));
     const t = (Date.now() - this.t0) / 1000;
     switch (cmd) {
       case MSP.API_VERSION:
@@ -119,7 +120,7 @@ export class DemoLink implements FcLink {
         void payload;
         return new Uint8Array(0);
       default:
-        throw new Error(`Demo: nieobsługiwana komenda MSP ${cmd}`);
+        throw new Error(tr('serial.demoUnsupported', { cmd }));
     }
   }
 

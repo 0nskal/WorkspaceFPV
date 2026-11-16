@@ -108,9 +108,9 @@ export async function readAll(link: FcLink): Promise<Pick<FcState, 'info' | 'con
   const variant = ascii(await link.request(MSP.FC_VARIANT));
   const v = await link.request(MSP.FC_VERSION);
   const board = decodeBoardInfo(await link.request(MSP.BOARD_INFO));
-  let craftName = 'Dron';
+  let craftName = '';
   try {
-    craftName = ascii(await link.request(MSP.NAME)) || 'Dron';
+    craftName = ascii(await link.request(MSP.NAME));
   } catch {
     /* brak nazwy */
   }

@@ -1,30 +1,30 @@
 <p align="center">
-  <img src="docs/icon.png" width="128" height="128" alt="Rotorlab">
+  <img src="docs/icon.png" width="128" height="128" alt="WorkspaceFPV">
 </p>
 
-<h1 align="center">Rotorlab</h1>
+<h1 align="center">WorkspaceFPV</h1>
 
 <p align="center">
   A free AI-powered app for diagnosing, configuring and fixing FPV drones running Betaflight: the Configurator tabs, ESC and ELRS info, PID autotune from logs.
 </p>
 
 <p align="center">
-  <a href="https://github.com/0nskal/rotorlab/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/0nskal/rotorlab?style=flat-square&color=0B1016&labelColor=0B1016"></a>
+  <a href="https://github.com/0nskal/WorkspaceFPV/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/0nskal/WorkspaceFPV?style=flat-square&color=0B1016&labelColor=0B1016"></a>
   <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%2F11-0B1016?style=flat-square&logo=windows&logoColor=DCEFF8">
   <img alt="Chrome/Edge WebSerial" src="https://img.shields.io/badge/Chrome%20%2F%20Edge-WebSerial-0B1016?style=flat-square&logo=googlechrome&logoColor=DCEFF8">
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-0B1016?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/0nskal/rotorlab/releases/latest/download/Rotorlab-Setup.exe"><b>Download for Windows</b></a>
+  <a href="https://github.com/0nskal/WorkspaceFPV/releases/latest/download/WorkspaceFPV-Setup.exe"><b>Download for Windows</b></a>
   &nbsp;·&nbsp;
-  <a href="https://rotorlab.pages.dev/app/"><b>Open in the browser</b></a>
+  <a href="https://workspacefpv.pages.dev/app/"><b>Open in the browser</b></a>
   &nbsp;·&nbsp;
-  <a href="https://rotorlab.pages.dev"><b>Website</b></a>
+  <a href="https://workspacefpv.pages.dev"><b>Website</b></a>
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Rotorlab: X-ray style drone layout and a patient chart with the diagnosis" width="860">
+  <img src="docs/screenshot.png" alt="WorkspaceFPV: X-ray style drone layout and a patient chart with the diagnosis" width="860">
 </p>
 
 <p align="center"><b>English</b> · <a href="#polski">Polski</a></p>
@@ -56,22 +56,22 @@
 **Tested on hardware vs. not yet:** the Betaflight tabs were built against the MSP protocol from the firmware source and tested against the simulated FC (demo mode) and unit tests. Saving settings, Blackbox download/erase/MSC, the 4-way ESC read and the ELRS passthrough have **not been tested on a real flight controller yet**. Keep a `diff all` backup (the CLI tab makes one in one click) and remove the props.
 
 <p align="center">
-  <img src="docs/screenshot-setup.png" alt="Rotorlab Setup tab: firmware and board, attitude, sensors, arming status" width="860">
+  <img src="docs/screenshot-setup.png" alt="WorkspaceFPV Setup tab: firmware and board, attitude, sensors, arming status" width="860">
 </p>
 <p align="center">
-  <img src="docs/screenshot-tuning.png" alt="Rotorlab PID Tuning tab: rates with live curves and the throttle curve" width="860">
+  <img src="docs/screenshot-tuning.png" alt="WorkspaceFPV PID Tuning tab: rates with live curves and the throttle curve" width="860">
 </p>
 
 ## Install
 
 ### Windows
 
-1. Download [`Rotorlab-Setup.exe`](https://github.com/0nskal/rotorlab/releases/latest/download/Rotorlab-Setup.exe) from the latest release.
+1. Download [`WorkspaceFPV-Setup.exe`](https://github.com/0nskal/WorkspaceFPV/releases/latest/download/WorkspaceFPV-Setup.exe) from the latest release.
 2. Run the installer. The app is not code-signed, so SmartScreen may show a warning: **More info → Run anyway**.
 
 ### Browser
 
-Open [rotorlab.pages.dev/app](https://rotorlab.pages.dev/app/) in **Chrome or Edge 89+** (WebSerial). Firefox and Safari do not support the serial port.
+Open [workspacefpv.pages.dev/app](https://workspacefpv.pages.dev/app/) in **Chrome or Edge 89+** (WebSerial). Firefox and Safari do not support the serial port.
 
 Requirements: a USB data cable, Betaflight 4.3+ on the flight controller.
 
@@ -79,7 +79,7 @@ Requirements: a USB data cable, Betaflight 4.3+ on the flight controller.
 
 1. Close Betaflight Configurator (it holds the port) and remove the props.
 2. Plug in the flight controller over USB and click **Connect**. No drone at hand? Choose **Demo mode**.
-3. Optionally paste your Anthropic API key in **Settings**. It is stored locally and never goes to the repo or any Rotorlab server.
+3. Optionally paste your Anthropic API key in **Settings**. It is stored locally and never goes to the repo or any WorkspaceFPV server.
 
 ## How it works
 
@@ -97,8 +97,8 @@ Architecture of the Betaflight layer: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 
 ## Safety and privacy
 
-- Before every CLI change Rotorlab saves a `diff all` backup, shows the list of commands and waits for confirmation. Tab edits are only sent when you press Save, and never while the drone is armed.
-- While connected Rotorlab disables arming (like the Betaflight Configurator); it is released on disconnect.
+- Before every CLI change WorkspaceFPV saves a `diff all` backup, shows the list of commands and waits for confirmation. Tab edits are only sent when you press Save, and never while the drone is armed.
+- While connected WorkspaceFPV disables arming (like the Betaflight Configurator); it is released on disconnect.
 - The motor test only works after you tick "Props removed", has a STOP button and stops on disconnect or tab change.
 - The API key is stored locally on your device.
 - Drone data (configuration, `diff all`, rule results) goes to Anthropic only when you ask the AI assistant a question.
@@ -126,18 +126,18 @@ The same works for `app/src/analysis/test.mjs` and every `app/src/bf/test-*.mjs`
 ### Website deploy
 
 ```bash
-npm run build && node scripts/build-site.mjs && npx wrangler pages deploy site --project-name rotorlab
+npm run build && node scripts/build-site.mjs && npx wrangler@4.40.0 pages deploy site --project-name workspacefpv --branch main
 ```
 
 `scripts/build-site.mjs` copies `dist/` to `site/app/`, so the browser app is served under `/app/`. The website (`site/`) is English by default with an EN/PL switch (`?lang=pl` also works).
 
 ## Updates
 
-The Windows version updates from inside the app: **Settings → Updates** ("Check for updates", download with a progress bar, "Install and restart"). By default Rotorlab checks for new versions ~5 s after start (you can turn that off in the same place) and shows a quiet notice. A downloaded update also installs itself when you close the app. This applies from version 0.2.0; 0.1.0 has to be downloaded manually once. The browser version updates itself when you reload the page.
+The Windows version updates from inside the app: **Settings → Updates** ("Check for updates", download with a progress bar, "Install and restart"). By default WorkspaceFPV checks for new versions ~5 s after start (you can turn that off in the same place) and shows a quiet notice. A downloaded update also installs itself when you close the app. This applies from version 0.2.0; 0.1.0 has to be downloaded manually once. The browser version updates itself when you reload the page.
 
 ## Releases
 
-Process: bump `version` in `package.json` (e.g. `0.2.0`), commit, `git tag v0.2.0 && git push --tags`, and GitHub Actions does the rest. The workflow checks that the tag matches the version in `package.json` (it fails otherwise), builds on Windows and uploads `Rotorlab-Setup.exe`, `Rotorlab-Setup.exe.blockmap` and `latest.yml` (used by the update mechanism) to the GitHub Release.
+Process: bump `version` in `package.json` (e.g. `0.2.0`), commit, `git tag v0.2.0 && git push --tags`, and GitHub Actions does the rest. The workflow checks that the tag matches the version in `package.json` (it fails otherwise), builds on Windows and uploads `WorkspaceFPV-Setup.exe`, `WorkspaceFPV-Setup.exe.blockmap` and `latest.yml` (used by the update mechanism) to the GitHub Release.
 
 Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI workflow builds the project on every push and pull request.
 
@@ -160,7 +160,7 @@ Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI work
 
 ## Funkcje
 
-- **Diagnoza w minutę.** Po połączeniu Rotorlab czyta całą konfigurację przez MSP i sprawdza ją regułami: protokół ESC, bidirectional DShot, napięcie na celę, flagi blokady uzbrojenia. Lista „Co sprawdziłem” pokazuje każdą regułę.
+- **Diagnoza w minutę.** Po połączeniu WorkspaceFPV czyta całą konfigurację przez MSP i sprawdza ją regułami: protokół ESC, bidirectional DShot, napięcie na celę, flagi blokady uzbrojenia. Lista „Co sprawdziłem” pokazuje każdą regułę.
 - **Asystent AI.** Z kluczem Anthropic API dopowiada diagnozę i proponuje komendy CLI Betaflight. Zakładki konfiguracji mają przycisk „Zapytaj AI o tę kartę”. Bez klucza działają same reguły.
 - **Zakładki jak w Betaflight Configuratorze.** Wszystko czyta się samo przy połączeniu (bez przycisków „odczytaj”), zapis idzie przez MSP (komendy SET, zapis EEPROM, restart i ponowne połączenie, gdy trzeba). Zmienione pola są zaznaczone, dopóki nie klikniesz Zapisz.
   - **Setup:** firmware i płytka, położenie na żywo, czujniki, blokady uzbrojenia, kalibracja, restart do DFU/MSC, reset.
@@ -188,12 +188,12 @@ Pushing a `v*` tag runs GitHub Actions with automatic release notes. The CI work
 
 ### Windows
 
-1. Pobierz [`Rotorlab-Setup.exe`](https://github.com/0nskal/rotorlab/releases/latest/download/Rotorlab-Setup.exe) z najnowszego wydania.
+1. Pobierz [`WorkspaceFPV-Setup.exe`](https://github.com/0nskal/WorkspaceFPV/releases/latest/download/WorkspaceFPV-Setup.exe) z najnowszego wydania.
 2. Uruchom instalator. Appka nie jest podpisana certyfikatem, więc SmartScreen może pokazać ostrzeżenie: **Więcej informacji → Uruchom mimo to**.
 
 ### Przeglądarka
 
-Otwórz [rotorlab.pages.dev/app](https://rotorlab.pages.dev/app/) w **Chrome lub Edge 89+** (WebSerial). Firefox i Safari nie obsługują portu szeregowego.
+Otwórz [workspacefpv.pages.dev/app](https://workspacefpv.pages.dev/app/) w **Chrome lub Edge 89+** (WebSerial). Firefox i Safari nie obsługują portu szeregowego.
 
 Wymagania: kabel USB z danymi, Betaflight 4.3+ na kontrolerze lotu.
 
@@ -201,7 +201,7 @@ Wymagania: kabel USB z danymi, Betaflight 4.3+ na kontrolerze lotu.
 
 1. Zamknij Betaflight Configurator (zajmuje port) i zdejmij śmigła.
 2. Podłącz kontroler lotu kablem USB i kliknij **Połącz**. Nie masz drona pod ręką? Wybierz **Tryb demo**.
-3. Opcjonalnie wklej klucz Anthropic API w **Ustawieniach**. Zapisuje się lokalnie, nie trafia do repo ani na żaden serwer Rotorlab.
+3. Opcjonalnie wklej klucz Anthropic API w **Ustawieniach**. Zapisuje się lokalnie, nie trafia do repo ani na żaden serwer WorkspaceFPV.
 
 ## Jak to działa
 
@@ -219,8 +219,8 @@ Architektura warstwy Betaflight: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Bezpieczeństwo i prywatność
 
-- Przed każdą zmianą przez CLI Rotorlab zapisuje kopię `diff all`, pokazuje listę komend i czeka na potwierdzenie. Zmiany w zakładkach idą do FC dopiero po kliknięciu Zapisz i nigdy, gdy dron jest uzbrojony.
-- Po połączeniu Rotorlab blokuje uzbrajanie (jak Betaflight Configurator); blokada znika po rozłączeniu.
+- Przed każdą zmianą przez CLI WorkspaceFPV zapisuje kopię `diff all`, pokazuje listę komend i czeka na potwierdzenie. Zmiany w zakładkach idą do FC dopiero po kliknięciu Zapisz i nigdy, gdy dron jest uzbrojony.
+- Po połączeniu WorkspaceFPV blokuje uzbrajanie (jak Betaflight Configurator); blokada znika po rozłączeniu.
 - Test silników działa tylko po zaznaczeniu „Śmigła zdjęte”, ma przycisk STOP i zatrzymuje się po rozłączeniu albo zmianie zakładki.
 - Klucz API jest przechowywany lokalnie na Twoim urządzeniu.
 - Dane drona (konfiguracja, `diff all`, wynik reguł) trafiają do Anthropic tylko wtedy, gdy zadajesz pytanie asystentowi AI.
@@ -242,18 +242,18 @@ Testy (Node, bundlowane esbuildem), np. `npx esbuild app/src/bf/test-firmware.mj
 ### Deploy strony
 
 ```bash
-npm run build && node scripts/build-site.mjs && npx wrangler pages deploy site --project-name rotorlab
+npm run build && node scripts/build-site.mjs && npx wrangler@4.40.0 pages deploy site --project-name workspacefpv --branch main
 ```
 
 Skrypt `scripts/build-site.mjs` kopiuje `dist/` do `site/app/`, dzięki czemu appka w przeglądarce działa pod `/app/`. Strona (`site/`) jest domyślnie po angielsku z przełącznikiem EN/PL (działa też `?lang=pl`).
 
 ## Aktualizacje
 
-Wersja Windows aktualizuje się z poziomu appki: **Ustawienia → Aktualizacje** (przycisk „Sprawdź aktualizacje”, pobieranie z paskiem postępu, „Zainstaluj i uruchom ponownie”). Domyślnie Rotorlab sprawdza nowe wersje ~5 s po starcie (można wyłączyć tym samym miejscu) i pokazuje dyskretną informację. Pobrana aktualizacja instaluje się też sama po zamknięciu appki. Dotyczy to wersji od 0.2.0; 0.1.0 trzeba raz pobrać ręcznie. Wersja w przeglądarce aktualizuje się sama po odświeżeniu strony.
+Wersja Windows aktualizuje się z poziomu appki: **Ustawienia → Aktualizacje** (przycisk „Sprawdź aktualizacje”, pobieranie z paskiem postępu, „Zainstaluj i uruchom ponownie”). Domyślnie WorkspaceFPV sprawdza nowe wersje ~5 s po starcie (można wyłączyć tym samym miejscu) i pokazuje dyskretną informację. Pobrana aktualizacja instaluje się też sama po zamknięciu appki. Dotyczy to wersji od 0.2.0; 0.1.0 trzeba raz pobrać ręcznie. Wersja w przeglądarce aktualizuje się sama po odświeżeniu strony.
 
 ## Wydania
 
-Proces: podbij `version` w `package.json` (np. `0.2.0`), zacommituj, `git tag v0.2.0 && git push --tags`, a resztę robi GitHub Actions. Workflow sprawdza, że tag zgadza się z wersją w `package.json` (inaczej kończy się błędem), buduje na Windows i wgrywa do GitHub Release `Rotorlab-Setup.exe`, `Rotorlab-Setup.exe.blockmap` oraz `latest.yml` (z tego pliku korzysta mechanizm aktualizacji).
+Proces: podbij `version` w `package.json` (np. `0.2.0`), zacommituj, `git tag v0.2.0 && git push --tags`, a resztę robi GitHub Actions. Workflow sprawdza, że tag zgadza się z wersją w `package.json` (inaczej kończy się błędem), buduje na Windows i wgrywa do GitHub Release `WorkspaceFPV-Setup.exe`, `WorkspaceFPV-Setup.exe.blockmap` oraz `latest.yml` (z tego pliku korzysta mechanizm aktualizacji).
 
 Wypchnięcie tagu `v*` uruchamia GitHub Actions z automatycznymi notatkami wydania. Workflow CI buduje projekt przy każdym pushu i pull requeście.
 

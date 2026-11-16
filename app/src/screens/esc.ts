@@ -265,7 +265,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       const bidirOff = isDshot(s.config.motorPwmProtocol) && !s.config.bidir ? ` · ${t('xray.bidirOff')}` : '';
       hotText = `${partLabel('esc')} · ${protocolName(s.config.motorPwmProtocol).replace(/^DSHOT/, 'DShot')}${bidirOff}`;
     }
-    const film = `ROTORLAB · ${(s.info?.craftName || t('common.drone')).toUpperCase()} · ${fmtDate()}`;
+    const film = `WORKSPACEFPV · ${(s.info?.craftName || t('common.drone')).toUpperCase()} · ${fmtDate()}`;
     const key = JSON.stringify([hot, hotText, propsOut, film]);
     if (key === droneKey) return;
     droneKey = key;

@@ -18,7 +18,7 @@ export interface Settings {
   autoElrsInfo: boolean;
 }
 
-const KEY = 'rotorlab.settings.v1';
+const KEY = 'workspacefpv.settings.v1';
 const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: true };
 
 export class SettingsStore {
@@ -57,7 +57,7 @@ export class SettingsStore {
   }
 }
 
-const BACKUP_KEY = 'rotorlab.backup.v1';
+const BACKUP_KEY = 'workspacefpv.backup.v1';
 
 export interface StoredBackup {
   at: number;

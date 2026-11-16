@@ -27,7 +27,7 @@ export const enBfCore = {
   errMax: 'At most {n}',
   errLen: 'At most {n} characters',
   armDisableSetting: 'Disable arming while connected (recommended)',
-  armDisableNote: 'Like the Betaflight Configurator, Rotorlab tells the FC not to arm while it is connected and releases it on a clean disconnect.',
+  armDisableNote: 'Like the Betaflight Configurator, WorkspaceFPV tells the FC not to arm while it is connected and releases it on a clean disconnect.',
   arm: {
     NO_GYRO: 'No gyro detected',
     FAILSAFE: 'Failsafe is active',

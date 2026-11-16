@@ -1,4 +1,4 @@
-// Builds every icon from assets/icon-source.png (1024 px, the Rotorlab logo):
+// Builds every icon from assets/icon-source.png (1024 px, the WorkspaceFPV logo):
 // assets/icon.png (512), assets/icon.ico (16..256), docs/icon.png (256),
 // app/src/ui/logo.png (96, in-app top bar), site/favicon.png (64), site/apple-touch-icon.png (180).
 import sharp from 'sharp';

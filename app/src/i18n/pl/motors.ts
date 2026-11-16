@@ -32,7 +32,7 @@ export const plBfMotors: typeof enBfMotors = {
   aiSummary: 'Zakładka ESC: protokół silników {protocol}, dwukierunkowy DShot {bidir}, idle {idle} %, {poles} biegunów, {dir}. Co powinienem sprawdzić lub zmienić?',
   confirmTitle: 'Zapis ustawień silników',
   confirmIntro: 'Te wartości trafią do kontrolera lotu:',
-  confirmReboot: 'Zmienił się protokół lub dwukierunkowy DShot, więc FC zrestartuje się po zapisie, a Rotorlab połączy się ponownie.',
+  confirmReboot: 'Zmienił się protokół lub dwukierunkowy DShot, więc FC zrestartuje się po zapisie, a WorkspaceFPV połączy się ponownie.',
   saved: 'Ustawienia silników zapisane.',
   savedReboot: 'Zapisano. FC się restartuje…',
   saveFail: 'Nie udało się zapisać: {msg}',

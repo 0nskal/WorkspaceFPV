@@ -76,7 +76,7 @@ export const mount: ScreenMount = (el, ctx) => {
           <button class="btn s" type="button" data-act="upd-check">${t('settings.updCheck')}</button>
           <button class="btn p" type="button" data-act="upd-download" hidden>${t('settings.updDownload')}</button>
           <button class="btn p" type="button" data-act="upd-install" hidden>${t('settings.updInstall')}</button>
-          <a class="btn s" href="https://github.com/0nskal/rotorlab/releases" target="_blank" rel="noopener">${t('settings.updNotes')}</a>
+          <a class="btn s" href="https://github.com/0nskal/WorkspaceFPV/releases" target="_blank" rel="noopener">${t('settings.updNotes')}</a>
         </div>`
             : `<p class="about">${t('settings.updWeb')}</p>`
         }

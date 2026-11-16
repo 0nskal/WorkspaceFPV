@@ -435,13 +435,13 @@ export function createApp(root: HTMLElement): AppContext {
     buildShell();
     renderBar();
     mountScreen();
-    window.rotorlab?.setLanguage?.(lang);
+    window.workspacefpv?.setLanguage?.(lang);
   });
 
   buildShell();
   renderBar();
   mountScreen();
-  window.rotorlab?.setLanguage?.(getLang());
+  window.workspacefpv?.setLanguage?.(getLang());
 
   // ?demo=1 enters demo mode right away (for screenshots)
   if (new URLSearchParams(location.search).get('demo') === '1') void connectDemo();

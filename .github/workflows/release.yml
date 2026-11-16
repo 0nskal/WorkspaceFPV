@@ -29,8 +29,8 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/Rotorlab-Setup.exe
-            release/Rotorlab-Setup.exe.blockmap
+            release/WorkspaceFPV-Setup.exe
+            release/WorkspaceFPV-Setup.exe.blockmap
             release/latest.yml
           fail_on_unmatched_files: true
           generate_release_notes: true

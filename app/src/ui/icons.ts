@@ -29,7 +29,7 @@ export function icon(name: IconName, size = 15, extra = ''): string {
   return `<svg class="i" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" ${extra}>${PATHS[name] ?? ''}</svg>`;
 }
 
-/** Rotorlab logo (app icon), rendered from assets/icon-source.png by scripts/make-icons.mjs. */
+/** WorkspaceFPV logo (app icon), rendered from assets/icon-source.png by scripts/make-icons.mjs. */
 export function logo(size = 24): string {
   return `<img class="logo" src="${logoUrl}" width="${size}" height="${size}" alt="" aria-hidden="true">`;
 }

@@ -2,7 +2,7 @@
  * Betaflight 4-way interface (FC <-> ESC bootloader), host side. Pure protocol: frames, CRC, commands.
  * Implemented from the description in design/BETAFLIGHT-PARITY.md section 6 (clean-room, MIT).
  *
- * SAFETY: Rotorlab only reads. Every outgoing request goes through `encodeRequest`, which refuses any command that is
+ * SAFETY: WorkspaceFPV only reads. Every outgoing request goes through `encodeRequest`, which refuses any command that is
  * not in READ_ONLY_CMDS (no erase, no flash write, no EEPROM write, no mode change). The guard is in code, not in UI.
  */
 import { crc16Xmodem } from './crc';
@@ -40,7 +40,7 @@ export const ACK = {
   GENERAL_ERROR: 0x0f,
 } as const;
 
-/** The ONLY commands Rotorlab may send. Anything else throws before a byte reaches the wire. */
+/** The ONLY commands WorkspaceFPV may send. Anything else throws before a byte reaches the wire. */
 export const READ_ONLY_CMDS: ReadonlySet<number> = new Set<number>([
   CMD.TEST_ALIVE,
   CMD.PROTOCOL_GET_VERSION,

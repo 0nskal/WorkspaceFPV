@@ -3,7 +3,7 @@ import type { enBfSetup } from '../en/bfSetup';
 export const plBfSetup: typeof enBfSetup = {
   tab: 'Setup',
   title: 'Setup',
-  notBtfl: 'To nie jest Betaflight (albo API MSP jest starsze niż 1.44). Dla takiego firmware Rotorlab oferuje tylko funkcje oparte na CLI.',
+  notBtfl: 'To nie jest Betaflight (albo API MSP jest starsze niż 1.44). Dla takiego firmware WorkspaceFPV oferuje tylko funkcje oparte na CLI.',
   gAttitude: 'Położenie',
   roll: 'Roll',
   pitch: 'Pitch',
@@ -42,7 +42,7 @@ export const plBfSetup: typeof enBfSetup = {
   gArming: 'Stan uzbrojenia',
   armOk: 'Nic nie blokuje uzbrojenia.',
   armNormal: 'normalne przy połączeniu',
-  armRotorlab: 'Rotorlab blokuje uzbrojenie, dopóki jest połączony (patrz Ustawienia).',
+  armWorkspaceFPV: 'WorkspaceFPV blokuje uzbrojenie, dopóki jest połączony (patrz Ustawienia).',
   rebootReq: 'FC zgłasza, że potrzebny jest restart.',
   gCal: 'Kalibracja',
   accBtn: 'Kalibruj akcelerometr',

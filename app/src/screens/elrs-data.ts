@@ -38,7 +38,7 @@ export interface ElrsLocal {
   verified: boolean;
 }
 
-const KEY = 'rotorlab.elrs.v1';
+const KEY = 'workspacefpv.elrs.v1';
 const EMPTY: ElrsLocal = { txVersion: '', phrase: false, region: '', method: '', verified: false };
 
 export function loadLocal(): ElrsLocal {

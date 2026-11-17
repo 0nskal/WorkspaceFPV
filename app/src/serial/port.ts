@@ -75,6 +75,9 @@ export class SerialTransport {
   async open(baudRate = 115200): Promise<void> {
     await this.port.open({ baudRate, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none', bufferSize: 4096 });
     if (!this.port.readable || !this.port.writable) throw new Error(t('serial.portUnavailable'));
+    // Betaflight's USB VCP only transmits while the host holds DTR high (some boards, e.g. GEPRC F722, stay silent
+    // otherwise and every MSP request times out). The Configurator asserts it too. Best effort: not all drivers support it.
+    await this.port.setSignals({ dataTerminalReady: true, requestToSend: true }).catch(() => undefined);
     this.writer = this.port.writable.getWriter();
     this.reader = this.port.readable.getReader();
     navigator.serial.addEventListener('disconnect', this.onDisconnect);

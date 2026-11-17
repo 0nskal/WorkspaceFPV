@@ -1,4 +1,5 @@
 import { findPeaks, nextPow2, welchPsd } from './fft';
+import { logStats } from './quality';
 import { stepMetrics, stepResponse } from './step';
 import type { AnalysisResult, AxisResult, LogData } from './types';
 
@@ -37,5 +38,5 @@ export function analyze(log: LogData, name = ''): AnalysisResult {
     return { name: nm, step, windows, ...m };
   });
 
-  return { name, fs, duration: log.duration, rows: log.rows, rcFallback: log.rcFallback, axes, spectrum: { df, maxHz, db }, peaks: { motor, frame } };
+  return { name, fs, duration: log.duration, rows: log.rows, rcFallback: log.rcFallback, axes, spectrum: { df, maxHz, db }, peaks: { motor, frame }, stats: logStats(log), ...(log.headerPid ? { headerPid: log.headerPid } : {}) };
 }

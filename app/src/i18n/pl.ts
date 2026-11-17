@@ -14,6 +14,7 @@ import { plBfMotors } from './pl/motors';
 import { plBfBlackbox } from './pl/blackbox';
 import { plBfCli } from './pl/cli';
 import { plBfOsd } from './pl/osd';
+import { plPidWizard } from './pl/pid-wizard';
 import { plAiProviders } from './pl/ai-providers';
 import { plMode, plNav, plSnip, plTipsUi } from './pl/ui-modes';
 import { plTipsCore } from './pl/tips-core';
@@ -462,6 +463,7 @@ export const pl: Dict = {
   bfBlackbox: plBfBlackbox,
   bfCli: plBfCli,
   bfOsd: plBfOsd,
+  pidWizard: plPidWizard,
   aiProviders: plAiProviders,
   mode: plMode,
   nav: plNav,

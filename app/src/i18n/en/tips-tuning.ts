@@ -103,6 +103,14 @@ export const enTipsTuning = {
     apply:
       "Writes the suggested values to the flight controller as CLI commands after you confirm in a dialog, and the quad reboots. Check that the changes make sense for how you fly, and make a short test flight afterwards.",
   },
+  pidWizard: {
+    intro:
+      "The wizard walks you through one tuning round: list the parts, back up the setup, prepare logging, fly a short script, load the log and get new PIDs. You fly, the app never controls the drone. Apply the result, fly the same script again and compare the rounds.",
+    quality:
+      "How useful the log is for tuning, 0 to 100. It counts sharp stick moves on each axis, the throttle range, the logging rate, the length and how often the motors hit 100 percent. Under 50 the proposal is a rough guess: fly again with the moves listed below.",
+    headerPid:
+      "A Blackbox log stores the PIDs it was flown with. If you changed PIDs after the flight, the FC has other numbers than the log. The proposal is computed from the log's PIDs, because those produced the flight you see.",
+  },
   cli: {
     intro:
       "The CLI is Betaflight's text console. Everything the other tabs set, plus settings that have no tab, can be changed here with commands. A beginner does not need it. If you use it, take a backup first (see the tip on diff all) and do not run commands you do not understand.",

@@ -7,6 +7,7 @@ import type { ScreenMount } from '../context';
 import type { Key } from '../i18n';
 import type { IconName } from '../ui/icons';
 import * as autotune from './autotune';
+import * as pidWizard from './pid-wizard';
 import * as bfConfig from './bf-config';
 import * as bfFailsafe from './bf-failsafe';
 import * as bfPorts from './bf-ports';
@@ -52,6 +53,7 @@ export const SCREENS: ScreenDef[] = [
   { id: 'osd', titleKey: 'bfOsd.tab', icon: 'monitor', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning', level: 'basic' },
   { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'wave', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
+  { id: 'pid-wizard', titleKey: 'pidWizard.tab', icon: 'target', mount: pidWizard.mount, requiresConnection: false, group: 'tuning', level: 'basic' },
   { id: 'autotune', titleKey: 'tabs.autotune', icon: 'sliders', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'expert' },
   { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools', level: 'basic' },
   { id: 'cli', titleKey: 'bfCli.tab', icon: 'terminal', mount: bfCli.mount, requiresConnection: true, group: 'tools', level: 'expert' },
@@ -76,6 +78,7 @@ const SECTION_OF: Record<string, Section> = {
   osd: 'flight',
   'bf-tuning': 'tuning',
   blackbox: 'tuning',
+  'pid-wizard': 'tuning',
   autotune: 'tuning',
   elrs: 'tools',
   cli: 'tools',

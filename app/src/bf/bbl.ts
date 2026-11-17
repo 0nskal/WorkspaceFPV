@@ -6,7 +6,7 @@
  * columns are kept; the other frames are decoded just to stay in sync.
  * Pure TypeScript (no DOM), runs in a Web Worker and in Node.
  */
-import type { LogData } from '../analysis/types';
+import type { HeaderPid, LogData, PidTriple } from '../analysis/types';
 import { LogError } from '../analysis/parse';
 
 export const BBL_MAGIC = 'H Product:Blackbox flight data recorder by Nicholas Sherlock';
@@ -312,8 +312,33 @@ export interface DecodedLog {
   setpoint: Float32Array[];
   motor: Float32Array[];
   rcFallback: boolean;
+  /** rcCommand[3] (throttle, 1000..2000) when the log has it. */
+  throttle: Float32Array | null;
+  /** Every "H key:value" header line of this log (PIDs, motor output range, ...). */
+  info: Record<string, string>;
   /** Frames dropped while resynchronising after corrupt data. */
   corrupt: number;
+}
+
+/** "48,82,38" -> [48, 82, 38]; null when the value is missing or not three numbers. */
+function pidTriple(v: string | undefined): PidTriple | null {
+  if (!v) return null;
+  const n = v.split(',').map((x) => Number(x.trim()));
+  return n.length >= 3 && n.slice(0, 3).every((x) => Number.isFinite(x)) ? [n[0]!, n[1]!, n[2]!] : null;
+}
+
+/** PIDs the quad flew with, from the header lines rollPID / pitchPID / yawPID (P,I,D; Betaflight 3.x-2025.x). */
+export function headerPid(info: Record<string, string>): HeaderPid | null {
+  const roll = pidTriple(info['rollPID']);
+  const pitch = pidTriple(info['pitchPID']);
+  const yaw = pidTriple(info['yawPID']);
+  return roll && pitch && yaw ? { roll, pitch, yaw } : null;
+}
+
+/** Motor output range from "motorOutput:min,max" (e.g. 158,2047 for DShot); null when absent. */
+export function motorRange(info: Record<string, string>): [number, number] | null {
+  const n = (info['motorOutput'] ?? '').split(',').map((x) => Number(x.trim()));
+  return n.length >= 2 && Number.isFinite(n[0]) && Number.isFinite(n[1]) && n[1]! > n[0]! ? [n[0]!, n[1]!] : null;
 }
 
 function find(names: string[], n: string): number {
@@ -346,6 +371,7 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
     mi.push(k);
   }
   const motor0 = mi[0] ?? -1;
+  const ti = find(names, 'rcCommand[3]');
   const minThrottle = Number(h.info['minthrottle'] ?? 1000);
   const vbatRef = Number(h.info['vbatref'] ?? 0);
   const minMotor = Number((h.info['motorOutput'] ?? '0').split(',')[0]);
@@ -354,6 +380,7 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
   const gy = [new Grow(), new Grow(), new Grow()];
   const sp = [new Grow(), new Grow(), new Grow()];
   const mo = mi.map(() => new Grow());
+  const thr = ti >= 0 ? new Grow() : null;
 
   let prev: number[] | null = null;
   let prev2: number[] | null = null;
@@ -375,6 +402,7 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
       sp[a]!.push(f[si[a]!]!);
     }
     for (let m = 0; m < mi.length; m++) mo[m]!.push(f[mi[m]!]!);
+    thr?.push(f[ti]!);
   };
 
   const skipDef = (d: FieldDef | null): void => {
@@ -497,7 +525,7 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
     t[i] = t[i]! + off;
   }
   const cut = (g: Grow) => g.buf.subarray(0, g.n);
-  return { rows: time.n, time: t, gyro: gy.map(cut), setpoint: sp.map(cut), motor: mo.map(cut), rcFallback, corrupt };
+  return { rows: time.n, time: t, gyro: gy.map(cut), setpoint: sp.map(cut), motor: mo.map(cut), rcFallback, throttle: thr ? cut(thr) : null, info: h.info, corrupt };
 }
 
 /** Header-level summary without decoding frames (fast): firmware, craft, number of logs. */
@@ -567,5 +595,11 @@ export async function parseBbl(file: Blob, onProgress: (frac: number) => void): 
   const dt = dts[dts.length >> 1] ?? 0;
   if (!(dt > 0)) throw new LogError('short', 'at.err.noRate');
   onProgress(1);
-  return { fs: 1e6 / dt, rows: n, duration: (best.time[n - 1]! - best.time[0]!) / 1e6, setpoint: best.setpoint, gyro: best.gyro, motor: best.motor, rcFallback: best.rcFallback };
+  const out: LogData = { fs: 1e6 / dt, rows: n, duration: (best.time[n - 1]! - best.time[0]!) / 1e6, setpoint: best.setpoint, gyro: best.gyro, motor: best.motor, rcFallback: best.rcFallback };
+  if (best.throttle) out.throttle = best.throttle;
+  const range = motorRange(best.info);
+  if (range) out.motorRange = range;
+  const pid = headerPid(best.info);
+  if (pid) out.headerPid = pid;
+  return out;
 }

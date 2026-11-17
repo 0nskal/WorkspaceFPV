@@ -13,6 +13,29 @@ export interface LogData {
   motor: Float32Array[];
   /** true, gdy setpoint przyblizono z rcCommand. */
   rcFallback: boolean;
+  /** Throttle stick (rcCommand[3], 1000..2000) when the log has it; drives the throttle coverage of the log quality score. */
+  throttle?: Float32Array;
+  /** Motor output range from the log header (`motorOutput`), for the saturation share; absent for CSV. */
+  motorRange?: [min: number, max: number];
+  /** PIDs the quad flew with, from the log header (rollPID/pitchPID/yawPID); absent for CSV. */
+  headerPid?: HeaderPid;
+}
+
+/** P/I/D per axis as written in a Blackbox log header. */
+export interface HeaderPid {
+  roll: PidTriple;
+  pitch: PidTriple;
+  yaw: PidTriple;
+}
+
+/** Coverage statistics of a log, computed next to the analysis (inputs of analysis/quality.ts). */
+export interface LogStats {
+  /** Seconds of clear stick movement (|setpoint| above the activity threshold) per axis roll/pitch/yaw. */
+  activeSec: [number, number, number];
+  /** Share of 10 % throttle bins (0-100 %) that hold at least a little data; null without a throttle column. */
+  throttleCoverage: number | null;
+  /** Share of samples where at least one motor sits at its maximum; null when the motor range is unknown. */
+  saturation: number | null;
 }
 
 export interface Peak {
@@ -46,6 +69,10 @@ export interface AnalysisResult {
   axes: AxisResult[];
   spectrum: { df: number; maxHz: number; db: number[][] };
   peaks: { motor: Peak | null; frame: Peak | null };
+  /** Coverage statistics for the log quality score (optional: older cached results do not have it). */
+  stats?: LogStats;
+  /** PIDs from the log header, when the log has them. */
+  headerPid?: HeaderPid;
 }
 
 export type PidTriple = [p: number, i: number, d: number];

@@ -61,6 +61,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
   const sp = [new Col(), new Col(), new Col()];
   const gy = [new Col(), new Col(), new Col()];
   const mo: Col[] = [];
+  let thr: Col | null = null;
   let rcFallback = false;
   // [indeks kolumny, funkcja zapisu] posortowane rosnaco
   let want: { idx: number; push: (v: number) => void }[] = [];
@@ -93,6 +94,12 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
       const c = new Col();
       mo.push(c);
       w.push({ idx: mi, push: (v) => c.push(v) });
+    }
+    const ti = find('rccommand[3]');
+    if (ti >= 0) {
+      const c = new Col();
+      thr = c;
+      w.push({ idx: ti, push: (v) => c.push(v) });
     }
     if (missing.length) throw new LogError('columns', 'at.err.missingCols', { cols: missing.join(', ') });
     w.sort((a, b) => a.idx - b.idx);
@@ -175,7 +182,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
   if (!headerDone) throw new LogError('columns', 'at.err.noTimeCol');
 
   // wyrownanie dlugosci (wiersze z brakami): przycinamy do najkrotszej
-  const cols: { n: number }[] = [time, ...sp, ...gy, ...mo];
+  const cols: { n: number }[] = [time, ...sp, ...gy, ...mo, ...(thr ? [thr] : [])];
   const n = Math.min(...cols.map((c) => c.n));
   if (n < 1000) throw new LogError('short', 'at.err.tooShort', { n });
   void timeIdx;
@@ -201,5 +208,8 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
     for (let i = 0; i < a.length; i++) b[i] = a[i]! * rcScale;
     return b;
   });
-  return { fs, rows: n, duration: (time.buf[n - 1]! - time.buf[0]!) / 1e6, setpoint: spOut, gyro: gy.map(cut), motor: mo.map(cut), rcFallback };
+  const out: LogData = { fs, rows: n, duration: (time.buf[n - 1]! - time.buf[0]!) / 1e6, setpoint: spOut, gyro: gy.map(cut), motor: mo.map(cut), rcFallback };
+  const thrCol = thr as Col | null; // assigned inside setupHeader (TypeScript cannot see it)
+  if (thrCol) out.throttle = cut(thrCol);
+  return out;
 }

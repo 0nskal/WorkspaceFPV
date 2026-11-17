@@ -78,5 +78,13 @@ export function synthLog(opts: { seconds?: number; fs?: number; seed?: number; a
     for (let i = 0; i < n; i++) arr[i] = 1300 + 80 * Math.sin(i * dt * 0.7 + m) + (noise ? gauss() * 8 : 0);
     return arr;
   });
-  return { fs, rows: n, duration: seconds, setpoint, gyro, motor, rcFallback: false };
+  // throttle: slow sweeps through most of the range plus a few punches (feeds the log quality throttle coverage)
+  const throttle = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i * dt;
+    const sweep = 0.45 + 0.3 * Math.sin(t * 0.55) + 0.12 * Math.sin(t * 1.9);
+    const punch = t % 9 < 0.6 ? 0.35 : 0;
+    throttle[i] = 1000 + 1000 * Math.max(0, Math.min(1, sweep + punch));
+  }
+  return { fs, rows: n, duration: seconds, setpoint, gyro, motor, rcFallback: false, throttle, motorRange: [1000, 2000] };
 }

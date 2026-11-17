@@ -83,6 +83,14 @@ export const plTipsTuning: typeof enTipsTuning = {
       "Kasuje **wszystkie** logi z pamięci flash. Nie da się tego cofnąć, więc najpierw pobierz, jeśli chcesz zachować log. Duże kości kasują się dłużej.",
     msc: "Restartuje kontroler jako pendrive USB, żeby skopiować logi z karty SD albo flasha na płytkach, które to wspierają. Betaflight w tym trybie nie działa. Odłącz i podłącz USB, żeby wrócić do normalnej pracy.",
   },
+  pidWizard: {
+    intro:
+      "Kreator prowadzi przez jedną rundę strojenia: lista części, kopia ustawień, przygotowanie logowania, krótki lot według skryptu, wczytanie logu i nowe PID-y. Latasz Ty, aplikacja nigdy nie steruje dronem. Zapisz wynik, przeleć ten sam skrypt jeszcze raz i porównaj rundy.",
+    quality:
+      "Na ile log nadaje się do strojenia, od 0 do 100. Liczą się ostre ruchy drążkiem na każdej osi, zakres gazu, częstotliwość logowania, długość i to, jak często silniki dochodzą do 100 procent. Poniżej 50 propozycja jest zgrubna: poleć jeszcze raz z ruchami wypisanymi niżej.",
+    headerPid:
+      "Log Blackbox zapisuje PID-y, z którymi dron leciał. Jeśli po locie zmieniłeś PID-y, FC ma inne liczby niż log. Propozycja jest liczona od PID-ów z logu, bo to one dały lot, który widzisz.",
+  },
   autotune: {
     intro:
       "Autotune czyta log Blackbox, sprawdza, jak quad szedł za ruchami drążków, i proponuje małe zmiany PID. Nie stroi w locie. Latasz, pobierasz log, wrzucasz go tutaj i sam decydujesz, czy zastosować propozycję. Najlepiej działa z logiem z kilkoma ostrymi ruchami drążków, jak rolki i flipy.",

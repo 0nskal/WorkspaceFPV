@@ -1,0 +1,356 @@
+/*
+ * WorkspaceFPV 1.0 layout layer (loaded last). Same X-ray colours, a calmer and more readable layout modelled on the
+ * Betaflight App: one page title with a thin amber rule, panels with an amber "pill" title sitting on the border,
+ * form rows as [control | label | help bulb], 14 px sans text, mono only for numbers and code.
+ *
+ * Kit for screens (see docs in AGENTS-UI.md):
+ *   <header class="bf-head"><h2>Title</h2> ...actions</header>            page title
+ *   <section class="bf-panel"><header><span class="bf-legend">Name</span>${tip()}</header> ... </section>
+ *   <div class="bf-row"><div class="bf-ctl">control</div><label class="bf-lbl">Label</label>${tip}</div>
+ *   <dl class="v1-kv"><dt>Key</dt><dd>value</dd></dl>                     key / value list (info boxes)
+ *   <button class="btn amber">Primary</button>  .btn ghost  .btn danger   buttons
+ *   <div class="v1-warn">…</div>  <div class="v1-note">…</div>              warning / note blocks
+ */
+:root {
+  --v1-panel: #0b141c;
+  --v1-line: #263848;
+  --v1-line-2: #1a2834;
+  --v1-field: #0e1923;
+  --v1-field-line: #33495b;
+  --v1-ink-2: #b9d0dc;
+  --v1-fs: 14px;
+}
+
+/* ---------- base text ---------- */
+.screen {
+  font-size: var(--v1-fs);
+  line-height: 1.45;
+}
+
+/* ---------- sidebar ---------- */
+.nav a {
+  font-size: 14px;
+}
+.sgrp-h {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.sgrp-sub {
+  margin: 10px 0 2px 12px;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sub);
+  opacity: 0.8;
+}
+.nav a.ext span {
+  flex: 1;
+}
+.nav a.ext::after {
+  content: '↗';
+  font-size: 11px;
+  color: var(--sub);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.nav a.ext:hover::after {
+  opacity: 1;
+}
+
+/* ---------- page header ---------- */
+.bf-head {
+  height: auto;
+  min-height: 64px;
+  padding: 16px 28px 12px;
+  border-bottom: 1px solid rgba(224, 168, 46, 0.55);
+  gap: 16px;
+}
+.bf-head h2 {
+  font: 500 24px/1.2 var(--sans);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.bf-head .bf-count {
+  font-size: 12px;
+}
+.bf-body {
+  padding: 26px 28px 28px;
+}
+.bf-grid {
+  gap: 30px 22px;
+}
+
+/* ---------- panels: amber pill title on the border ---------- */
+.bf-panel {
+  position: relative;
+  margin-top: 12px;
+  padding: 4px 18px 14px;
+  border: 1px solid var(--v1-line);
+  border-radius: 12px;
+  background: var(--v1-panel);
+}
+.bf-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 0;
+  margin: -17px 0 10px -4px;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.bf-panel > header > :first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bf-legend,
+.bf-panel > header > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--amber);
+  color: #15110a;
+  font: 600 13.5px/1.25 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+.bf-panel > header small {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--v1-panel);
+  font-size: 12px;
+  color: var(--sub);
+  text-align: right;
+}
+.bf-legend .tip .bulb-glass,
+.bf-legend .tip .bulb-base,
+.bf-legend .tip .bulb-fil {
+  stroke: #15110a;
+}
+
+/* ---------- form rows: control | label | help ---------- */
+.bf-fields {
+  gap: 0;
+}
+.bf-row {
+  grid-template-columns: auto minmax(0, 1fr) 22px;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 7px 0 7px 8px;
+  border-bottom: 0;
+}
+.bf-row::before {
+  left: -2px;
+  top: 6px;
+  bottom: 6px;
+  border-radius: 3px;
+}
+.bf-row .bf-ctl {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bf-row .bf-lbl {
+  grid-column: 2;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.35;
+}
+.bf-row > .tip,
+.bf-row > .bf-tip-gap {
+  grid-column: 3;
+  justify-self: end;
+}
+.bf-row > .bf-note,
+.bf-row > .bf-err {
+  grid-column: 2 / -1;
+  font-size: 12px;
+}
+.bf-row > .bf-err:empty {
+  display: none;
+}
+.bf-row.info .bf-ctl {
+  min-width: 84px;
+}
+.bf-info {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.bf-row.bare {
+  padding: 0;
+}
+
+/* inputs, selects */
+.bf-ctl input[type='number'],
+.bf-ctl input[type='text'],
+.bf-ctl select,
+.v1-in {
+  height: 32px;
+  border: 1px solid var(--v1-field-line);
+  background: var(--v1-field);
+  color: var(--ink);
+  font: 500 13.5px var(--mono);
+  border-radius: 8px;
+}
+.bf-ctl input[type='number'] {
+  width: 92px;
+  padding: 0 6px 0 10px;
+}
+.bf-ctl input[type='text'] {
+  width: 200px;
+  padding: 0 10px;
+  font-family: var(--sans);
+}
+.bf-ctl select {
+  min-width: 150px;
+  max-width: 240px;
+  padding: 0 30px 0 10px;
+  font-family: var(--sans);
+}
+.bf-ctl input:hover:not(:disabled),
+.bf-ctl select:hover:not(:disabled) {
+  border-color: #4c6a80;
+}
+.bf-unit {
+  font-size: 12px;
+  color: var(--sub);
+}
+
+/* switch: pill, amber when on */
+.bf-sw i {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #3a5266;
+  background: #101c26;
+}
+.bf-sw i::after {
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #6e8798;
+}
+.bf-sw.on i {
+  border-color: var(--amber);
+  background: var(--amber);
+}
+.bf-sw.on i::after {
+  transform: translateX(16px);
+  background: #15110a;
+}
+.bf-row.chg .bf-sw.on i {
+  border-color: var(--hot);
+  background: var(--hot);
+}
+.bf-row.chg .bf-sw.on i::after {
+  background: #fff;
+}
+.bf-sw .bf-sw-t {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* save bar */
+.bf-save {
+  height: 62px;
+  padding: 0 28px;
+}
+.bf-save .btn.light {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #15110a;
+  font-weight: 600;
+}
+.bf-save .btn.light:hover:not(:disabled) {
+  background: #ecb942;
+}
+
+/* ---------- shared kit ---------- */
+.btn.amber {
+  background: var(--amber);
+  border: 1px solid var(--amber);
+  color: #15110a;
+  font-weight: 600;
+}
+.btn.amber:hover:not(:disabled) {
+  background: #ecb942;
+}
+.btn.danger {
+  background: #c42d14;
+  border: 1px solid #c42d14;
+  color: #fff;
+  font-weight: 600;
+}
+.btn.danger:hover:not(:disabled) {
+  background: #db3a1f;
+}
+.v1-kv {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px 16px;
+  font-size: 13.5px;
+}
+.v1-kv dt {
+  font-weight: 600;
+  color: var(--text);
+}
+.v1-kv dd {
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.v1-kv dd.ok {
+  color: #5fd3a5;
+}
+.v1-kv dd.warn {
+  color: var(--amber);
+}
+.v1-kv dd.bad {
+  color: var(--hot);
+}
+.v1-warn,
+.v1-note {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.v1-warn {
+  border: 1px solid rgba(255, 74, 46, 0.55);
+  background: rgba(255, 74, 46, 0.08);
+}
+.v1-warn strong {
+  color: var(--hot);
+}
+.v1-note {
+  border: 1px solid rgba(224, 168, 46, 0.5);
+  background: rgba(224, 168, 46, 0.07);
+}
+.v1-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px 22px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .bf-body {
+    padding: 22px 18px;
+  }
+  .bf-head {
+    padding: 14px 18px 10px;
+  }
+}

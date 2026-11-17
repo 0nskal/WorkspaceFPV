@@ -27,8 +27,9 @@ export function decorateForm(el: HTMLElement, rows: RowRule[], panels: PanelRule
       const rule = rows.find((r) => (typeof r.key === 'string' ? r.key === key : r.key.test(key)));
       if (!rule) return;
       if (rule.expert) row.dataset.level = 'expert';
-      const label = row.querySelector<HTMLElement>('label.bf-lbl');
-      if (rule.tip && label && !label.querySelector('.tip')) label.insertAdjacentHTML('beforeend', ` ${tip(rule.tip)}`);
+      // the curated tip takes the row's help slot (right column), replacing the field's own short tip
+      const slot = row.querySelector<HTMLElement>(':scope > .tip:not([data-decor]), :scope > .bf-tip-gap');
+      if (rule.tip && slot) slot.outerHTML = tip(rule.tip).replace('class="tip"', 'class="tip" data-decor');
     });
     el.querySelectorAll<HTMLElement>('.bf-panel').forEach((panel) => {
       const span = panel.querySelector<HTMLElement>(':scope > header > span');

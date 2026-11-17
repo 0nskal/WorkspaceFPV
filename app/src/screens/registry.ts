@@ -60,9 +60,9 @@ export const SCREENS: ScreenDef[] = [
 
 export const DEFAULT_SCREEN = SCREENS[0]!.id;
 
-/** Sidebar sections (Start, Hardware, Flight, Tuning, Tools) and which tab belongs where. */
-export type Section = 'start' | 'hardware' | 'flight' | 'tuning' | 'tools';
-export const SECTIONS: Section[] = ['start', 'hardware', 'flight', 'tuning', 'tools'];
+/** Sidebar sections (Start, Hardware, Tuning; Tools holds external links) and which tab belongs where. */
+export type Section = 'start' | 'hardware' | 'tuning' | 'tools';
+export const SECTIONS: Section[] = ['start', 'hardware', 'tuning', 'tools'];
 const SECTION_OF: Record<string, Section> = {
   warsztat: 'start',
   setup: 'start',
@@ -71,16 +71,34 @@ const SECTION_OF: Record<string, Section> = {
   power: 'hardware',
   'bf-receiver': 'hardware',
   esc: 'hardware',
-  'bf-modes': 'flight',
-  failsafe: 'flight',
-  osd: 'flight',
+  sensors: 'hardware',
+  failsafe: 'hardware',
+  gps: 'hardware',
+  elrs: 'hardware',
   'bf-tuning': 'tuning',
+  'bf-modes': 'tuning',
+  osd: 'tuning',
   blackbox: 'tuning',
   autotune: 'tuning',
-  elrs: 'tools',
-  cli: 'tools',
+  cli: 'tuning',
 };
 export const sectionOf = (id: string): Section => SECTION_OF[id] ?? 'tools';
+
+/** Tools: links to the official configurators and USB driver utilities (open in the system browser). */
+export interface ToolLink {
+  id: string;
+  labelKey: Key;
+  url: string;
+}
+export const TOOL_LINKS: ToolLink[] = [
+  { id: 'betaflight', labelKey: 'nav.links.betaflight', url: 'https://app.betaflight.com/' },
+  { id: 'elrs', labelKey: 'nav.links.elrs', url: 'https://github.com/ExpressLRS/ExpressLRS-Configurator/releases' },
+  { id: 'esc', labelKey: 'nav.links.esc', url: 'https://esc-configurator.com/' },
+  { id: 'dji', labelKey: 'nav.links.dji', url: 'https://www.dji.com/pl/downloads/softwares/dji-assistant-2-consumer-drones-series' },
+  { id: 'cp210x', labelKey: 'nav.links.cp210x', url: 'https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers' },
+  { id: 'zadig', labelKey: 'nav.links.zadig', url: 'https://zadig.akeo.ie/' },
+  { id: 'impulserc', labelKey: 'nav.links.impulserc', url: 'https://github.com/ImpulseRC/ImpulseRC_Driver_Fixer' },
+];
 
 /** Tabs visible in the given interface mode. */
 export const screenVisible = (sc: ScreenDef, mode: 'basic' | 'expert'): boolean => mode === 'expert' || sc.level === 'basic';

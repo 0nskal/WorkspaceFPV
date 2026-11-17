@@ -15,7 +15,7 @@ import { hasWebSerial } from './serial/port';
 import type { CliEntry, FcLink } from './serial/types';
 import { SettingsStore, loadBackup, saveBackup } from './settings';
 import { getLang, onLanguageChange, t } from './i18n';
-import { DEFAULT_SCREEN, SCREENS, SECTIONS, findScreen, screenVisible, sectionOf } from './screens/registry';
+import { DEFAULT_SCREEN, SCREENS, SECTIONS, TOOL_LINKS, findScreen, screenVisible, sectionOf, type ToolLink } from './screens/registry';
 import type { Part } from './fc/diagnose';
 import { downloadText, escapeHtml, stamp } from './ui/dom';
 import { createDrawer, type Drawer } from './ui/drawer';
@@ -37,7 +37,8 @@ export function createApp(root: HTMLElement): AppContext {
   let link: FcLink | null = null;
   let stopTelemetry: (() => void) | null = null;
   let identity: { usbVendorId?: number; usbProductId?: number } | null = null;
-  let drawerOpen = true;
+  // the assistant panel starts closed so the tab gets the full width (toggle in the top bar, opens itself for AI answers)
+  let drawerOpen = false;
 
   /** Betaflight configuration store + session (ctx.bf); the shared FcState core is derived from it. */
   const bf = new BfSession({
@@ -295,6 +296,11 @@ export function createApp(root: HTMLElement): AppContext {
     const items = SCREENS.filter((sc) => sc.nav !== false && screenVisible(sc, mode));
     return (
       SECTIONS.map((sec) => {
+        if (sec === 'tools') {
+          const link = (l: ToolLink) => `<a class="ext" href="${l.url}" target="_blank" rel="noopener noreferrer" title="${t('nav.links.openExt')}">${icon(l.id === 'cp210x' || l.id === 'zadig' || l.id === 'impulserc' ? 'download' : 'external', 16)}<span>${t(l.labelKey)}</span></a>`;
+          const drivers = new Set(['cp210x', 'zadig', 'impulserc']);
+          return `<div class="sgrp"><div class="sgrp-h">${t('nav.tools')}</div>${TOOL_LINKS.filter((l) => !drivers.has(l.id)).map(link).join('')}<div class="sgrp-sub">${t('nav.links.driversHead')}</div>${TOOL_LINKS.filter((l) => drivers.has(l.id)).map(link).join('')}</div>`;
+        }
         const list = items.filter((sc) => sectionOf(sc.id) === sec);
         if (!list.length) return '';
         return `<div class="sgrp"><div class="sgrp-h">${t(`nav.${sec}`)}</div>${list

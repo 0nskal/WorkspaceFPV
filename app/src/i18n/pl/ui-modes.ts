@@ -46,6 +46,18 @@ export const plNav: typeof enNav = {
   searchEmpty: 'Nic nie znaleziono.',
   tab: 'Zakładka',
   problems: 'Do poprawy: {n}',
+  links: {
+    betaflight: 'Betaflight App',
+    elrs: 'ELRS Configurator',
+    esc: 'ESC Configurator',
+    dji: 'DJI Assistant 2',
+    cp210x: 'Sterowniki CP210x',
+    zadig: 'Zadig (sterownik USB)',
+    impulserc: 'ImpulseRC Driver Fixer',
+    driversHead: 'Sterowniki USB',
+    linksHead: 'Konfiguratory',
+    openExt: 'Otwiera się w przeglądarce',
+  },
 };
 
 export const plTipsUi: typeof enTipsUi = {

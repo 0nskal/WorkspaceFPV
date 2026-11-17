@@ -5,6 +5,7 @@
  */
 import type { AppContext } from '../context';
 import { t, type Key } from '../i18n';
+import { tipText } from '../ui/tip';
 import { escapeHtml } from '../ui/dom';
 import type { BfArea, BfData, MspWrite } from './store';
 
@@ -102,14 +103,15 @@ export function fieldHtml(f: FieldDef, draft: Draft, base: Draft): string {
   } else if (f.type === 'select') {
     ctl = `<select id="${id}" data-k="${escapeHtml(f.key)}" data-t="o" ${dis}>${(f.options ?? []).map((o) => `<option value="${escapeHtml(String(o.value))}" ${String(o.value) === String(v) ? 'selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
   } else if (f.type === 'check') {
-    ctl = `<label class="bf-sw ${v ? 'on' : ''}"><input id="${id}" data-k="${escapeHtml(f.key)}" data-t="b" type="checkbox" ${v ? 'checked' : ''} ${dis} /><i></i><span class="mono">${escapeHtml(fmtVal(f, v))}</span></label>`;
+    ctl = `<label class="bf-sw ${v ? 'on' : ''}"><input id="${id}" data-k="${escapeHtml(f.key)}" data-t="b" type="checkbox" ${v ? 'checked' : ''} ${dis} /><i></i><span class="bf-sw-t">${escapeHtml(fmtVal(f, v))}</span></label>`;
   } else {
     ctl = `<span class="bf-info mono">${escapeHtml(f.text ?? '')}</span>`;
   }
-  return `<div class="bf-row${chg ? ' chg' : ''}${err ? ' bad' : ''}${f.type === 'info' ? ' info' : ''}" data-row="${escapeHtml(f.key)}"${f.tip ? ` title="${escapeHtml(f.tip)}"` : ''}>
-    <label class="bf-lbl" for="${id}">${escapeHtml(f.label)}</label>
+  // Betaflight-like row: control, label, help bulb (the explanation opens in a bubble instead of cluttering the row)
+  return `<div class="bf-row bf-${f.type}${chg ? ' chg' : ''}${err ? ' bad' : ''}${f.type === 'info' ? ' info' : ''}" data-row="${escapeHtml(f.key)}">
     <div class="bf-ctl">${ctl}</div>
-    ${f.tip ? `<small class="bf-tip">${escapeHtml(f.tip)}</small>` : ''}
+    <label class="bf-lbl" for="${id}">${escapeHtml(f.label)}</label>
+    ${f.tip ? tipText(f.tip, f.label) : '<span class="bf-tip-gap"></span>'}
     ${f.note ? `<small class="bf-note">${escapeHtml(f.note)}</small>` : ''}
     <small class="bf-err" role="alert">${err ? escapeHtml(err) : ''}</small>
   </div>`;
@@ -117,14 +119,14 @@ export function fieldHtml(f: FieldDef, draft: Draft, base: Draft): string {
 
 /** Control only (no label/tip) wrapped as a changeable row: for custom group layouts such as tables. */
 export function bareHtml(f: FieldDef, draft: Draft, base: Draft): string {
-  return fieldHtml({ ...f, tip: undefined, note: undefined }, draft, base).replace('<div class="bf-row', '<div class="bf-row bare').replace(/<label class="bf-lbl"[^>]*>.*?<\/label>/s, '');
+  return fieldHtml({ ...f, tip: undefined, note: undefined }, draft, base).replace('<div class="bf-row', '<div class="bf-row bare').replace(/<label class="bf-lbl"[^>]*>.*?<\/label>/s, '').replace('<span class="bf-tip-gap"></span>', '');
 }
 
 export function groupsHtml(groups: Group[], draft: Draft, base: Draft): string {
   return groups
     .map(
       (g) => `<section class="bf-panel${g.wide ? ' wide' : ''}">
-      <header><span>${escapeHtml(g.title)}</span>${g.hint ? `<small>${escapeHtml(g.hint)}</small>` : ''}</header>
+      <header><span class="bf-legend">${escapeHtml(g.title)}</span>${g.hint ? `<small>${escapeHtml(g.hint)}</small>` : ''}</header>
       <div class="bf-fields">${g.render ? g.render(draft, base) : g.fields.map((f) => fieldHtml(f, draft, base)).join('')}</div>
     </section>`,
     )

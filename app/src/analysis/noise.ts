@@ -8,7 +8,8 @@ import { BAD_GYRO_SAT, BAD_IDLE, median, quantile } from './signals';
 import type { LogData } from './types';
 
 export type NoiseSignal = 'gyro' | 'gyroUnfilt' | 'dterm';
-export type RidgeKind = 'motor' | 'frame' | 'unknown';
+/** `low`: constant peak well below the frame band (soft mount, loose stack, flight motion), not a filter target. */
+export type RidgeKind = 'motor' | 'frame' | 'low' | 'unknown';
 
 export interface NoisePeak {
   hz: number;
@@ -300,12 +301,22 @@ export function analyzeNoise(log: LogData, thr: Float32Array | null, mask: Uint8
   const u = rp(log.gyroUnfilt);
   const d = rp(log.axisD);
   const unfiltSource: NoiseAnalysis['unfiltSource'] = !log.gyroUnfilt ? null : log.debug && log.gyroUnfilt[0] === log.debug[0] ? 'debug' : 'gyroUnfilt';
+  const bands = frameBands(frameInches);
+  const lowHz = 0.8 * bands.frame[0];
+  const mk = (sig: NoiseSignal, xs: Float32Array[] | null) => (xs ? markLow(spectrogram(sig, xs, thr, log.fs, opts), lowHz) : null);
   return {
-    gyro: g ? spectrogram('gyro', g, thr, log.fs, opts) : null,
-    gyroUnfilt: u ? spectrogram('gyroUnfilt', u, thr, log.fs, opts) : null,
-    dterm: d ? spectrogram('dterm', d, thr, log.fs, opts) : null,
+    gyro: mk('gyro', g),
+    gyroUnfilt: mk('gyroUnfilt', u),
+    dterm: mk('dterm', d),
     unfiltSource,
-    bands: frameBands(frameInches),
+    bands,
   };
+}
+
+/** Re-labels non-motor ridges and peaks below `lowHz` (0.8 x the frame band's low edge) as `low`. */
+export function markLow(sp: Spectrogram, lowHz: number): Spectrogram {
+  for (const r of sp.ridges) if (r.kind !== 'motor' && Math.max(r.hzAtLow, r.hzAtHigh) < lowHz) r.kind = 'low';
+  for (const p of sp.peaks) if (p.kind !== 'motor' && p.hz < lowHz) p.kind = 'low';
+  return sp;
 }
 

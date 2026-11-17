@@ -1,4 +1,4 @@
-/** Builds the wizard's FcFacts from the shared stores (ctx.state + ctx.bf). Reads only; nothing is sent to the FC. */
+/** Builds the Autotune flow's FcFacts from the shared stores (ctx.state + ctx.bf). Reads only; nothing is sent to the FC. */
 import type { AppContext } from '../context';
 import { decodeBlackboxConfig, decodeFlashSummary, decodeSdSummary, loggingRateHz } from '../bf/blackbox';
 import { debugModeName } from '../bf/motors';

@@ -80,13 +80,22 @@ export interface AutotuneResult {
   filters: FilterRecommendation;
   pids: PidRecommendation;
   series: SeriesResult | null;
+  /** Mean step response (roll, pitch) of every compared session, for the series overlay chart. */
+  seriesCurves: SeriesCurve[];
   procedure: ProcedureStep[];
   nextStep: ProcedureId | null;
   /** Wall time of the run [ms]. */
   ms: number;
 }
 
+export interface SeriesCurve {
+  index: number;
+  roll: number[] | null;
+  pitch: number[] | null;
+}
+
 const MIN_ROWS = 1000;
+const curveOf = (s: AxisSteps | undefined) => s?.detected.curve ?? s?.wiener.curve ?? null;
 
 function needsOf(log: LogData): LogNeeds {
   const out: LogNeeds = {
@@ -154,6 +163,7 @@ export function autotune(input: LogData | LogData[], opts: AutotuneOptions = {},
   prog(0.75);
 
   let series: SeriesResult | null = null;
+  const seriesCurves: SeriesCurve[] = [];
   const usable = sessions.filter((s) => s.usable);
   if (usable.length >= 2 && opts.series !== false) {
     const items = usable.map((s, k) => {
@@ -163,6 +173,7 @@ export function autotune(input: LogData | LogData[], opts: AutotuneOptions = {},
         return stepsOf(l, th, badMask(l, th), 2);
       })();
       prog(0.75 + (0.23 * (k + 1)) / usable.length);
+      seriesCurves.push({ index: s.index, roll: curveOf(st[0]), pitch: curveOf(st[1]) });
       return { index: s.index, ...(l.settings ? { settings: l.settings } : {}), steps: st };
     });
     const dDb = dtermNoiseDb(noise.dterm);
@@ -184,6 +195,7 @@ export function autotune(input: LogData | LogData[], opts: AutotuneOptions = {},
     filters,
     pids,
     series,
+    seriesCurves,
     procedure: PROCEDURE,
     nextStep: series ? nextProcedureStep(series.param) : null,
     ms: Date.now() - t0,

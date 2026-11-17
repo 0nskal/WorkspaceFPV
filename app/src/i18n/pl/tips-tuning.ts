@@ -83,34 +83,83 @@ export const plTipsTuning: typeof enTipsTuning = {
       "Kasuje **wszystkie** logi z pamięci flash. Nie da się tego cofnąć, więc najpierw pobierz, jeśli chcesz zachować log. Duże kości kasują się dłużej.",
     msc: "Restartuje kontroler jako pendrive USB, żeby skopiować logi z karty SD albo flasha na płytkach, które to wspierają. Betaflight w tym trybie nie działa. Odłącz i podłącz USB, żeby wrócić do normalnej pracy.",
   },
-  pidWizard: {
-    intro:
-      "Kreator prowadzi przez jedną rundę strojenia: lista części, kopia ustawień, przygotowanie logowania, krótki lot według skryptu, wczytanie logu i nowe PID-y. Latasz Ty, aplikacja nigdy nie steruje dronem. Zapisz wynik, przeleć ten sam skrypt jeszcze raz i porównaj rundy.",
-    quality:
-      "Na ile log nadaje się do strojenia, od 0 do 100. Liczą się ostre ruchy drążkiem na każdej osi, zakres gazu, częstotliwość logowania, długość i to, jak często silniki dochodzą do 100 procent. Poniżej 50 propozycja jest zgrubna: poleć jeszcze raz z ruchami wypisanymi niżej.",
-    headerPid:
-      "Log Blackbox zapisuje PID-y, z którymi dron leciał. Jeśli po locie zmieniłeś PID-y, FC ma inne liczby niż log. Propozycja jest liczona od PID-ów z logu, bo to one dały lot, który widzisz.",
-  },
   autotune: {
     intro:
-      "Autotune czyta log Blackbox, sprawdza, jak quad szedł za ruchami drążków, i proponuje małe zmiany PID. Nie stroi w locie. Latasz, pobierasz log, wrzucasz go tutaj i sam decydujesz, czy zastosować propozycję. Najlepiej działa z logiem z kilkoma ostrymi ruchami drążków, jak rolki i flipy.",
-    drop: "Użyj logu Blackbox jako .csv, .bbl lub .bfl. Musi zawierać dane gyro i setpoint (drążki) oraz realne ruchy drążkami. Log samego zawisu to za mało do analizy.",
-    stepResponse:
-      "Odpowiedź skokowa pokazuje, jak szybko i czysto quad idzie za nagłym ruchem drążka. Dobra krzywa szybko rośnie i ustala się na 100 procent. Krzywa mocno powyżej 100 procent to przeregulowanie, więc D jest chyba za niskie. Wolna krzywa oznacza niskie P albo F.",
-    overshoot:
-      "**Przeregulowanie** to o ile quad przeskakuje cel po nagłym ruchu, w procentach. Poniżej ok. 10 procent jest OK dla freestyle. Więcej wskazuje na większe D albo mniejsze P.",
-    riseSettle:
-      "**Rise** to czas dojścia do celu, **settle** to czas, aż odpowiedź zostanie blisko niego. Krótszy rise to ostrzejszy quad. Bardzo długi albo brakujący settle oznacza, że quad kołysze się po ruchu.",
-    spectrum:
-      "Jak silny jest szum żyroskopu na każdej częstotliwości. Ostre piki to zwykle szum silników albo drgania ramy. Szum na pikach grzeje silniki i ogranicza, ile D możesz użyć.",
-    motorPeak:
-      "Najsilniejszy pik szumu, który wygląda na pochodzący z silników. Duży pik to problem z szumem silników: sprawdź śmigła, łożyska, luźne śruby i filtry. Przy działającym filtrze RPM ten pik powinien być mały.",
-    bidir:
-      "Czy włączony jest dwukierunkowy DShot, którego potrzebuje filtr RPM. Gdy jest włączony, tuner dopuszcza większy wzrost D, bo szum silników jest filtrowany dokładniej.",
-    table:
-      "Aktualne PID-y obok wartości zaproponowanych z logu. Zmiany są celowo małe, więc zastosuj, polataj i w razie potrzeby powtórz. FF jest pokazane tylko strzałką, bo tuner mówi, żeby podnieść, ale nie o ile.",
+      "**Jak działa Autotune:** robisz jeden krótki lot testowy, a dron go nagrywa. Aplikacja czyta to nagranie, sprawdza, jak czysto dron podąża za drążkami, jak bardzo drga i jak radzi sobie ze ścięciem gazu, a potem wybiera jedną małą, bezpieczną zmianę. Klikasz Zastosuj, lecisz jeszcze raz i widzisz, czy jest lepiej. Jedno kliknięcie Cofnij przywraca stare ustawienia.",
+    bDrone:
+      "Aplikacja odczytuje z drona baterię, protokół silników i firmware. Rozmiaru ramy nie widzi, więc go wybierasz. Rozmiar mówi, gdzie spodziewać się drgań i jakie typowe części masz.",
+    bBackup:
+      "Kopia ustawień to plik ze wszystkimi ustawieniami drona. Autotune zmienia tylko kilka z nich, ale jeśli wynik Ci się nie spodoba, **Cofnij** jednym kliknięciem wgrywa kopię z powrotem. Plik trafia też na Twój komputer.",
+    bPrepare:
+      "Do analizy dron musi nagrać lot z odpowiednimi danymi: żyroskop, drążki i silniki, wystarczająco często. **Przygotuj logowanie** zmienia tylko te ustawienia nagrywania. PID-y i filtry zostają bez zmian.",
+    bFly:
+      "Lataj na otwartej przestrzeni, około minuty. Włącz odliczanie przy starcie i rób to, co mówi duża karta: zawis, szybkie szarpnięcia na każdej osi, kilka pompek gazem i spadków. Aplikacja nie steruje dronem, tylko odlicza czas.",
+    bLoad:
+      "Log z lotu to plik nagrany przez drona. Na karcie SD to najnowszy plik .BBL. Upuść go tutaj, a aplikacja przeanalizuje go na tym komputerze; nic nie jest nigdzie wysyłane.",
+    bLights:
+      "Zielone jest w porządku, żółte może być lepsze, czerwone wymaga poprawy, szare znaczy, że log nie miał danych. **Charakter lotu** to to, jak czysto dron zatrzymuje się po szybkich ruchach. **Drgania** to szum silników i ramy. **Bujanie po ścięciu gazu** to propwash.",
+    bResult:
+      "Aplikacja wybiera jedną zmianę ze wszystkiego, co znalazła. Zmiana jest mała, gdy lot dał mało danych, a przy słabym logu nie zmienia nic; wtedy mówi, co polecieć następnym razem.",
+    bApply:
+      "Wysyła zmianę do drona po oknie potwierdzenia. Przed zapisem aplikacja sama robi jeszcze jedną kopię. Dron się zrestartuje i połączy ponownie.",
+    bUndo:
+      "Przywraca kopię ustawień z kroku 2: wszystko wraca do stanu sprzed Autotune. Po zapisie dron się zrestartuje.",
+    bCompare:
+      "Gdy polecisz jeszcze raz z nowymi ustawieniami i wczytasz nowy log, aplikacja porówna oba loty: mniej odbicia, szybsza reakcja, mniej drgań i mniej propwasha liczą się jako lepiej.",
+    parts:
+      'Rozmiar ramy i śmigieł ustawia pasma częstotliwości dla analizy szumu i propwasha (skalowane od 5": propwash 20-90 Hz, rama 100-250 Hz) oraz podpowiedź dynamicznego biegu jałowego. Reszta to kontekst dla Ciebie i dla oceny AI.',
+    backup:
+      "**diff all** z FC, zapisany jako before-pid-<data>.txt i trzymany w aplikacji (5 ostatnich). Przywracanie wysyła diff oraz stare wartości każdego klucza zmienionego przez Autotune, więc wracają też klucze, które miały wartość domyślną.",
+    prepare:
+      "Czego silnik analizy potrzebuje w logu: setpoint, żyroskop, silniki i RC, debug **GYRO_SCALED** dla niefiltrowanego żyroskopu (zalecenia filtrów, opóźnienie filtrów) i logowanie co najmniej 1,6 kHz dla dokładnych czasów. Każda poprawka to linia CLI zapisywana zwykłą drogą: potwierdzenie, kopia, zapis.",
+    flight:
+      "Skrypt pokrywa to, co mierzy silnik: szarpnięcia różnej wielkości na każdej osi (odpowiedź wg wychylenia), pompki gazem (pasma gazu, TPA, spektrogram) i spadki (propwash). Celem jest 30-90 s prawdziwych manewrów.",
+    drop:
+      "Plik .bbl lub .bfl prosto z FC jest dekodowany natywnie, ze wszystkimi lotami. CSV z Blackbox Explorera też działa, ale bez nagłówka nie ma ustawień, suwaków ani filtrów do odczytu, więc możliwe są tylko surowe zmiany.",
+    quality:
+      "0-100 z okien skokowych na osiach, ruchów drążkami, częstotliwości logowania, pokrycia gazu, długości i nasycenia silników. Skaluje każdą propozycję: poniżej 50 zmiany PID są dużo mniejsze albo pomijane.",
+    headerPid:
+      "Log Blackbox zapisuje PID-y, z którymi dron latał. Jeśli po locie zmieniłeś PID-y, FC ma inne liczby niż log. Propozycje są liczone od PID-ów z logu, bo to one dały lot, który widzisz.",
+    overview:
+      "Te same cztery obszary co w trybie podstawowym, ale z liczbami. Pomaga zdecydować, od czego zacząć: filtry przed PID-ami, gdy szum jest czerwony; lepszy log przed czymkolwiek, gdy log jest czerwony.",
+    needs:
+      "Czego brakuje w logu i co przez to tracisz. Na przykład bez GYRO_SCALED nie ma niefiltrowanego żyroskopu, więc nie ma opóźnienia filtrów, a zalecenia notch / RPM są słabsze. Linia CLI ustawia to na następny lot.",
     apply:
-      "Zapisuje zaproponowane wartości do kontrolera jako komendy CLI po Twoim potwierdzeniu w oknie, a quad się restartuje. Sprawdź, czy zmiany pasują do tego, jak latasz, i zrób potem krótki lot testowy.",
+      "Zaznacz zmiany, które chcesz; pasek na dole łączy je w jedną listę CLI (jedno simplified_tuning apply na końcu) i zapisuje zwykłą drogą: potwierdzenie, automatyczna kopia, zapis. Ważność mówi, jak bardzo to istotne, a procent, na ile log to potwierdza.",
+    stepResponse:
+      "Średnia odpowiedź na prawdziwe ruchy drążka znalezione w logu (1,0 = cel z drążka). Dobra krzywa szybko rośnie, przekracza 1,0 o 5-10 % i w ciągu ~100 ms mieści się w zacienionym paśmie ±5 %. Podział wg wychylenia pokazuje nieliniowość, podział wg gazu sprawdza TPA.",
+    stepMetrics:
+      '**Narastanie** 10-90 % (5" freestyle: 20-40 ms dobrze, ponad 80 ms wolno). **Opóźnienie do 50 %** za setpointem. **Przeregulowanie** idealnie 5-10 %. **Ustalanie** = ostatnia chwila poza ±2 / ±5 %. **Oscylacje** = przejścia przez ±3 % po szczycie (3 i więcej to drgania). **Odbicie** po zatrzymaniu wskazuje na I-term relax.',
+    buckets:
+      "Mediana metryk ruchów w każdym koszyku. Większe przeregulowanie na wysokim gazie niż na niskim znaczy więcej TPA. Bardzo różne małe i duże ruchy wskazują raczej na feedforward albo limity rate niż na P/D.",
+    spectrum:
+      "Szum uśredniony po gazie dla każdej częstotliwości. Piki **silnik** przesuwają się z gazem (to działka filtra RPM), piki **rama** stoją w miejscu (filtr notch, mechanika). Zielona przerywana linia to tło; piki 12 dB ponad nim to rezonanse.",
+    spectrogram:
+      "Częstotliwość w poziomie, gaz w pionie, jaśniej = głośniej. Szum silników rysuje ukośne grzbiety (biała przerywana linia), które rosną z gazem; rezonans ramy to pionowa linia (bursztynowa). Kreskowane wiersze nie miały danych przy tym gazie.",
+    peaks:
+      "Każdy pik z wysokością ponad tło. Ponad 6 dB to pik, ponad 12 dB rezonans, który warto usunąć. Grzbiety to te same piki śledzone przez kolejne przedziały gazu, z częstotliwością na niskim i wysokim gazie.",
+    filters:
+      "Czego potrzebuje zmierzony szum: harmoniczne i min Hz filtra RPM z grzbietów silników, liczba i zakres notch ze stałych pików, mnożniki filtrów z pozostałego szumu żyroskopu i D-term. Mniej filtrowania to mniejsze opóźnienie; celuj w najmniej filtrowania, przy którym silniki są chłodne.",
+    filterDelay:
+      'Opóźnienie między niefiltrowanym a filtrowanym żyroskopem (wymaga GYRO_SCALED). Poniżej 2 ms jest dobrze dla 5"; powyżej dron robi się „miękki”, a propwash rośnie.',
+    propwash:
+      "Energia błędu śledzenia roll/pitch w paśmie propwash przez 400 ms po każdym ścięciu gazu, podzielona przez tę samą energię w spokojnym locie. Poniżej 2× jest dobrze, 2-5× średnio, ponad 5× mocno. Potrzeba co najmniej 3 ścięć.",
+    pids:
+      "Obecne wartości z nagłówka logu obok propozycji. D min / D max zależy od schematu D w firmware. Zmiany są ograniczone do ±25 % na rundę i skalowane jakością oraz pewnością.",
+    sliders:
+      "Gdy dron używa uproszczonego strojenia (RP lub RPY), ta sama zmiana jest podana jako ruch suwaków w siatce 0,05 Konfiguratora. Wybieraj tę postać: Betaflight trzyma suwaki w zgodzie. Postać surowa wyłącza simplified_pids_mode.",
+    hot:
+      "Zaznacz, jeśli po locie testowym silniki były gorące. Wtedy silnik analizy nigdy nie podnosi D: obniża P i ostrzega o filtrach D-term.",
+    form:
+      "**Suwaki** zapisuje wartości simplified_* i uruchamia simplified_tuning apply. **Surowe CLI** zapisuje wartości p_/i_/d_/f_ i wyłącza suwaki PID. Zalecenia filtrów idą za tym samym wyborem.",
+    session:
+      "Plik .bbl może mieć kilka lotów (jeden na uzbrojenie). Domyślnie analizowany jest najdłuższy użyteczny; tu wybierzesz inny. Pozostałe dalej biorą udział w porównaniu serii.",
+    series:
+      "Porównywane są loty, które różnią się dokładnie jednym suwakiem (albo jednym wzmocnieniem): każdy dostaje ocenę z narastania, przeregulowania blisko 8 %, oscylacji i ustalania (feedforward: opóźnienie i korelacja śledzenia). Przy remisie wygrywa niższa wartość: chłodniejsze silniki, większy zapas.",
+    procedure:
+      "Zwykła kolejność pełnego strojenia: najpierw filtry, potem przemiatanie P&I z I i FF na 0, potem master, przywrócenie I, feedforward (acro) i dynamiczny bieg jałowy. Podświetlony krok to ten po serii, którą właśnie poleciałeś.",
+    rounds:
+      "Jeden wiersz na każdy wczytany log w tej sesji. Zielone komórki poprawiły się względem poprzedniej rundy, bursztynowe pogorszyły. Wykres pokazuje odpowiedź skokową roll z ostatnich rund.",
   },
   cli: {
     intro:

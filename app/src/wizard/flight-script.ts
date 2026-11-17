@@ -1,6 +1,6 @@
 /**
- * Auto-tune wizard, step 4: the flight-test coach script. Data only: the pilot flies, the app shows big step cards
- * with a countdown and never sends anything to the drone. Texts: pidWizard.flight.steps.<id>.title / .body.
+ * Autotune PID flow, step 4: the flight-test coach script. Data only: the pilot flies, the app shows big step cards
+ * with a countdown and never sends anything to the drone. Texts: atFlow.flight.steps.<id>.title / .body.
  * Another step set (for example a chirp script) is added as another entry of SCRIPTS.
  */
 

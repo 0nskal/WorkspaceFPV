@@ -1,6 +1,6 @@
-// Auto-tune wizard logic (state machine, backups/restore, checklist, flight script, parts, header PIDs): npm test
+// Autotune PID flow logic (state machine, backups/restore, checklist, flight script, parts, header PIDs): npm test
 import assert from 'node:assert/strict';
-import { STEPS, initialState, blockFor, go, backupName, parseSet, recordUndo, restoreCommands, pidMismatch, pidOld, addBackup, MAX_BACKUPS, trend } from './state.ts';
+import { STEPS, initialState, blockFor, canJump, go, backupName, parseSet, parseState, recordUndo, restoreCommands, pidMismatch, pidOld, addBackup, MAX_BACKUPS, trend } from './state.ts';
 import { prepareChecks, allFixes, bestSampleRate, NEEDED_FIELDS } from './prepare.ts';
 import { SCRIPTS, coachAt, startOf, scriptSeconds } from './flight-script.ts';
 import { emptyFacts, emptyParts, mergeDetected, missingParts, ruleProfile, typicalBuild, aiFacts } from './parts.ts';
@@ -136,6 +136,23 @@ function check(name, ok, info = '') {
   const txt = aiFacts({ ...emptyParts(), frameIn: 5 }, { ...f, board: 'SpeedyBee F405 V4' }).join('\n');
   check('aiFacts lists facts and unknowns', txt.includes('Frame: 5 in') && txt.includes('Unknown fields:') && txt.includes('Bidirectional DShot: off'));
   check('trend', trend(20, 10) === 'better' && trend(10, 20) === 'worse' && trend(10, 10.5) === 'same' && trend(null, 1) === null);
+}
+
+// 7. Offline analysis is never gated; jumping in Basic vs Expert; stored state is parsed defensively
+{
+  const g = { backup: null, armed: true, ticks: { battery: false, space: false }, hasLog: false };
+  check('log step open without backup / FC / ticks', blockFor('import', g) === null);
+  check('flight only needs the checklist', blockFor('flight', { ...g, armed: false, ticks: { battery: true, space: true } }) === null);
+  const s0 = initialState();
+  check('basic: cannot jump ahead', !canJump(s0, 'flight', { ...g, armed: false, ticks: { battery: true, space: true } }, false));
+  check('basic: log step always reachable', canJump(s0, 'import', g, false));
+  check('expert: jump to any unblocked step', canJump(s0, 'flight', { ...g, ticks: { battery: true, space: true } }, true) && !canJump(s0, 'prepare', g, true));
+  check('result needs a log in both modes', !canJump({ ...s0, reached: 'propose' }, 'propose', g, true));
+  const old = JSON.stringify({ v: 1, step: 'flight', reached: 'import', parts: { frameIn: 5 }, backup: 'before-pid-x', ticks: { battery: true }, fixed: ['debug'], undo: { debug_mode: 'NONE' }, beep: true });
+  const p = parseState(old);
+  check('migrated wizard state keeps fields', p.step === 'flight' && p.reached === 'import' && p.parts.frameIn === 5 && p.parts.propIn === null && p.backup === 'before-pid-x' && p.ticks.battery && !p.ticks.space && p.undo.debug_mode === 'NONE' && p.folded === false);
+  check('broken state resets', parseState('{nope').step === 'parts' && parseState(JSON.stringify({ v: 2 })).step === 'parts');
+  check('unknown step resets', parseState(JSON.stringify({ v: 1, step: 'wat' })).step === 'parts');
 }
 
 assert.equal(fails, 0, `${fails} checks failed`);

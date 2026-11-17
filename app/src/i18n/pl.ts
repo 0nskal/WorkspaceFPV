@@ -14,7 +14,7 @@ import { plBfMotors } from './pl/motors';
 import { plBfBlackbox } from './pl/blackbox';
 import { plBfCli } from './pl/cli';
 import { plBfOsd } from './pl/osd';
-import { plPidWizard } from './pl/pid-wizard';
+import { plAtFlow } from './pl/autotune-flow';
 import { plAutotune2 } from './pl/autotune2';
 import { plAiProviders } from './pl/ai-providers';
 import { plMode, plNav, plSnip, plTipsUi } from './pl/ui-modes';
@@ -307,7 +307,6 @@ export const pl: Dict = {
     },
   },
   at: {
-    film: 'WORKSPACEFPV · AUTOTUNE PID',
     dropTitle: 'Analiza logu blackbox',
     dropLead: 'Przeciągnij tu log <span class="mono">.bbl</span> (czytany natywnie) albo <span class="mono">.csv</span> z Blackbox Explorera. WorkspaceFPV policzy widmo szumu gyro i odpowiedź skokową PID, a potem zaproponuje zmiany.',
     pick: 'Wybierz plik logu',
@@ -319,43 +318,10 @@ export const pl: Dict = {
     generating: 'Generuję przykładowy log…',
     sampleName: 'przykładowy log (syntetyczny)',
     binaryTitle: 'To jest binarny log blackbox',
-    binaryLead: '<span class="mono">{name}</span> nie udało się wczytać jako log Blackbox ani CSV. Wyeksportuj log jednym ze sposobów:',
-    binaryStep1: '<b>Blackbox Explorer:</b> otwórz plik .bbl/.bfl, potem <span class="mono">File → Export CSV</span>.',
-    binaryStep2: '<b>blackbox_decode</b> (z paczki blackbox-tools): <span class="at-code">blackbox_decode LOG.BBL</span> utworzy plik <span class="mono">LOG.01.csv</span>.',
-    errorTitle: 'Nie udało się wczytać logu',
-    changeLog: 'Zmień log',
-    stepCap: 'STEP RESPONSE · ROLL / PITCH / YAW',
-    overshoot: '{axis} · PRZEREGULOWANIE',
-    riseSettle: 'ROLL · NARAST. / USTAL.',
-    spectrumCap: 'WIDMO SZUMU GYRO · 0–{max} Hz',
-    motorPeak: 'SZCZYT SILNIKÓW',
-    framePeak: 'SZCZYT RAMY',
-    bidirRpm: 'BIDIR DSHOT · RPM FILTER',
-    bidirDemo: 'wyłączony (demo)',
-    currentSuggested: 'OBECNE → SUGEROWANE',
-    pidFromDemo: ' · PID Z DEMO',
-    changes: { one: '{n} zmiana', few: '{n} zmiany', many: '{n} zmian' },
-    axis: 'OŚ',
-    ffTitle: 'FF nie jest odczytywany z MSP_PID',
-    cliCmds: 'KOMENDY CLI',
-    noChangesToApply: '# brak zmian do wgrania',
-    connectForCmds: '# połącz z FC, aby zobaczyć gotowe komendy',
-    apply: 'Wgraj do FC',
-    applyNoChanges: 'Brak zmian do wgrania',
-    applyNeedFc: 'Najpierw połącz z FC',
-    askAi: 'Zapytaj AI o ten log',
-    copy: 'Kopiuj',
     copied: 'Komendy skopiowane',
     copyFail: 'Nie udało się skopiować',
-    applyTitle: 'Wgraj zmiany PID i filtrów',
-    applyNote: 'Zmiany wynikają z analizy logu. Po zapisie FC się zrestartuje. Zalecam krótki, ostrożny lot próbny po zmianach.',
     unit: { min: 'min' },
-    gt500: '>500',
-    stepAria: 'Odpowiedź skokowa Roll, Pitch, Yaw',
     stepNoData: 'Za mało ruchu drążka w logu, aby policzyć odpowiedź skokową.',
-    spectrumAria: 'Widmo szumu gyro 0-{max} Hz',
-    frameMark: 'rama · {hz} Hz',
-    motorMark: 'silniki · {hz} Hz',
     err: {
       missingCols: 'W pliku brakuje kolumn: {cols}.',
       noHeader: 'Nie znaleziono nagłówka CSV.',
@@ -464,7 +430,7 @@ export const pl: Dict = {
   bfBlackbox: plBfBlackbox,
   bfCli: plBfCli,
   bfOsd: plBfOsd,
-  pidWizard: plPidWizard,
+  atFlow: plAtFlow,
   autotune2: plAutotune2,
   aiProviders: plAiProviders,
   mode: plMode,

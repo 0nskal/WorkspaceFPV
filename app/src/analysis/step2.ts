@@ -78,6 +78,8 @@ export interface StepBucket {
   n: number;
   /** Median metrics of the steps in the bucket (null when empty). */
   metrics: CurveMetrics | null;
+  /** Mean normalised response of the bucket, 1 ms per point (null when empty). */
+  curve: number[] | null;
 }
 
 export interface AxisSteps {
@@ -342,27 +344,14 @@ export function analyzeAxisSteps(axis: AxisKey, sp: ArrayLike<number>, gy: Array
     good.push({ m, y, size: Math.abs(s.target - s.base), thr: tMean });
   }
 
-  // mean curve over usable steps (points covered by at least half of them)
-  let curve: number[] | null = null;
-  if (good.length) {
-    const maxL = Math.max(...good.map((g) => g.y.length));
-    const sum = new Float64Array(maxL);
-    const cnt = new Uint32Array(maxL);
-    for (const g of good) for (let k = 0; k < g.y.length; k++) {
-      sum[k] = sum[k]! + g.y[k]!;
-      cnt[k] = cnt[k]! + 1;
-    }
-    curve = [];
-    const need = Math.max(1, Math.ceil(good.length / 2));
-    for (let k = 0; k < maxL && cnt[k]! >= need; k++) curve.push(sum[k]! / cnt[k]!);
-  }
+  const curve = meanCurve(good.map((g) => g.y));
   const bucket = (defs: typeof SIZE_BUCKETS, val: (g: (typeof good)[number]) => number | null): StepBucket[] =>
     defs.map(([id, lo, hi]) => {
       const sel = good.filter((g) => {
         const v = val(g);
         return v !== null && v >= lo && v < hi;
       });
-      return { id, lo, hi: Number.isFinite(hi) ? hi : 9999, n: sel.length, metrics: medianMetrics(sel.map((g) => g.m)) };
+      return { id, lo, hi: Number.isFinite(hi) ? hi : 9999, n: sel.length, metrics: medianMetrics(sel.map((g) => g.m)), curve: meanCurve(sel.map((g) => g.y)) };
     });
   const bySize = bucket(SIZE_BUCKETS, (g) => g.size);
   const byThrottle = thr ? bucket(THR_BUCKETS, (g) => g.thr) : [];
@@ -393,6 +382,22 @@ export function analyzeAxisSteps(axis: AxisKey, sp: ArrayLike<number>, gy: Array
     trackingDelayMs: tr ? tr.ms : null,
     trackingCorr: tr ? tr.corr : null,
   };
+}
+
+/** Mean of 1 ms response curves, rounded to 4 decimals; only points covered by at least half of them. Null when empty. */
+export function meanCurve(list: ArrayLike<number>[]): number[] | null {
+  if (!list.length) return null;
+  const maxL = Math.max(...list.map((y) => y.length));
+  const sum = new Float64Array(maxL);
+  const cnt = new Uint32Array(maxL);
+  for (const y of list) for (let k = 0; k < y.length; k++) {
+    sum[k] = sum[k]! + y[k]!;
+    cnt[k] = cnt[k]! + 1;
+  }
+  const out: number[] = [];
+  const need = Math.max(1, Math.ceil(list.length / 2));
+  for (let k = 0; k < maxL && cnt[k]! >= need; k++) out.push(Math.round((sum[k]! / cnt[k]!) * 1e4) / 1e4);
+  return out;
 }
 
 /** Setpoint-to-gyro delay [ms] by cross-correlation on a ~1 kHz copy (0..60 ms lags); null when there is no stick activity. */

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { curveMetrics, findSteps, analyzeAxisSteps } from './step2.ts';
 import { synthFlight, synthDemoSessions, piResponse, zetaFromOvershoot } from './synth.ts';
 import { throttlePct, badMask, BAD_GYRO_SAT, BAD_IDLE } from './signals.ts';
-import { analyzeNoise, frameBands } from './noise.ts';
+import { analyzeNoise, frameBands, markLow } from './noise.ts';
 import { filterDelay, recommendFilters } from './filters.ts';
 import { detectPropwash } from './propwash.ts';
 import { recommendPids, dynIdleFor, DYN_IDLE_TABLE } from './pidrec.ts';
@@ -141,6 +141,13 @@ const crossFine = (y, lvl, dt) => {
   const b7 = frameBands(7);
   const b3 = frameBands(3);
   check('noise: frame bands scale with size', b7.frame[0] < 100 && b3.frame[0] > 100 && frameBands().propwash.join() === '20,90');
+  {
+    const mkR = (kind, a, b) => ({ kind, meanHz: (a + b) / 2, slopeHzPerPct: 0, hzAtLow: a, hzAtHigh: b, thrLow: 20, thrHigh: 60, maxProm: 14, points: [] });
+    const sp = { ridges: [mkR('frame', 52, 54), mkR('frame', 150, 152), mkR('motor', 50, 200)], peaks: [{ hz: 53, prom: 14, resonance: true, kind: 'frame' }, { hz: 151, prom: 9, resonance: false, kind: 'frame' }] };
+    markLow(sp, 0.8 * frameBands(5).frame[0]);
+    check('noise: 53 Hz constant peak on a 5" is low, not frame', sp.peaks[0].kind === 'low' && sp.ridges[0].kind === 'low' && sp.peaks[1].kind === 'frame' && sp.ridges[1].kind === 'frame' && sp.ridges[2].kind === 'motor');
+    check('i18n: low kind + lowPeak verdict text', !!en.atFlow.expert.noise.kind.low && !!pl.atFlow.expert.noise.kind.low && !!en.atFlow.basic.v.noise.lowPeak && !!pl.atFlow.basic.v.noise.lowPeak);
+  }
   const noThr = analyzeNoise({ ...log, throttle: undefined, motorRange: undefined, settings: { ...log.settings, motorOutput: undefined } }, null, null);
   check('noise: without throttle only the average spectrum', noThr.gyro.counts.every((c) => c === 0) && noThr.gyro.spectrum.length > 0 && noThr.gyro.ridges.length === 0);
 }

@@ -390,6 +390,8 @@ export function demoCli(cmd: string, cfg: DemoCfgRef): string | null {
     const lines = settingLines(cfg).filter((l) => l.split(' = ')[0]!.includes(q));
     return lines.length ? lines.join('\n') : 'Invalid name';
   }
+  // the Autotune PID tab writes slider changes followed by this command
+  if (low === 'simplified_tuning apply') return 'Applied simplified tuning.';
   if (low === 'dump' || low === 'dump all') return ['# dump', '', '# version', '# Betaflight / STM32F405 (S405) 4.5.1 Jan  8 2025 / 10:23:01 (77d01ba3b) MSP API: 1.46', '', '# name: 5" Freestyle', '', '# feature', 'feature -RX_PARALLEL_PWM', 'feature TELEMETRY', 'feature OSD', '', '# master', ...settingLines(cfg).map((l) => 'set ' + l.split('\n')[0]!)].join('\n');
   return null;
 }

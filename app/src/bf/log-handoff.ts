@@ -1,7 +1,5 @@
-/** One-shot hand-over of a downloaded blackbox log from the Blackbox tab to the Autotune tab (or the Auto-tune wizard). */
+/** One-shot hand-over of a downloaded blackbox log from the Blackbox tab to the Autotune PID tab. */
 let pending: File | null = null;
-/** Tab that receives the log: the wizard claims it while it waits for a log in its import step. */
-let target = 'autotune';
 
 export function setPendingLog(file: File): void {
   pending = file;
@@ -14,9 +12,5 @@ export function takePendingLog(): File | null {
   return f;
 }
 
-/** Route the Blackbox tab opens after "Analyse"; null puts it back to the Autotune tab. */
-export function setHandoffTarget(route: string | null): void {
-  target = route ?? 'autotune';
-}
-
-export const handoffTarget = (): string => target;
+/** Route of the tab that analyses a handed-over log. */
+export const HANDOFF_ROUTE = 'autotune';

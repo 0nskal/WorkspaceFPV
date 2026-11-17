@@ -26,7 +26,6 @@ const TIP_ROUTE: Record<string, string> = {
   tuning: 'bf-tuning',
   blackbox: 'blackbox',
   autotune: 'autotune',
-  pidWizard: 'pid-wizard',
   cli: 'cli',
 };
 

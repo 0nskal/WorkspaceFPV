@@ -1,5 +1,5 @@
 /**
- * Auto-tune wizard, step 3: the pre-flight checklist built from what the FC reported. Pure logic.
+ * Autotune PID flow, step 3: the pre-flight checklist built from what the FC reported. Pure logic.
  * Fixes are plain Betaflight CLI commands; the screen sends them only through ctx.applyCommands (confirmation,
  * diff-all backup, save) after the user presses a button.
  */

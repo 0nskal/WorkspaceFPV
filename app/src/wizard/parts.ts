@@ -1,5 +1,5 @@
 /**
- * Auto-tune wizard, step 1: what the drone is made of. Pure logic (no DOM, no i18n): the facts read from the FC,
+ * Autotune PID flow, step 1: what the drone is made of. Pure logic (no DOM, no i18n): the facts read from the FC,
  * the prefilled form, the rule-based starting profile and the data block sent to the AI assistant.
  * `FcFacts` is built from ctx.state / ctx.bf by wizard/fc-facts.ts.
  */

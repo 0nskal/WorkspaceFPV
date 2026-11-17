@@ -1,7 +1,7 @@
 /**
- * Auto-tune wizard: step order and gating, named "before-pid" backups, the restore command list, the undo map of
- * values the wizard changed, and the header-vs-FC PID check. Everything except load/save is pure.
- * Wizard state and backups live in localStorage (like the settings and the last diff backup), iterations in memory.
+ * Autotune PID flow (screens/autotune.ts): step order and gating, named "before-pid" backups, the restore command
+ * list, the undo map of values the flow changed, and the header-vs-FC PID check. Everything except load/save is pure.
+ * Flow state and backups live in localStorage (like the settings and the last diff backup), rounds in memory.
  */
 import { emptyParts, type Parts, type Pid3 } from './parts';
 
@@ -23,9 +23,11 @@ export interface WizardState {
   /** Values before the wizard changed them (CLI key -> old value), for the restore. The first recorded value wins. */
   undo: Record<string, string>;
   beep: boolean;
+  /** Expert mode: the stepper is folded to one line. */
+  folded: boolean;
 }
 
-export const initialState = (): WizardState => ({ v: 1, step: 'parts', reached: 'parts', parts: emptyParts(), backup: null, ticks: { battery: false, space: false }, fixed: [], undo: {}, beep: false });
+export const initialState = (): WizardState => ({ v: 1, step: 'parts', reached: 'parts', parts: emptyParts(), backup: null, ticks: { battery: false, space: false }, fixed: [], undo: {}, beep: false, folded: false });
 
 export const stepIndex = (s: StepId): number => STEPS.indexOf(s);
 
@@ -39,13 +41,23 @@ export interface GateInput {
 /** Why a step cannot be entered yet (null = it can). */
 export type Block = 'needBackup' | 'armed' | 'needTicks' | 'needLog';
 
+/**
+ * Gates: "prepare" writes logging settings, so it needs the backup and a disarmed FC; the flight coach needs the
+ * manual checklist; the result needs a log. Loading and analysing a log is always allowed (offline, writes nothing):
+ * a pilot with a log from yesterday can go straight to it. Applying a result has its own checks in the screen.
+ */
 export function blockFor(step: StepId, g: GateInput): Block | null {
-  const i = stepIndex(step);
-  if (i >= stepIndex('prepare') && !g.backup) return 'needBackup';
-  if (i >= stepIndex('prepare') && g.armed) return 'armed';
-  if (i >= stepIndex('flight') && !(g.ticks.battery && g.ticks.space)) return 'needTicks';
-  if (i >= stepIndex('propose') && !g.hasLog) return 'needLog';
+  if (step === 'prepare' && !g.backup) return 'needBackup';
+  if (step === 'prepare' && g.armed) return 'armed';
+  if (step === 'flight' && !(g.ticks.battery && g.ticks.space)) return 'needTicks';
+  if (step === 'propose' && !g.hasLog) return 'needLog';
   return null;
+}
+
+/** Steps the stepper may jump to: any unblocked one in Expert mode; in Basic mode the steps reached so far plus the log step. */
+export function canJump(s: WizardState, to: StepId, g: GateInput, expert: boolean): boolean {
+  if (blockFor(to, g)) return false;
+  return expert || to === 'import' || stepIndex(to) <= stepIndex(s.reached);
 }
 
 /** Moves to `to` when allowed; returns the new state (unchanged when blocked). */
@@ -117,23 +129,7 @@ export function pidOld(fc: Pid3 | null | undefined): Record<string, string> {
   return out;
 }
 
-/* ---------------- iterations (memory only) ---------------- */
-
-export interface AxisMetrics {
-  overshoot: number | null;
-  rise: number | null;
-  settle: number | null;
-}
-
-export interface Iteration {
-  n: number;
-  at: number;
-  name: string;
-  score: number;
-  axes: [AxisMetrics, AxisMetrics, AxisMetrics];
-  /** Commands applied after this log (empty = nothing applied). */
-  applied: string[];
-}
+/* ---------------- rounds ---------------- */
 
 /** Change of a metric between two iterations: 'better' | 'worse' | 'same' (overshoot and times: lower is better). */
 export function trend(prev: number | null, cur: number | null, tol = 1): 'better' | 'worse' | 'same' | null {
@@ -144,19 +140,49 @@ export function trend(prev: number | null, cur: number | null, tol = 1): 'better
 
 /* ---------------- persistence ---------------- */
 
-const KEY = 'workspacefpv.pidWizard.v1';
+const KEY = 'workspacefpv.autotune.v1';
+/** Key of the former separate "Auto-tune wizard" tab; read once and moved to KEY. */
+const OLD_KEY = 'workspacefpv.pidWizard.v1';
 const BACKUPS_KEY = 'workspacefpv.pidBackups.v1';
 /** Named backups kept in localStorage (each is a full diff all; the files are downloaded too). */
 export const MAX_BACKUPS = 5;
 
+/** Parses a stored state; anything unknown or broken falls back to the defaults field by field. */
+export function parseState(raw: string | null): WizardState {
+  const base = initialState();
+  if (!raw) return base;
+  try {
+    const s = JSON.parse(raw) as Partial<WizardState>;
+    if (!s || typeof s !== 'object' || s.v !== 1) return base;
+    const step = (STEPS as readonly string[]).includes(s.step as string) ? (s.step as StepId) : base.step;
+    const reached = (STEPS as readonly string[]).includes(s.reached as string) ? (s.reached as StepId) : step;
+    return {
+      ...base,
+      ...s,
+      step,
+      reached,
+      parts: { ...base.parts, ...(s.parts ?? {}) },
+      ticks: { ...base.ticks, ...(s.ticks ?? {}) },
+      fixed: Array.isArray(s.fixed) ? s.fixed.filter((x) => typeof x === 'string') : [],
+      undo: s.undo && typeof s.undo === 'object' ? s.undo : {},
+      folded: !!s.folded,
+    };
+  } catch {
+    return base;
+  }
+}
+
 export function loadState(): WizardState {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return initialState();
-    const s = JSON.parse(raw) as Partial<WizardState>;
-    if (s.v !== 1) return initialState();
-    const base = initialState();
-    return { ...base, ...s, parts: { ...base.parts, ...(s.parts ?? {}) }, ticks: { ...base.ticks, ...(s.ticks ?? {}) } };
+    if (raw) return parseState(raw);
+    // migrate the former wizard tab's state once (same shape, v1)
+    const old = localStorage.getItem(OLD_KEY);
+    if (!old) return initialState();
+    const s = parseState(old);
+    localStorage.setItem(KEY, JSON.stringify(s));
+    localStorage.removeItem(OLD_KEY);
+    return s;
   } catch {
     return initialState();
   }

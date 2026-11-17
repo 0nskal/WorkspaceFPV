@@ -62,7 +62,7 @@ export function logStats(log: LogData): LogStats {
 
 export type QualityLabel = 'good' | 'ok' | 'poor';
 
-/** What to fly or change next time (translated by the screen: pidWizard.q.advice.<code>). */
+/** What to fly or change next time (translated by the screen: atFlow.import.advice.<code>). */
 export type AdviceCode = 'moreRoll' | 'morePitch' | 'moreYaw' | 'moreSteps' | 'throttleRange' | 'noThrottle' | 'sampleRate' | 'longer' | 'saturation' | 'rcFallback';
 
 export interface QualityPart {

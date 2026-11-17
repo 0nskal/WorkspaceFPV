@@ -69,6 +69,9 @@ export interface AppContext {
   askAi(question: string): void;
   openDrawer(): void;
 
+  /** Tells the app why the next FC reboot happens, so a FC that does not come back gets the right message. */
+  noteRebootCause(cause: 'elrs-passthrough' | null): void;
+
   toast(message: string, kind?: 'info' | 'error' | 'ok'): void;
   confirm(options: ConfirmOptions): Promise<boolean>;
 }

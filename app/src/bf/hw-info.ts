@@ -153,7 +153,13 @@ export class HwInfo {
 
   /** Cheap pre-filter for the auto-run: only a UART CRSF receiver can answer (RX_CONFIG comes from the connect-time read). */
   private elrsCandidate(): boolean {
-    return this.ctx.bf.get().rx?.serialRxProvider === 9;
+    return this.ctx.bf.get().rx?.serialRxProvider === 9 && !this.noDtrReset();
+  }
+
+  /** This board is known to stay in passthrough after the ELRS read (no reboot on DTR drop). */
+  private noDtrReset(): boolean {
+    const board = this.ctx.state.get().info?.boardName;
+    return !!board && this.ctx.settings.get().noDtrReset.includes(board);
   }
 
   /* ---------------- shared checks ---------------- */
@@ -166,7 +172,7 @@ export class HwInfo {
       confirmText: kind === 'esc' ? t('bfInfo.confirm.escGo') : t('bfInfo.confirm.elrsGo'),
       body: `<p>${kind === 'esc' ? t('bfInfo.confirm.escIntro') : t('bfInfo.confirm.elrsIntro')}</p>
         <ul class="bf-info-checklist">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
-        <p class="save-note">${kind === 'esc' ? t('bfInfo.confirm.escNote') : t('bfInfo.confirm.elrsNote')}</p>
+        <p class="save-note">${kind === 'esc' ? t('bfInfo.confirm.escNote') : this.noDtrReset() ? t('bfInfo.confirm.elrsNoteReplug') : t('bfInfo.confirm.elrsNote')}</p>
         ${source === 'auto' ? `<p class="mono">${t('bfInfo.confirm.autoNote')}</p>` : ''}`,
     });
   }
@@ -259,6 +265,7 @@ export class HwInfo {
       if (!(await this.confirm('elrs', source))) return this.setElrs({ phase: 'blocked', reason: 'declined' });
 
       const demo = io.kind === 'demo';
+      if (!demo) this.ctx.noteRebootCause('elrs-passthrough');
       this.setElrs({ phase: 'running', step: 'config' });
       const res = await io.raw((rio) =>
         readElrsInfo(rio, {
@@ -267,7 +274,10 @@ export class HwInfo {
           onProgress: (step: ElrsStep) => this.setElrs({ phase: 'running', step }),
         }),
       );
-      if (res.kind === 'no-uart') return this.setElrs({ phase: 'blocked', reason: 'noUart' });
+      if (res.kind === 'no-uart') {
+        this.ctx.noteRebootCause(null);
+        return this.setElrs({ phase: 'blocked', reason: 'noUart' });
+      }
 
       // ok / no-answer both end with the FC reset: wait for the automatic reconnect
       if (res.kind === 'ok') this.ctx.state.patch({ hw: { ...this.ctx.state.get().hw, elrs: res.info } });

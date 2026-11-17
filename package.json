@@ -1,6 +1,6 @@
 {
   "name": "workspacefpv",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "//appId": "appId stays app.rotorlab on purpose: the NSIS installer and auto-updater identify the existing install by it, so 0.2.0 upgrades in place after the rename to WorkspaceFPV. Do not change.",
   "description": "WorkspaceFPV - diagnose and fix FPV drones running Betaflight, with an AI assistant",
   "private": true,

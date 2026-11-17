@@ -61,6 +61,15 @@ export interface AiConfig {
 export class AiError extends Error {}
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+
+/**
+ * A Gemini model id ("gemini-2.5-flash", also accepted with the "models/" prefix). Anything else (e.g. the key's
+ * display name "Default Gemini API Key" pasted into the model field) falls back to the default instead of failing.
+ */
+export function normalizeGeminiModel(raw: string): string {
+  const m = raw.trim().replace(/^models\//, '');
+  return /^[a-z0-9][a-z0-9.-]*$/i.test(m) ? m : DEFAULT_GEMINI_MODEL;
+}
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
 export const DEFAULT_CLAUDE_CODE_MODEL = 'opus';
 export const CLAUDE_CODE_MODELS = ['opus', 'sonnet'] as const;

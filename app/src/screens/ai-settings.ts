@@ -2,7 +2,7 @@
 import type { AppContext } from '../context';
 import { desktopAi } from '../ai/bridge';
 import { ollamaStatus } from '../ai/providers';
-import { CLAUDE_CODE_MODELS, DEFAULT_GEMINI_MODEL, PROVIDER_IDS, type ProviderId } from '../ai/types';
+import { CLAUDE_CODE_MODELS, DEFAULT_GEMINI_MODEL, PROVIDER_IDS, type ProviderId, normalizeGeminiModel } from '../ai/types';
 import { t } from '../i18n';
 import { MODELS } from '../settings';
 import { escapeHtml } from '../ui/dom';
@@ -40,7 +40,7 @@ export function aiSettingsHtml(ctx: AppContext): string {
       <p class="about" data-cc-missing hidden>${t('aiProviders.cc.missing')}</p>
       <div class="field-row actions"><button class="btn s" type="button" data-act="refresh" data-for="claude-code">${t('aiProviders.cc.refresh')}</button></div>`,
     gemini: `
-      ${keyField('gemKey', s.geminiKey, 'AIza...', t('aiProviders.gemini.key'))}
+      ${keyField('gemKey', s.geminiKey, 'AIza… / AQ.…', t('aiProviders.gemini.key'))}
       <small>${t('aiProviders.gemini.get')}</small>
       <label class="field" style="margin-top:14px">
         <span>${t('aiProviders.gemini.model')}</span>
@@ -121,7 +121,7 @@ export function bindAiSettings(el: HTMLElement, ctx: AppContext, flash: (msg: st
       model: val('model') || prev.model,
       claudeCodeModel: val('ccModel') || prev.claudeCodeModel,
       geminiKey: val('gemKey'),
-      geminiModel: val('gemModel') || DEFAULT_GEMINI_MODEL,
+      geminiModel: normalizeGeminiModel(val('gemModel')),
       ollamaUrl: val('ollUrl') || prev.ollamaUrl,
       ollamaModel: q<HTMLSelectElement>('[name="ollModel"]')?.value ?? prev.ollamaModel,
     });

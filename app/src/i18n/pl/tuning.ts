@@ -3,6 +3,7 @@ import type { enBfTuning } from '../en/tuning';
 
 export const plBfTuning: typeof enBfTuning = {
   tab: 'Strojenie PID',
+  lead: 'Wzmocnienia PID, rates z podglądem krzywych i filtry dla wybranego profilu.',
   sub: { pid: 'PID', rates: 'Rates', filters: 'Filtry' },
   common: {
     unsupported: 'Nieobsługiwane przez ten firmware',

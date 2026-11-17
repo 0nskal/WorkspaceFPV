@@ -15,13 +15,16 @@ import { hasWebSerial } from './serial/port';
 import type { CliEntry, FcLink } from './serial/types';
 import { SettingsStore, loadBackup, saveBackup } from './settings';
 import { getLang, onLanguageChange, t } from './i18n';
-import { DEFAULT_SCREEN, SCREENS, findScreen, screenVisible } from './screens/registry';
+import { DEFAULT_SCREEN, SCREENS, SECTIONS, findScreen, screenVisible, sectionOf } from './screens/registry';
+import type { Part } from './fc/diagnose';
 import { downloadText, escapeHtml, stamp } from './ui/dom';
 import { createDrawer, type Drawer } from './ui/drawer';
 import { icon, logo } from './ui/icons';
 import { confirmDialog, toast } from './ui/modal';
 import { applyModeAttrs, chooseModeDialog, currentMode, modeSwitchHtml } from './ui/mode';
 import { initTips } from './ui/tip';
+import { openSearch } from './ui/search';
+import { ringElement } from './ui/snip';
 import { updatesApi } from './updates';
 const parseRoute = (): Route => {
   const h = location.hash.replace(/^#\/?/, '');
@@ -283,19 +286,47 @@ export function createApp(root: HTMLElement): AppContext {
   let stI!: HTMLElement;
   let dnEl!: HTMLElement;
   let rssiEl!: HTMLElement;
+  let vbatEl!: HTMLElement;
   let gyroLine!: SVGPolylineElement;
 
-  /** Second bar: every tab in registry order, a thin divider between groups (overview | FC setup | tuning | tools). */
+  /** Sidebar: tabs grouped into Start / Hardware / Flight / Tuning / Tools, one sliding indicator for the active one. */
   function navHtml(): string {
-    let prev = '';
     const mode = currentMode(settings);
-    return SCREENS.filter((sc) => sc.nav !== false && screenVisible(sc, mode))
-      .map((sc) => {
-        const sep = prev && sc.group !== prev ? '<span class="nav-sep" aria-hidden="true"></span>' : '';
-        prev = sc.group;
-        return `${sep}<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`;
-      })
-      .join('') + '<span class="nav-ind" aria-hidden="true"></span>';
+    const items = SCREENS.filter((sc) => sc.nav !== false && screenVisible(sc, mode));
+    return (
+      SECTIONS.map((sec) => {
+        const list = items.filter((sc) => sectionOf(sc.id) === sec);
+        if (!list.length) return '';
+        return `<div class="sgrp"><div class="sgrp-h">${t(`nav.${sec}`)}</div>${list
+          .map((sc) => `<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${icon(sc.icon, 16)}<span>${t(sc.titleKey)}</span><b class="badge" hidden></b></a>`)
+          .join('')}</div>`;
+      }).join('') + '<span class="nav-ind" aria-hidden="true"></span>'
+    );
+  }
+
+  /** Problem counters next to the tabs, from the rule results (red = failure, amber = warning). */
+  const PART_ROUTE: Record<Part, string> = { esc: 'esc', motors: 'esc', rx: 'bf-receiver', battery: 'power', fc: 'setup' };
+  function renderBadges(): void {
+    const counts = new Map<string, { n: number; fail: boolean }>();
+    if (store.get().conn === 'connected') {
+      for (const c of diagnose(store.get(), bf.get()).checks) {
+        if (!c.part || (c.severity !== 'fail' && c.severity !== 'warn')) continue;
+        const r = PART_ROUTE[c.part];
+        const e = counts.get(r) ?? { n: 0, fail: false };
+        e.n++;
+        e.fail ||= c.severity === 'fail';
+        counts.set(r, e);
+      }
+    }
+    navEl.querySelectorAll<HTMLElement>('a[data-route]').forEach((a) => {
+      const b = a.querySelector<HTMLElement>('.badge');
+      const e = counts.get(a.dataset.route ?? '');
+      if (!b) return;
+      b.hidden = !e;
+      b.textContent = e ? String(e.n) : '';
+      b.className = `badge${e?.fail ? ' fail' : ''}`;
+      if (e) b.title = t('nav.problems', { n: e.n });
+    });
   }
 
   /** (Re)builds the whole shell: top bar, tab bar from the screen registry, empty screen area. Called on start and on language change. */
@@ -303,20 +334,24 @@ export function createApp(root: HTMLElement): AppContext {
     root.innerHTML = `
     <header class="bar">
       <div class="brand">${logo(24)}${t('shell.brand')}</div>
-      <div class="sep"></div>
-      <div class="st"><i></i><span class="st-t">${t('shell.disconnected')}</span></div>
-      <div class="sep dn-sep"></div>
-      <div class="dn"></div>
+      <div class="st"><i></i><span class="st-t">${t('shell.disconnected')}</span><span class="dn"></span></div>
+      <span class="dn-sep" hidden></span>
       <div class="tel">
         <svg class="gyro" width="98" height="22" viewBox="0 0 98 22" aria-hidden="true"><polyline fill="none" stroke="#CFE6F2" stroke-width="1.1" points=""/></svg>
+        <span class="vbat">VBAT <b>—</b></span>
         <span class="rssi">RSSI <b>—</b></span>
         ${modeSwitchHtml(currentMode(settings))}
         <button class="ib" data-act="settings" title="${t('shell.settings')}" aria-label="${t('shell.settings')}">${icon('settings', 17)}</button>
         <button class="ib" data-act="drawer" title="${t('shell.drawerToggle')}" aria-label="${t('shell.assistantAria')}">${icon('panel', 17)}</button>
       </div>
     </header>
-    <nav class="nav" aria-label="${t('shell.tabsAria')}">${navHtml()}</nav>
-    <div class="body"><main class="screen" id="screen"></main></div>`;
+    <div class="workspace">
+      <aside class="side">
+        <button type="button" class="side-search" data-act="search">${icon('search', 15)}<span>${t('nav.search')}</span><kbd>Ctrl</kbd><kbd>K</kbd></button>
+        <nav class="nav" aria-label="${t('shell.tabsAria')}">${navHtml()}</nav>
+      </aside>
+      <div class="body"><main class="screen" id="screen"></main></div>
+    </div>`;
     screenEl = root.querySelector<HTMLElement>('#screen') as HTMLElement;
     bodyEl = root.querySelector<HTMLElement>('.body') as HTMLElement;
     navEl = root.querySelector<HTMLElement>('.nav') as HTMLElement;
@@ -324,6 +359,7 @@ export function createApp(root: HTMLElement): AppContext {
     stI = root.querySelector<HTMLElement>('.st i') as HTMLElement;
     dnEl = root.querySelector<HTMLElement>('.dn') as HTMLElement;
     rssiEl = root.querySelector<HTMLElement>('.rssi b') as HTMLElement;
+    vbatEl = root.querySelector<HTMLElement>('.vbat b') as HTMLElement;
     gyroLine = root.querySelector<SVGPolylineElement>('.gyro polyline') as SVGPolylineElement;
   }
 
@@ -415,7 +451,8 @@ export function createApp(root: HTMLElement): AppContext {
     const a = navEl.querySelector<HTMLElement>('a.on');
     ind.hidden = !a;
     if (!a) return;
-    ind.style.transform = `translateX(${a.offsetLeft}px) scaleX(${a.offsetWidth})`;
+    ind.style.transform = `translateY(${a.offsetTop}px)`;
+    ind.style.height = `${a.offsetHeight}px`;
     if (!ind.classList.contains('ready')) requestAnimationFrame(() => ind.classList.add('ready'));
   }
 
@@ -435,13 +472,15 @@ export function createApp(root: HTMLElement): AppContext {
     };
     stT.textContent = text[s.conn];
     stI.className = s.conn === 'connected' ? 'on' : s.conn === 'disconnected' ? '' : 'wait';
-    dnEl.textContent = s.conn === 'connected' || s.conn === 'reconnecting' ? s.info?.craftName || t('common.drone') : '';
+    dnEl.textContent = s.conn === 'connected' || s.conn === 'reconnecting' ? ` · ${s.info?.craftName || t('common.drone')}${s.info ? ` · BF ${s.info.version}` : ''}` : '';
     (root.querySelector('.dn-sep') as HTMLElement).hidden = !dnEl.textContent;
     if (s.conn === 'disconnected') {
       rssiEl.textContent = '—';
+      vbatEl.textContent = '—';
       gyroLine.setAttribute('points', '');
     }
     navEl.classList.toggle('offline', s.conn !== 'connected' && s.conn !== 'reconnecting');
+    renderBadges();
     syncLayout();
   }
 
@@ -450,11 +489,35 @@ export function createApp(root: HTMLElement): AppContext {
     const tel = store.get().telemetry;
     if (!tel) return;
     rssiEl.textContent = `${rssiPct(tel.rssi)}%`;
+    vbatEl.textContent = `${tel.vbat.toFixed(1)} V`;
     gyro.push(Math.hypot(...tel.gyro));
     if (gyro.length > 45) gyro.shift();
     const max = Math.max(20, ...gyro);
     gyroLine.setAttribute('points', gyro.map((g, i) => `${(i * 2.2).toFixed(1)},${(20.5 - Math.min(19, (g / max) * 19)).toFixed(1)}`).join(' '));
   }
+
+  /** Ctrl+K: find a tab or a setting; a setting opens its tab, scrolls to the bulb, rings it and opens the tip. */
+  function search(): void {
+    openSearch(currentMode(settings), (route, tipKey) => {
+      if (route !== current) ctx.navigate(route);
+      if (!tipKey) return;
+      setTimeout(() => {
+        const bulb = screenEl.querySelector<HTMLElement>(`.tip[data-tip="${tipKey}"]`);
+        if (!bulb) return;
+        bulb.scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' });
+        setTimeout(() => {
+          ringElement(bulb.closest('label, .row, tr, .bf-field, .field, div') ?? bulb);
+          bulb.focus();
+        }, reduceMotion() ? 0 : 280);
+      }, 260);
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      search();
+    }
+  });
 
   /** Switches Basic/Expert: rebuilds the tab bar in place; an expert-only screen gets the "switch to Expert" note. */
   function setMode(m: 'basic' | 'expert'): void {
@@ -479,6 +542,7 @@ export function createApp(root: HTMLElement): AppContext {
     }
     const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'settings') ctx.navigate('ustawienia');
+    else if (act === 'search') search();
     else if (act === 'to-expert') setMode('expert');
     else if (act === 'drawer') {
       drawerOpen = !drawerOpen;

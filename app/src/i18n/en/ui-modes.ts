@@ -20,6 +20,31 @@ export const enMode = {
   tipBattery: 'Battery',
   tipReceiver: 'Receiver',
   tipEsc: 'ESC',
+  wsGreetMorning: 'Good morning.',
+  wsGreetDay: 'Hi.',
+  wsGreetEvening: 'Good evening.',
+  wsSub: 'What are we fixing today?',
+  wsZoneTitle: 'Connect the flight controller over USB',
+  wsZoneHelp: 'Betaflight FC over USB. In the browser you pick the port, the desktop app finds it by itself.',
+  wsBackup: 'Last backup',
+  wsBackupDownload: 'Download',
+  wsVersion: 'App version',
+  wsVersionText: 'WorkspaceFPV {version}',
+  wsDemoCard: 'Try demo',
+  wsDemoText: 'A simulated 5" quad with an ESC problem.',
+};
+
+export const enNav = {
+  start: 'Start',
+  hardware: 'Hardware',
+  flight: 'Flight',
+  tuning: 'Tuning',
+  tools: 'Tools',
+  search: 'Search',
+  searchPh: 'Search a tab or a setting, e.g. "motor poles", "failsafe"',
+  searchEmpty: 'Nothing found.',
+  tab: 'Tab',
+  problems: '{n} to fix',
 };
 
 export const enTipsUi = {

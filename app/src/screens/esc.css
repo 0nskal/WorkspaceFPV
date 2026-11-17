@@ -1,0 +1,536 @@
+/* Motors tab (route "esc"): drawing with a readout card per motor, safety bar, test columns, protocol bar.
+   Square corners, no shadows, 1px lines. Motion: transform/opacity only. Scoped under .esc-v2. */
+
+.esc.esc-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 24px 28px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bar-line) transparent;
+}
+.esc-v2 > * {
+  flex: none;
+  min-width: 0;
+}
+.esc-v2 .intro {
+  margin: 0;
+}
+
+/* ---------- drawing + motor cards ---------- */
+.esc-v2 .ev-stage {
+  position: relative;
+  height: clamp(290px, 38vh, 360px);
+  border: 1px solid var(--bar-line);
+  background: var(--film);
+}
+.esc-v2 .ev-stage .esc-art {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: auto;
+  height: auto;
+  flex: none;
+  aspect-ratio: 600 / 620;
+  transform: translateX(-50%);
+}
+.esc-v2 .ev-card {
+  position: absolute;
+  z-index: 1;
+  width: 204px;
+  padding: 8px 10px 9px;
+  border: 1px solid var(--bar-line);
+  background: rgba(7, 11, 16, 0.88);
+}
+.esc-v2 .ev-card.warn {
+  border-color: var(--amber);
+  background: rgba(224, 168, 46, 0.08);
+}
+.esc-v2 .ev-card-4 {
+  top: 12px;
+  left: 12px;
+}
+.esc-v2 .ev-card-2 {
+  top: 12px;
+  right: 12px;
+}
+.esc-v2 .ev-card-3 {
+  bottom: 12px;
+  left: 12px;
+}
+.esc-v2 .ev-card-1 {
+  bottom: 12px;
+  right: 12px;
+}
+.esc-v2 .ev-card-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  margin-bottom: 4px;
+}
+.esc-v2 .ev-card-h b {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.esc-v2 .ev-card.warn .ev-card-h b {
+  color: var(--amber);
+}
+.esc-v2 .ev-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.esc-v2 .ev-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.65;
+}
+.esc-v2 .ev-card dt {
+  white-space: nowrap;
+  color: var(--sub);
+}
+.esc-v2 .ev-card dd {
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.esc-v2 .ev-card dd.bad {
+  color: var(--hot);
+}
+
+/* ---------- safety bar ---------- */
+.esc-v2 .ev-safety {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'lock warn stop'
+    'lock unlock stop';
+  align-items: center;
+  column-gap: 20px;
+  row-gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--bar-line);
+  background: var(--film);
+}
+.esc-v2 .ev-lock {
+  grid-area: lock;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.esc-v2 .ev-lock-in {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.esc-v2 .ev-sw {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 26px;
+  border: 1px solid var(--sub);
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.esc-v2 .ev-sw i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: var(--sub);
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+.esc-v2 .ev-lock-in:checked + .ev-sw {
+  background: var(--ok);
+  border-color: #2fbf8c;
+}
+.esc-v2 .ev-lock-in:checked + .ev-sw i {
+  transform: translateX(20px);
+  background: var(--ink);
+}
+.esc-v2 .ev-lock-in:focus-visible + .ev-sw {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.esc-v2 .ev-lock-t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.esc-v2 .ev-lock-t small {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sub);
+}
+.esc-v2 .ev-lock-t b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.esc-v2 .esc-warn {
+  grid-area: warn;
+  min-height: 0;
+  padding: 0;
+  background: none;
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 500;
+  gap: 8px;
+}
+.esc-v2 .esc-warn.on {
+  color: var(--hot);
+}
+.esc-v2 .esc-warn svg {
+  flex: none;
+}
+.esc-v2 .ev-unlock {
+  grid-area: unlock;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  gap: 8px;
+  font-size: 12px;
+}
+.esc-v2 .ev-unlock input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--amber);
+}
+.esc-v2 .esc-stop {
+  grid-area: stop;
+  width: auto;
+  height: 48px;
+  margin: 0;
+  padding: 0 26px;
+  background: var(--hot);
+  color: var(--bg);
+  font: 700 18px var(--sans);
+  letter-spacing: 0.08em;
+  transition: transform 150ms var(--ease-out), opacity 150ms var(--ease-out);
+}
+.esc-v2 .esc-stop kbd {
+  border-color: rgba(7, 11, 16, 0.55);
+  color: var(--bg);
+}
+.esc-v2 .esc-stop:hover {
+  background: var(--hot);
+}
+.esc-v2 .esc-stop:active {
+  transform: scale(0.97);
+}
+.esc-v2 .esc-stop.armed {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---------- test columns ---------- */
+.esc-v2 .ev-test {
+  border-color: var(--bar-line);
+  background: var(--film);
+}
+.esc-v2 .ev-test > header {
+  border-bottom-color: var(--bar-line);
+}
+.esc-v2 .ev-cols {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 0.7fr);
+}
+.esc.esc-v2 .esc-slider.ev-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: auto;
+  padding: 12px 16px 10px;
+  border-bottom: 0;
+  border-right: 1px solid var(--bar-line);
+  color: var(--text);
+}
+.esc-v2 .esc-slider.ev-col:last-child {
+  border-right: 0;
+}
+.esc-v2 .esc-slider.ev-col.dis {
+  color: var(--sub);
+}
+.esc-v2 .ev-col-h {
+  width: 100%;
+  gap: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.esc-v2 .ev-col-h .esc-sl-n {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.esc-v2 .esc-slider.ev-col.dis .esc-sl-n {
+  color: var(--sub);
+}
+.esc-v2 .ev-col.all .esc-sl-n {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.esc-v2 .ev-col .esc-val {
+  font-size: 13px;
+}
+.esc-v2 .ev-col-b {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  height: 116px;
+}
+.esc-v2 .ev-col.all .ev-col-b {
+  justify-content: center;
+}
+.esc-v2 .ev-col .esc-range {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 20px;
+  height: 100%;
+  flex: none;
+}
+.esc-v2 .ev-col .esc-range::-webkit-slider-runnable-track {
+  width: 2px;
+  height: 100%;
+  background: currentColor;
+  opacity: 0.5;
+}
+.esc-v2 .ev-col .esc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 12px;
+  margin: 0 0 0 -9px;
+  background: var(--ink);
+}
+.esc-v2 .ev-col .esc-range:disabled::-webkit-slider-thumb {
+  background: var(--sub);
+}
+.esc-v2 .ev-col.live .esc-range::-webkit-slider-thumb {
+  background: var(--hot);
+}
+.esc-v2 .ev-col.live .esc-val {
+  color: var(--hot);
+}
+.esc-v2 .ev-bar {
+  flex: none;
+  width: 40px;
+  border: 1px solid var(--bar-line);
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.esc-v2 .ev-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--sub);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 150ms var(--ease-out);
+}
+.esc-v2 .ev-col.live .ev-bar:not(.rpm) i {
+  background: var(--hot);
+}
+.esc-v2 .ev-bar.rpm i {
+  background: var(--amber);
+}
+.esc-v2 .ev-col-f {
+  display: grid;
+  grid-template-columns: 40px 40px;
+  gap: 8px;
+  margin-left: 28px;
+  font-size: 11px;
+}
+.esc-v2 .ev-col-f span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.esc-v2 .ev-col-f small {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sub);
+}
+.esc-v2 .ev-col-f b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ---------- protocol bar ---------- */
+.esc-v2 .ev-proto {
+  border: 1px solid var(--bar-line);
+  background: var(--film);
+}
+.esc-v2 .ev-proto-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 16px;
+  text-align: left;
+  font-size: 15px;
+  color: var(--text);
+}
+.esc-v2 .ev-proto-cur {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+.esc-v2 .ev-proto-cur b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.esc-v2 .ev-proto-cur b.warn {
+  color: var(--hot);
+}
+.esc-v2 .ev-proto-w {
+  display: inline-flex;
+  color: var(--amber);
+}
+.esc-v2 .ev-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-size: 12px;
+}
+.esc-v2 .ev-pending {
+  display: none;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--amber);
+}
+.esc-v2 .ev-proto:has(.bf-motors-changed) .ev-pending {
+  display: inline;
+}
+.esc-v2 .ev-chev {
+  flex: none;
+  margin-left: auto;
+  color: var(--sub);
+  transition: transform 180ms var(--ease-out);
+}
+.esc-v2 .ev-pending ~ .ev-chev {
+  margin-left: 0;
+}
+.esc-v2 .ev-proto:not(:has(.bf-motors-changed)) .ev-pending ~ .ev-chev {
+  margin-left: auto;
+}
+.esc-v2 .ev-proto.open .ev-chev {
+  transform: rotate(180deg);
+}
+.esc-v2 .ev-proto-body {
+  display: none;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  border-top: 1px solid var(--bar-line);
+}
+.esc-v2 .ev-proto.open .ev-proto-body,
+.esc-v2 .ev-proto:has(.bf-motors-changed) .ev-proto-body {
+  display: grid;
+}
+.esc-v2 .ev-proto-cfg,
+.esc-v2 .ev-proto-aux {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.esc-v2 .ev-proto-aux:empty {
+  display: none;
+}
+.esc-v2 .ev-proto .esc-panel {
+  border-color: var(--bar-line);
+  background: var(--bg);
+}
+.esc-v2 .ev-proto .esc-panel > header,
+.esc-v2 .ev-proto .esc-seg,
+.esc-v2 .ev-proto .esc-seg-b,
+.esc-v2 .ev-proto .esc-bidir,
+.esc-v2 .ev-proto .esc-note,
+.esc-v2 .ev-proto .bf-motors-grid,
+.esc-v2 .ev-proto .bf-motors-f {
+  border-color: var(--bar-line);
+}
+.esc-v2 .esc-seg-b.sel {
+  background: var(--amber);
+  color: var(--bg);
+}
+.esc-v2 .esc-seg-b.sel small {
+  color: var(--bg);
+}
+.esc-v2 .esc-sw.on i {
+  background: var(--ok);
+  border-color: #2fbf8c;
+}
+.esc-v2 .esc-sw.on i::after {
+  background: var(--ink);
+}
+.esc-v2 .esc-info {
+  grid-template-columns: repeat(auto-fit, minmax(0, auto));
+  border-color: var(--bar-line);
+  background: var(--bg);
+}
+.esc-v2 .esc-tog button.on {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--bg);
+}
+.esc-v2 .bf-motors-tel {
+  border-color: var(--bar-line);
+  background: var(--bg);
+}
+.esc-v2 .bf-motors-cards {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .esc-v2 .ev-proto-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .esc-v2 .ev-proto-bar:hover {
+    background: rgba(207, 230, 242, 0.05);
+  }
+  .esc-v2 .esc-stop:hover {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esc-v2 .ev-sw,
+  .esc-v2 .ev-sw i,
+  .esc-v2 .ev-bar i,
+  .esc-v2 .ev-chev,
+  .esc-v2 .esc-stop {
+    transition: none;
+  }
+}

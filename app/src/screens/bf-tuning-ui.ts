@@ -75,6 +75,7 @@ export interface FieldSpec {
 
 const decimals = (scale: number) => (scale >= 1 ? 0 : Math.max(0, Math.ceil(-Math.log10(scale) - 1e-9)));
 export const fmtVal = (raw: number, scale = 1): string => fmtNum(raw * scale, decimals(scale));
+const pct = (raw: number, s: { min: number; max: number }) => (s.max > s.min ? Math.max(0, Math.min(100, ((raw - s.min) / (s.max - s.min)) * 100)) : 0);
 const numStr = (raw: number, scale: number) => (raw * scale).toFixed(decimals(scale));
 
 /** Renders one control; a field the firmware does not report is shown dimmed with a tooltip. */
@@ -94,7 +95,7 @@ export function fieldHtml(f: Form, s: FieldSpec): string {
   } else if (s.check) {
     ctl = `<label class="bf-tuning-chk"><input type="checkbox" ${dat} ${v ? 'checked' : ''} aria-label="${escapeHtml(s.label)}"><span class="box">${icon('check', 14)}</span></label>`;
   } else {
-    const rng = s.slider ? `<input type="range" class="bf-tuning-rng" ${dat} data-sync min="${s.min * sc}" max="${s.max * sc}" step="${sc}" value="${numStr(v, sc)}" aria-label="${escapeHtml(s.label)}">` : '';
+    const rng = s.slider ? `<input type="range" class="bf-tuning-rng" ${dat} data-sync style="--p:${pct(v, s).toFixed(1)}%" min="${s.min * sc}" max="${s.max * sc}" step="${sc}" value="${numStr(v, sc)}" aria-label="${escapeHtml(s.label)}">` : '';
     ctl = `${rng}<input type="number" class="bf-tuning-num mono" ${dat} min="${s.min * sc}" max="${s.max * sc}" step="${sc}" value="${numStr(v, sc)}" aria-label="${escapeHtml(s.label)}">${s.unit ? `<span class="bf-tuning-u mono">${escapeHtml(s.unit)}</span>` : ''}`;
   }
   return `<div class="bf-tuning-f${ch} ${s.slider ? 'sl' : ''} ${s.cls ?? ''}" data-fk="${s.g}.${s.k}">${label}<span class="bf-tuning-c">${ctl}</span></div>`;
@@ -137,6 +138,7 @@ export function bindForm(root: HTMLElement, form: Form, specs: () => FieldSpec[]
     if (inp instanceof HTMLInputElement && inp.type !== 'checkbox') {
       inp.closest('.bf-tuning-c')?.querySelectorAll<HTMLInputElement>('input[data-k]').forEach((o) => {
         if (o !== inp) o.value = numStr(raw, sc);
+        if (o.type === 'range') o.style.setProperty('--p', `${pct(raw, spec).toFixed(1)}%`);
         o.classList.remove('bad');
       });
     }

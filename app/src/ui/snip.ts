@@ -235,6 +235,11 @@ export async function pointTo(ref: string, navigate: (route: string) => void, cu
   return true;
 }
 
+/** Rings any element (also used by the Ctrl+K search to show where a setting is). */
+export function ringElement(el: Element): void {
+  ring(el);
+}
+
 function ring(el: Element): void {
   document.querySelectorAll('.ai-ring').forEach((n) => n.remove());
   const r = el.getBoundingClientRect();

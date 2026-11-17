@@ -147,6 +147,7 @@ export function createDrawer(ctx: AppContext): Drawer {
     <div class="tab" aria-hidden="true"></div>
     <div class="dh"><i></i><span class="dh-t">${t('drawer.title')}</span><span class="r">${t('drawer.r')}</span></div>
     <div class="scroll">
+      <div class="health" hidden></div>
       <div class="chat"></div>
       <div class="chk"></div>
     </div>
@@ -178,6 +179,8 @@ export function createDrawer(ctx: AppContext): Drawer {
   let attachment: { name: string; text: string } | null = null;
   let snip: Snip | null = null;
   let showDetails = false;
+  let okOpen = false;
+  const healthEl = $('.health');
 
   function renderAttach() {
     attachEl.hidden = !attachment && !snip;
@@ -229,17 +232,40 @@ export function createDrawer(ctx: AppContext): Drawer {
     if (nearBottom || ctx.ai.busy) scroll.scrollTop = scroll.scrollHeight;
   }
 
+  /** 0-100: passing rules count 1, warnings 0.5, failures 0 (info rows are left out). */
+  function healthScore(checks: Check[]): number | null {
+    const rated = checks.filter((c) => c.severity !== 'info');
+    if (!rated.length) return null;
+    const pts = rated.reduce((a, c) => a + (c.severity === 'ok' ? 1 : c.severity === 'warn' ? 0.5 : 0), 0);
+    return Math.round((pts / rated.length) * 100);
+  }
+
+  /** Half-ring gauge at the top of the drawer. The arc length moves with a short transition when the score changes. */
+  function renderHealth(checks: Check[] | null): void {
+    const score = checks ? healthScore(checks) : null;
+    healthEl.hidden = score === null;
+    if (score === null) return;
+    const len = 138.23; // pi * 44
+    const tone = score >= 85 ? 'good' : score >= 60 ? 'mid' : 'bad';
+    healthEl.className = `health ${tone}`;
+    healthEl.title = t('drawer.healthHint');
+    healthEl.innerHTML = `<svg viewBox="0 0 100 56" width="132" height="74" aria-hidden="true"><path class="hg-track" d="M6 50a44 44 0 0 1 88 0"/><path class="hg-arc" d="M6 50a44 44 0 0 1 88 0" stroke-dasharray="${len}" stroke-dashoffset="${(len * (1 - score / 100)).toFixed(1)}"/></svg><div class="hg-v"><b>${score}</b><span>/100</span></div><div class="hg-l">${t('drawer.health')}</div>`;
+  }
+
   function renderChecks() {
     const s = ctx.state.get();
     if (s.conn !== 'connected' && s.conn !== 'reconnecting') {
       chk.innerHTML = '';
+      renderHealth(null);
       return;
     }
     const d = ctx.diagnosis();
-    const rows = d.checks
-      .map((c) => `<div class="row sev-${c.severity}">${checkIcon(c)}<div class="row-t"><span>${escapeHtml(c.label)}</span>${showDetails && c.detail ? `<small>${escapeHtml(c.detail)}</small>` : ''}</div></div>`)
-      .join('');
-    chk.innerHTML = `<div class="ch">${t('drawer.checked')}</div>${rows}<button class="lnk" data-act="details">${showDetails ? t('drawer.hideLog') : t('drawer.showLog')} ${icon('arrowRight', 13)}</button>${
+    renderHealth(d.checks);
+    const row = (c: Check) => `<div class="row sev-${c.severity}">${checkIcon(c)}<div class="row-t"><span>${escapeHtml(c.label)}</span>${showDetails && c.detail ? `<small>${escapeHtml(c.detail)}</small>` : ''}</div></div>`;
+    const bad = d.checks.filter((c) => c.severity === 'fail' || c.severity === 'warn');
+    const good = d.checks.filter((c) => c.severity === 'ok' || c.severity === 'info');
+    const rows = `${bad.length ? `<div class="ch fix">${t('drawer.toFix')}</div>${bad.map(row).join('')}` : ''}<button type="button" class="ch okh" data-act="oktoggle" aria-expanded="${okOpen}">${icon('check', 13)}${t('drawer.okList', { n: good.length })}${icon(okOpen ? 'minus' : 'arrowRight', 13)}</button>${okOpen ? good.map(row).join('') : ''}`;
+    chk.innerHTML = `${rows}<button class="lnk" data-act="details">${showDetails ? t('drawer.hideLog') : t('drawer.showLog')} ${icon('arrowRight', 13)}</button>${
       s.diff ? '' : `<button class="lnk" data-act="fetchdiff">${t('drawer.fetchDiff')} ${icon('download', 13)}</button>`
     }`;
   }
@@ -282,7 +308,10 @@ export function createDrawer(ctx: AppContext): Drawer {
     const btn = tg.closest<HTMLElement>('[data-act]');
     if (!btn) return;
     const act = btn.dataset.act;
-    if (act === 'details') {
+    if (act === 'oktoggle') {
+      okOpen = !okOpen;
+      renderChecks();
+    } else if (act === 'details') {
       showDetails = !showDetails;
       renderChecks();
     } else if (act === 'fetchdiff') {

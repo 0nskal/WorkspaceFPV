@@ -8,7 +8,10 @@ import { hasWebSerial } from '../serial/port';
 import { escapeHtml } from '../ui/dom';
 import { fmtDate, fmtNum, t } from '../i18n';
 import { ENTRY_Y, VIEW_H, VIEW_W, renderDrone, updateMotorBars, type XrayLabels } from '../ui/drone-xray';
-import { icon, logo } from '../ui/icons';
+import { icon } from '../ui/icons';
+import { loadBackup } from '../settings';
+import { APP_VERSION } from '../updates';
+import './warsztat.css';
 import { intro, tip } from '../ui/tip';
 
 function buildLabels(s: Readonly<FcState>, d: Diagnosis, bf: Readonly<BfData>): XrayLabels {
@@ -69,24 +72,39 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const s = ctx.state.get();
     const busy = s.conn === 'connecting';
     const noSerial = !hasWebSerial();
+    const hr = new Date().getHours();
+    const greet = hr < 12 ? 'mode.wsGreetMorning' : hr < 18 ? 'mode.wsGreetDay' : 'mode.wsGreetEvening';
+    const bk = loadBackup();
+    const cards = [
+      bk
+        ? `<div class="ws-card">${icon('download', 22)}<div class="ws-card-t"><b>${t('mode.wsBackup')}</b><span class="ws-v">${escapeHtml(bk.craft || t('common.drone'))} · ${escapeHtml(fmtDate(new Date(bk.at)))}</span></div><button class="btn ghost" data-act="backup">${t('mode.wsBackupDownload')}</button></div>`
+        : '',
+      `<div class="ws-card">${icon('chip', 22)}<div class="ws-card-t"><b>${t('mode.wsVersion')}</b><span class="ws-v">${escapeHtml(t('mode.wsVersionText', { version: APP_VERSION }))}</span></div></div>`,
+      `<button class="ws-card" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 22)}<span class="ws-card-t"><b>${t('mode.wsDemoCard')}</b><span class="ws-v">${t('mode.wsDemoText')}</span></span></button>`,
+    ].join('');
     el.innerHTML = `
-      <div class="start">
-        <div class="start-art" aria-hidden="true">${renderDrone({ highlight: null, bare: true, labels: emptyLabels() })}</div>
-        <div class="start-card">
-          <div class="start-brand">${logo(28)}<span>WorkspaceFPV</span></div>
-          <h1>${t('start.title')}</h1>
+      <div class="ws-start"><div class="ws-in">
+        <header class="ws-head">
+          <h1>${t(greet)} ${t('mode.wsSub')}</h1>
           <p>${t('start.lead')}</p>
-          ${intro('tips.warsztat.intro')}
-          ${busy ? `<div class="bf-progress mono" role="status"><span>${progressText()}</span><i><b style="width:${progressPct()}%"></b></i></div>` : ''}
-          <div class="start-btns">
-            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('start.connect')}</button>${tip('tips.warsztat.connect')}
-            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('start.demo')}</button>${tip('tips.warsztat.demo')}
+          <div class="ws-intro">${intro('tips.warsztat.intro')}</div>
+        </header>
+        <section class="ws-zone">
+          <svg class="ws-zone-ico" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M9 3h6v6H9zM10.5 5.5v1M13.5 5.5v1M8 9h8v3a4 4 0 0 1-8 0V9zM12 16v5"/></svg>
+          <div class="ws-zone-body">
+            <h2>${t('mode.wsZoneTitle')}</h2>
+            <p>${t('mode.wsZoneHelp')}</p>
+            ${busy ? `<div class="bf-progress mono" role="status"><span>${progressText()}</span><i><b style="width:${progressPct()}%"></b></i></div>` : ''}
+            <div class="start-btns">
+              <button class="btn primary-amber" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('start.connect')}</button>${tip('tips.warsztat.connect')}
+              <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('start.demo')}</button>${tip('tips.warsztat.demo')}
+            </div>
+            ${noSerial ? `<div class="start-msg warn">${t('start.noSerial')}</div>` : ''}
+            ${s.error ? `<div class="start-msg err" role="alert">${escapeHtml(s.error)}</div>` : ''}
           </div>
-          ${noSerial ? `<div class="start-msg warn">${t('start.noSerial')}</div>` : ''}
-          ${s.error ? `<div class="start-msg err" role="alert">${escapeHtml(s.error)}</div>` : ''}
-          <div class="start-foot mono">${t('start.foot')}</div>
-        </div>
-      </div>`;
+        </section>
+        <div class="ws-cards">${cards}</div>
+      </div></div>`;
     stage = null;
     document.body.classList.remove('has-hot');
   }
@@ -152,6 +170,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'connect') void ctx.connect();
     else if (act === 'demo') void ctx.connectDemo();
+    else if (act === 'backup') ctx.downloadBackup();
   });
 
   const offState = ctx.state.subscribe(render);

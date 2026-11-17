@@ -20,7 +20,7 @@ import { enBfBlackbox } from './en/blackbox';
 import { enBfCli } from './en/cli';
 import { enBfOsd } from './en/osd';
 import { enAiProviders } from './en/ai-providers';
-import { enMode, enSnip, enTipsUi } from './en/ui-modes';
+import { enMode, enNav, enSnip, enTipsUi } from './en/ui-modes';
 import { enTipsCore } from './en/tips-core';
 import { enTipsFc } from './en/tips-fc';
 import { enTipsRx } from './en/tips-rx';
@@ -164,6 +164,10 @@ export const en = {
     summaryProblems: 'The rules found problems: {n}. The biggest one concerns: {part}.',
   },
   drawer: {
+    health: 'Configuration health',
+    healthHint: 'Share of the rules that pass (warnings count half).',
+    toFix: 'To fix',
+    okList: 'All good ({n})',
     title: 'Assistant',
     r: 'patient chart',
     allOk: 'All good',
@@ -470,6 +474,7 @@ export const en = {
   bfOsd: enBfOsd,
   aiProviders: enAiProviders,
   mode: enMode,
+  nav: enNav,
   snip: enSnip,
   tipsUi: enTipsUi,
   tips: { ...enTipsCore, ...enTipsFc, ...enTipsRx, ...enTipsMotors, ...enTipsTuning },

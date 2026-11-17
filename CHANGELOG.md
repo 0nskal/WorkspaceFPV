@@ -2,6 +2,14 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 0.6.0 – 2026-11-17
+
+- **New look, same X-ray colours.** Tabs moved to a sidebar grouped into Start, Hardware, Flight, Tuning and Tools, with a red/amber counter next to tabs that have problems. Ctrl+K searches tabs and settings (it finds a setting by its tip text, opens the tab and lights the bulb). The top bar shows the connection, craft and Betaflight version, VBAT and RSSI.
+- **Assistant:** a 0-100 configuration health gauge, a To fix list and a collapsible All good list.
+- **Ports:** a board schematic with UART pads coloured by function, one compact row per port with function chips, MSP switch and baud, and inline conflict warnings.
+- **Motors:** readouts next to each motor on the frame (RPM, temperature, errors, ESC firmware), the problem motor highlighted, props lock and STOP in one bar, motor test columns and a protocol bar with the recommended setting.
+- **PID tuning and Workshop:** restyled panels, tabs and charts; a new start screen with a USB connect zone.
+
 ## 0.5.1 – 2026-11-17
 
 - **Fix: FC stuck after the ELRS version read.** Some boards (seen on a GEPRC F722 with Betaflight 2026.6) do not restart when the app drops DTR after `serialpassthrough … reset`, so they keep forwarding to the receiver and every MSP request times out ("MSP timeout (command 1)"). The app now says what happened and to unplug and replug the USB cable, remembers that board and never reads ELRS on it automatically again. The automatic ELRS read after connecting is now off by default (Settings); the manual read warns about the replug.
@@ -49,6 +57,14 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.6.0 – 2026-11-17
+
+- **Nowy wygląd w tych samych kolorach „rentgena”.** Zakładki są w bocznym menu w grupach Start, Sprzęt, Lot, Strojenie i Narzędzia, a przy zakładkach z problemami jest czerwony albo bursztynowy licznik. Ctrl+K szuka zakładek i ustawień (ustawienie znajduje po tekście podpowiedzi, otwiera zakładkę i zapala żarówkę). Górny pasek pokazuje połączenie, nazwę drona i wersję Betaflight, VBAT i RSSI.
+- **Asystent:** wskaźnik stanu konfiguracji 0–100, lista „Do poprawy” i zwijana lista „W porządku”.
+- **Porty:** schemat płytki z padami UART w kolorach funkcji, jeden zwarty wiersz na port z chipami funkcji, przełącznikiem MSP i baudem oraz ostrzeżenia o konfliktach od razu w wierszu.
+- **Silniki:** odczyty przy każdym silniku na ramie (obroty, temperatura, błędy, firmware ESC), podświetlony silnik z problemem, blokada śmigieł i STOP w jednym pasku, kolumny testu silników i pasek protokołu z zalecanym ustawieniem.
+- **Strojenie PID i Warsztat:** nowe panele, zakładki i wykresy; nowy ekran startowy ze strefą podłączania USB.
 
 ## 0.5.1 – 2026-11-17
 

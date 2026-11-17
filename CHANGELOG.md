@@ -2,6 +2,15 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 1.0.0 – 2026-11-18
+
+- **New look, built for reading.** Every flight-controller tab follows the Betaflight App layout with the WorkspaceFPV colours: a page title, panels with amber titles, rows of *control · label · help bulb* (the explanation opens from the bulb instead of sitting under every row), bigger text, and the assistant panel closed by default so the tab gets the full width.
+- **New menu.** Start · Hardware (Ports, Configuration, Power, Receiver, Motors, Sensors, Failsafe, GPS, ELRS) · Tuning (PID/Rates, Modes, OSD, Blackbox, Autotune PID, CLI) · Tools: links to Betaflight App, ELRS Configurator, ESC Configurator, DJI Assistant 2 and the USB drivers (CP210x, Zadig, ImpulseRC Driver Fixer).
+- **Sensors tab (new):** sensor hardware switches, board alignment, accelerometer calibration and trims, live attitude and live gyro / accelerometer / magnetometer / barometer graphs.
+- **GPS tab (new):** GPS configuration, satellite signal table, position, speed, heading, DOP, a home radar and a link to OpenStreetMap.
+- **Motors tab rebuilt:** model type with a clear quad diagram, ESC/motor settings (protocol, MOTOR_STOP, ESC_SENSOR, bidirectional DShot, poles, idle, dynamic idle, 3D), live gyro/accelerometer graph, and a motor test with RPM, error rate and temperature per motor and an "I understand the risks" switch. All safety locks stay.
+- Setup, Ports, Power, Receiver, PID tuning, Modes, OSD, Blackbox, CLI, ELRS and Autotune PID restyled to the same layout.
+
 ## 0.8.0 – 2026-11-17
 
 - **CHIRP analysis in PID Autotune (Expert).** Reads the sweep that Betaflight 2026 adds in CHIRP mode and shows how the drone follows every frequency: Bode charts (tracking, sensitivity, phase, coherence), bandwidth, phase and gain margin, a step response computed from the sweep and a rating per axis. Hints are for review only and are never applied automatically. A setup guide and a button for `debug_mode = CHIRP` are included. CHIRP flights in a multi-flight log are kept out of the normal step analysis. The sample log has a synthetic CHIRP flight.
@@ -81,6 +90,15 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 1.0.0 – 2026-11-18
+
+- **Nowy, czytelny wygląd.** Każda zakładka kontrolera ma układ jak w Betaflight App, w kolorach WorkspaceFPV: tytuł strony, panele z bursztynowymi tytułami, wiersze *kontrolka · etykieta · żarówka* (opis otwiera się z żarówki zamiast leżeć pod każdym wierszem), większa czcionka, a panel asystenta jest domyślnie zwinięty, więc zakładka ma całą szerokość.
+- **Nowe menu.** Start · Sprzęt (Porty, Konfiguracja, Zasilanie, Odbiornik, Silniki, Czujniki, Failsafe, GPS, ELRS) · Strojenie (PID/Rates, Tryby, OSD, Blackbox, Autotune PID, CLI) · Narzędzia: odnośniki do Betaflight App, ELRS Configurator, ESC Configurator, DJI Assistant 2 i sterowników USB (CP210x, Zadig, ImpulseRC Driver Fixer).
+- **Zakładka Czujniki (nowa):** włączanie czujników, ułożenie płytki, kalibracja i trym akcelerometru, położenie na żywo i wykresy żyroskopu, akcelerometru, magnetometru i barometru.
+- **Zakładka GPS (nowa):** konfiguracja GPS, tabela sygnału satelitów, pozycja, prędkość, kurs, DOP, radar względem domu i odnośnik do OpenStreetMap.
+- **Silniki od nowa:** typ modelu z czytelnym schematem, ustawienia ESC/silników (protokół, MOTOR_STOP, ESC_SENSOR, dwukierunkowy DShot, bieguny, bieg jałowy, dynamiczny bieg jałowy, 3D), wykres żyroskopu/akcelerometru na żywo i test silników z obrotami, błędami i temperaturą każdego silnika oraz przełącznikiem „Rozumiem zagrożenia”. Wszystkie zabezpieczenia zostają.
+- Setup, Porty, Zasilanie, Odbiornik, Strojenie PID, Tryby, OSD, Blackbox, CLI, ELRS i Autotune PID w tym samym układzie.
 
 ## 0.8.0 – 2026-11-17
 

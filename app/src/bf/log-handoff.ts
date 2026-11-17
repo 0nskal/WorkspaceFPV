@@ -1,4 +1,4 @@
-/** One-shot hand-over of a downloaded blackbox log from the Blackbox tab to the Autotune tab. */
+/** One-shot hand-over of a downloaded blackbox log from the Blackbox tab to the Autotune PID tab. */
 let pending: File | null = null;
 
 export function setPendingLog(file: File): void {
@@ -11,3 +11,6 @@ export function takePendingLog(): File | null {
   pending = null;
   return f;
 }
+
+/** Route of the tab that analyses a handed-over log. */
+export const HANDOFF_ROUTE = 'autotune';

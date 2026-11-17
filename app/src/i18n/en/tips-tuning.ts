@@ -84,24 +84,81 @@ export const enTipsTuning = {
   },
   autotune: {
     intro:
-      "Autotune reads a Blackbox log, checks how the quad followed your stick moves and suggests small PID changes. It does not tune in flight. You fly, download the log, drop it here and decide whether to apply the suggestion. It works best with a log that has a few sharp stick moves, like rolls and flips.",
-    drop: "Use a Blackbox log as .csv, .bbl or .bfl. It must contain gyro and setpoint (stick) data and some real stick movement. A hover-only log does not give enough to analyse.",
-    stepResponse:
-      "The step response shows how fast and how cleanly the quad follows a sudden stick move. A good curve rises quickly and settles at 100 percent. A curve well above 100 percent is overshoot, so D is probably too low. A slow curve means P or F is low.",
-    overshoot:
-      "**Overshoot** is how far past the target the quad goes after a sudden move, in percent. Under about 10 percent is fine for freestyle. Higher values point to more D or less P.",
-    riseSettle:
-      "**Rise** is the time to reach the target, **settle** the time until the response stays near it. Shorter rise means a sharper quad. A very long or missing settle time means the quad keeps wobbling after the move.",
-    spectrum:
-      "How strong the gyro noise is at each frequency. Sharp peaks are usually motor noise or frame vibration. Noise at a peak heats the motors and limits how much D you can use.",
-    motorPeak:
-      "The strongest noise peak that looks like it comes from the motors. A big peak means motor noise is a problem: check props, bearings, loose screws and the filters. With a working RPM filter this peak should be small.",
-    bidir:
-      "Whether bidirectional DShot, which the RPM filter needs, is on. With it on, the tuner allows a bigger D increase, because motor noise is filtered more precisely.",
-    table:
-      "Current PIDs next to the values suggested from the log. The changes are small on purpose, so apply them, fly and repeat if needed. FF is shown only as an arrow, because the tuner says to raise it but not by how much.",
+      "**How Autotune works:** you fly one short test flight while the drone records it. The app reads that recording, checks how cleanly the drone follows your sticks, how much it vibrates and how it handles throttle drops, then picks one small, safe change. You press Apply, fly again and see if it got better. One click on Undo brings your old settings back.",
+    bDrone:
+      "The app reads the battery, motor protocol and firmware from the drone. It cannot see the frame size, so you pick it. The size tells the app where to expect vibrations and which typical parts you have.",
+    bBackup:
+      "The safety copy is a file with every setting of your drone. Autotune changes only a few of them, but if you do not like the result, **Undo** puts the copy back in one click. It is also downloaded to your computer.",
+    bPrepare:
+      "For the analysis the drone must record the flight with the right data: gyro, sticks and motors, fast enough. **Prepare logging** changes only these recording settings. PIDs and filters stay as they are.",
+    bFly:
+      "Fly in an open space, about one minute. Start the timer at take-off and do what the big card says: hover, quick snaps on each axis, a few throttle punches and drops. The app does not control the drone, it only counts the time.",
+    bLoad:
+      "The flight log is the file the drone recorded. With an SD card it is the newest .BBL file on it. Drop it here and the app analyses it on this computer; nothing is sent anywhere.",
+    bLights:
+      "Green is fine, amber could be better, red needs work, grey means the log had no data for it. **Flight feel** is how cleanly the drone stops after quick moves. **Vibrations** are motor and frame noise. **Wobble after throttle drops** is propwash.",
+    bResult:
+      "The app picks one change from everything it found. It keeps the change small when the flight gave little data, and changes nothing when the log is poor; then it says what to fly next time.",
+    bApply:
+      "Sends the change to the drone after a confirmation window. Before writing, the app saves another backup automatically. The drone restarts and reconnects by itself.",
+    bUndo:
+      "Restores the safety copy from step 2: every setting goes back to how it was before Autotune. The drone restarts after saving.",
+    bCompare:
+      "After you fly again with the new settings and load the new log, the app compares the two flights: less bounce, faster response, fewer vibrations and less propwash count as better.",
+    parts:
+      'Frame and prop size set the frequency bands used for the noise and propwash analysis (scaled from 5": propwash 20-90 Hz, frame 100-250 Hz) and the dynamic idle hint. The rest is context for you and for the AI review.',
+    backup:
+      "**diff all** of the FC, saved as before-pid-<date>.txt and kept in the app (last 5). Restore re-sends the diff plus the old values of every key Autotune changed, so keys that were at their default come back too.",
+    prepare:
+      "What the engine needs in the log: setpoint, gyro, motors and RC, **GYRO_SCALED** debug for the unfiltered gyro (filter advice, filter delay), and at least 1.6 kHz logging for the step timing. Each fix is a CLI line applied through the usual confirm, backup and save.",
+    flight:
+      "The script covers what the engine measures: snaps of several sizes on each axis (step response by stick size), throttle punches (throttle bands, TPA, spectrogram) and drops (propwash). 30-90 s of real moves is the target.",
+    drop:
+      "A .bbl or .bfl straight from the FC is decoded natively, every flight in it. A Blackbox Explorer CSV works too, but without the header there are no settings, sliders or filters to read, so only raw changes are possible.",
+    quality:
+      "0-100 from the step windows per axis, stick activity, sample rate, throttle coverage, length and motor saturation. It scales every proposal: under 50 the PID changes shrink a lot or are skipped.",
+    headerPid:
+      "A Blackbox log stores the PIDs it was flown with. If you changed PIDs after the flight, the FC has other numbers than the log. Suggestions are computed from the log's PIDs, because those produced the flight you see.",
+    overview:
+      "The same four areas Basic mode shows, with numbers. Use it to decide where to look first: filters before PIDs when the noise is red, a better log before anything when the log is red.",
+    needs:
+      "What the log is missing and what that costs. For example without GYRO_SCALED there is no unfiltered gyro, so no filter delay and weaker notch / RPM advice. The CLI line sets it up for the next flight.",
     apply:
-      "Writes the suggested values to the flight controller as CLI commands after you confirm in a dialog, and the quad reboots. Check that the changes make sense for how you fly, and make a short test flight afterwards.",
+      "Tick the changes you want; the bar at the bottom merges them into one CLI list (one simplified_tuning apply at the end) and applies it through the normal confirmation, automatic backup and save. Severity says how much it matters, the percentage how well the log supports it.",
+    stepResponse:
+      "Mean response to the real stick steps found in the log (1.0 = the stick target). A good curve rises fast, peaks 5-10 % above 1.0 and settles inside the shaded ±5 % band within ~100 ms. Split by stick size to see non-linear behaviour, by throttle to check TPA.",
+    stepMetrics:
+      '**Rise** 10-90 % (5" freestyle: 20-40 ms good, over 80 ms slow). **Delay to 50 %** behind the setpoint. **Overshoot** 5-10 % ideal. **Settle** = last time outside ±2 / ±5 %. **Ringing** = crossings of ±3 % after the peak (3 or more means oscillation). **Bounce-back** after stops points to I-term relax.',
+    buckets:
+      "Median metrics of the steps in each bucket. More overshoot at high throttle than at low throttle means more TPA. Very different small and large steps point to feedforward or rate limits rather than P/D.",
+    spectrum:
+      "Throttle-averaged noise per frequency. Peaks labelled **motor** move with throttle (RPM filter territory), **frame** peaks stay put (dynamic notch, hardware). The green dashed line is the noise floor; peaks 12 dB above it are resonances.",
+    spectrogram:
+      "Frequency across, throttle up, brighter = louder. Motor noise draws diagonal ridges (dashed white) that climb with throttle; frame resonance is a vertical line (amber). Hatched rows had no data at that throttle.",
+    peaks:
+      "Each peak with its height over the noise floor. Over 6 dB is a peak, over 12 dB a resonance worth fixing. Ridges are the same peaks followed across throttle bins, with their frequency at low and high throttle.",
+    filters:
+      "What the measured noise needs: RPM harmonics and min Hz from the motor ridges, notch count and range from fixed peaks, filter multipliers from the remaining gyro and D-term noise. Less filtering means less delay; aim for the least filtering that keeps motors cool.",
+    filterDelay:
+      'Lag between the unfiltered and the filtered gyro (needs GYRO_SCALED). Under 2 ms is fine on a 5" quad; above it the quad feels floaty and propwash grows.',
+    propwash:
+      "Energy of the roll/pitch tracking error in the propwash band during 400 ms after each throttle chop, divided by the same energy in calm flight. Under 2× is fine, 2-5× moderate, over 5× severe. Needs at least 3 chops.",
+    pids:
+      "Current values from the log header next to the suggestion. D min / D max follows the firmware's D scheme. Changes are capped at ±25 % per round and scaled by quality and confidence.",
+    sliders:
+      "When the quad uses simplified tuning (RP or RPY), the same change is expressed as slider moves on the Configurator's 0.05 grid. Prefer this form: Betaflight keeps the sliders in sync. The raw form switches simplified_pids_mode OFF.",
+    hot:
+      "Tick it if the motors came down hot after the test flight. The engine then never raises D: it lowers P instead and warns about the D-term filters.",
+    form:
+      "**Sliders** writes simplified_* values and runs simplified_tuning apply. **Raw CLI** writes p_/i_/d_/f_ values and turns the PID sliders off. Filter advice follows the same choice.",
+    session:
+      "A .bbl can hold several flights (one per arm). The longest usable one is analysed by default; pick another here. The others still feed the series comparison.",
+    series:
+      "Flights that differ in exactly one slider (or raw gain) are compared: each gets a score from rise, overshoot near 8 %, ringing and settling (feedforward: tracking delay and correlation). Near-ties go to the lower value: cooler motors, more margin.",
+    procedure:
+      "The usual order of a full tune: filters first, then a P&I sweep with I and FF at 0, then master, restore I, feedforward (acro) and dynamic idle. The highlighted step is the one after the series you just flew.",
+    rounds:
+      "One row per loaded log in this session. Green cells improved over the previous round, amber got worse. The overlay shows the roll step response of the last rounds.",
   },
   cli: {
     intro:

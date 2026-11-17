@@ -19,6 +19,8 @@ import { enBfMotors } from './en/motors';
 import { enBfBlackbox } from './en/blackbox';
 import { enBfCli } from './en/cli';
 import { enBfOsd } from './en/osd';
+import { enAtFlow } from './en/autotune-flow';
+import { enAutotune2 } from './en/autotune2';
 import { enAiProviders } from './en/ai-providers';
 import { enMode, enNav, enSnip, enTipsUi } from './en/ui-modes';
 import { enTipsCore } from './en/tips-core';
@@ -312,7 +314,6 @@ export const en = {
     },
   },
   at: {
-    film: 'WORKSPACEFPV · PID AUTOTUNE',
     dropTitle: 'Blackbox log analysis',
     dropLead: 'Drop a <span class="mono">.bbl</span> log (read natively) or a <span class="mono">.csv</span> from Blackbox Explorer here. WorkspaceFPV computes the gyro noise spectrum and the PID step response, then suggests changes.',
     pick: 'Choose log file',
@@ -324,44 +325,11 @@ export const en = {
     generating: 'Generating a sample log…',
     sampleName: 'sample log (synthetic)',
     binaryTitle: 'This is a binary blackbox log',
-    binaryLead: '<span class="mono">{name}</span> could not be read as a Blackbox log or CSV. Export the log in one of these ways:',
-    binaryStep1: '<b>Blackbox Explorer:</b> open the .bbl/.bfl file, then <span class="mono">File → Export CSV</span>.',
-    binaryStep2: '<b>blackbox_decode</b> (from blackbox-tools): <span class="at-code">blackbox_decode LOG.BBL</span> creates <span class="mono">LOG.01.csv</span>.',
-    errorTitle: 'Could not load the log',
-    changeLog: 'Change log',
-    stepCap: 'STEP RESPONSE · ROLL / PITCH / YAW',
-    overshoot: '{axis} · OVERSHOOT',
-    riseSettle: 'ROLL · RISE / SETTLE',
-    spectrumCap: 'GYRO NOISE SPECTRUM · 0–{max} Hz',
-    motorPeak: 'MOTOR PEAK',
-    framePeak: 'FRAME PEAK',
-    bidirRpm: 'BIDIR DSHOT · RPM FILTER',
-    bidirDemo: 'disabled (demo)',
-    currentSuggested: 'CURRENT → SUGGESTED',
-    pidFromDemo: ' · PID FROM DEMO',
-    changes: { one: '{n} change', few: '{n} changes', many: '{n} changes' },
-    axis: 'AXIS',
-    ffTitle: 'FF is not read via MSP_PID',
-    cliCmds: 'CLI COMMANDS',
-    noChangesToApply: '# nothing to apply',
-    connectForCmds: '# connect to the FC to see ready-to-use commands',
-    apply: 'Apply to FC',
-    applyNoChanges: 'Nothing to apply',
-    applyNeedFc: 'Connect to the FC first',
-    askAi: 'Ask AI about this log',
-    copy: 'Copy',
     copied: 'Commands copied',
     copyFail: 'Could not copy',
-    applyTitle: 'Apply PID and filter changes',
-    applyNote: 'The changes come from the log analysis. The FC reboots after saving. A short, careful test flight afterwards is recommended.',
     unit: { min: 'min' },
-    gt500: '>500',
     // charts
-    stepAria: 'Step response, Roll, Pitch, Yaw',
     stepNoData: 'Not enough stick movement in the log to compute the step response.',
-    spectrumAria: 'Gyro noise spectrum 0-{max} Hz',
-    frameMark: 'frame · {hz} Hz',
-    motorMark: 'motors · {hz} Hz',
     // errors (keys used by parse.ts / run.ts)
     err: {
       missingCols: 'The file is missing columns: {cols}.',
@@ -472,6 +440,8 @@ export const en = {
   bfBlackbox: enBfBlackbox,
   bfCli: enBfCli,
   bfOsd: enBfOsd,
+  atFlow: enAtFlow,
+  autotune2: enAutotune2,
   aiProviders: enAiProviders,
   mode: enMode,
   nav: enNav,

@@ -24,7 +24,7 @@ import {
   type SdSummary,
 } from '../bf/blackbox';
 import { summarizeBbl, type BblSummary } from '../bf/bbl';
-import { setPendingLog } from '../bf/log-handoff';
+import { HANDOFF_ROUTE, setPendingLog } from '../bf/log-handoff';
 import { AREA, errMsg, rawOf, STEP } from '../bf/steps';
 import type { MspWrite } from '../bf/store';
 import { MSPM, DEBUG_MODES_45, decodeAdvancedConfig, encodeAdvancedConfig, debugModeName, type AdvancedConfig } from '../bf/motors';
@@ -432,7 +432,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     else if (act === 'save-again' && dl.phase === 'done') downloadBytes(dl.name, dl.data);
     else if (act === 'analyse' && dl.phase === 'done') {
       setPendingLog(new File([dl.data as BlobPart], dl.name, { type: 'application/octet-stream' }));
-      ctx.navigate('autotune');
+      ctx.navigate(HANDOFF_ROUTE);
     }
   });
   root.addEventListener('change', (e) => {

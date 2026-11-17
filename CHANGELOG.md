@@ -2,6 +2,12 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 0.7.0 – 2026-11-17
+
+- **One PID Autotune tab.** The separate tuning wizard is now part of PID Autotune and works in both modes, with lightbulb tips that say what to do and what Autotune does.
+- **Basic mode:** pick the drone size and style, back up the settings (`before-pid`), prepare the drone, fly a short coached test flight, load the log and get four traffic lights (flight feel, vibrations, propwash, log quality) plus one small, safe change. Apply, Undo (restore the backup) or fly again and compare.
+- **Expert mode:** a new analysis engine with charts. Step response from real stick moves (also per throttle range), throttle × frequency spectrograms that tell motor noise from frame resonance and low mount vibrations, filter delay and filter advice (RPM, dynamic notch, gyro and D-term sliders), propwash detection, PID advice with confidence, comparison of a flight series, settings read from the log header and BBL files with several flights. Tick the changes you want, then Apply selected, Copy CLI or Ask AI.
+
 ## 0.6.3 – 2026-11-17
 
 - **Fix: Gemini "unexpected model name format".** If the Model field holds something that is not a model id (for example the key name "Default Gemini API Key" copied from AI Studio), the app now uses the default gemini-2.5-flash instead of failing; a "models/" prefix is accepted. The key field also mentions the newer key format (AQ.…).
@@ -71,6 +77,12 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.7.0 – 2026-11-17
+
+- **Jedna zakładka Autotune PID.** Osobny kreator strojenia jest teraz częścią Autotune PID i działa w obu trybach, z tipami (żarówki), które mówią, co robić i co robi Autotune.
+- **Tryb podstawowy:** wybierasz rozmiar i styl drona, robisz kopię ustawień (`before-pid`), przygotowujesz drona, lecisz krótki lot testowy z podpowiedziami, wczytujesz log i dostajesz cztery światła (charakter lotu, drgania, propwash, jakość logu) oraz jedną małą, bezpieczną zmianę. Zastosuj, Cofnij (przywraca kopię) albo poleć jeszcze raz i porównaj.
+- **Tryb ekspert:** nowy silnik analizy z wykresami. Odpowiedź skokowa z prawdziwych ruchów drążka (także osobno dla zakresów gazu), spektrogramy częstotliwość × gaz, które odróżniają szum silników od rezonansu ramy i niskich drgań mocowania, opóźnienie i zalecenia filtrów (RPM, dynamiczny notch, suwaki gyro i D-term), wykrywanie propwasha, zalecenia PID z oceną pewności, porównanie serii lotów, ustawienia z nagłówka logu i pliki BBL z wieloma lotami. Zaznaczasz zmiany i klikasz Zastosuj zaznaczone, Kopiuj CLI albo Poproś AI.
 
 ## 0.6.3 – 2026-11-17
 

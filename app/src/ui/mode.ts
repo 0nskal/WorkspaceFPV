@@ -5,6 +5,8 @@
 import { t } from '../i18n';
 import type { SettingsStore, UiMode } from '../settings';
 import { escapeHtml } from './dom';
+import basicImg from '../assets/img/mode-basic.webp';
+import expertImg from '../assets/img/mode-expert.webp';
 
 export function currentMode(settings: SettingsStore): UiMode {
   return settings.get().uiMode || 'basic';
@@ -31,7 +33,7 @@ export function chooseModeDialog(): Promise<UiMode> {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay mode-choose';
     const card = (m: UiMode) =>
-      `<button type="button" class="mode-card" data-mode="${m}"><b>${t(m === 'basic' ? 'mode.basicCard' : 'mode.expertCard')}</b><span>${t(m === 'basic' ? 'mode.basicCardText' : 'mode.expertCardText')}</span><em>${t(m === 'basic' ? 'mode.basic' : 'mode.expert')}</em></button>`;
+      `<button type="button" class="mode-card" data-mode="${m}"><img src="${m === 'basic' ? basicImg : expertImg}" alt="" aria-hidden="true" width="800" height="446" /><b>${t(m === 'basic' ? 'mode.basicCard' : 'mode.expertCard')}</b><span>${t(m === 'basic' ? 'mode.basicCardText' : 'mode.expertCardText')}</span><em>${t(m === 'basic' ? 'mode.basic' : 'mode.expert')}</em></button>`;
     overlay.innerHTML = `<div class="modal mode-modal" role="dialog" aria-modal="true" aria-labelledby="mode-h">
       <div class="modal-h" id="mode-h"><i></i>${t('mode.chooseTitle')}</div>
       <div class="modal-b"><div class="mode-cards">${card('basic')}${card('expert')}</div><p class="mode-lead">${t('mode.chooseLead')}</p></div></div>`;

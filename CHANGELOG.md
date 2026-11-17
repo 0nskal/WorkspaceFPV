@@ -2,6 +2,11 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 0.6.2 – 2026-11-17
+
+- **Illustrations.** Five generated illustrations in the app's X-ray style (no text, small WebP files, about 135 kB together): a quad on the Workshop start screen, a flight controller with a USB cable in the connect zone and on tabs that need a connected FC, pictures on the Basic / Expert cards and a radio link on the ELRS tab (Basic mode).
+- ELRS tab: the beginner note no longer covers the receiver data.
+
 ## 0.6.1 – 2026-11-17
 
 - **Setup: a real 3D quad instead of the wireframe.** The attitude view is now a generic 5-inch freestyle quad (X frame, motors, 3-blade props, FC stack, camera with a red lens at the nose, battery, antenna) drawn with three.js. It follows the FC smoothly at the screen refresh rate instead of jumping with every telemetry sample. three.js loads only on this tab; without WebGL the old drawing stays.
@@ -62,6 +67,11 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.6.2 – 2026-11-17
+
+- **Ilustracje.** Pięć wygenerowanych ilustracji w stylu „rentgena” aplikacji (bez napisów, lekkie pliki WebP, razem ok. 135 kB): dron na ekranie startowym Warsztatu, kontroler lotu z kablem USB w strefie podłączania i w zakładkach, które wymagają połączenia, obrazki na kartach Podstawowy / Ekspert oraz łącze radiowe w zakładce ELRS (tryb podstawowy).
+- Zakładka ELRS: notka dla początkujących nie zasłania już danych odbiornika.
 
 ## 0.6.1 – 2026-11-17
 

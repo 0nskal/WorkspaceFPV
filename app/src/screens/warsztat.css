@@ -171,3 +171,54 @@ button.ws-card:focus-visible,
     align-items: flex-start;
   }
 }
+
+/* generated illustrations (Gemini), edges masked so they melt into the film background */
+.ws-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 44%);
+  gap: 24px;
+  align-items: center;
+}
+.ws-hero {
+  width: 100%;
+  height: auto;
+  -webkit-mask-image: radial-gradient(ellipse 52% 56% at 50% 50%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 52% 56% at 50% 50%, #000 40%, transparent 100%);
+  animation: ws-hero-in 600ms var(--ease-out) both, ws-float 6s ease-in-out 600ms infinite;
+}
+.ws-zone-img {
+  flex: none;
+  width: 200px;
+  height: auto;
+  -webkit-mask-image: radial-gradient(ellipse 58% 60% at 55% 50%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 58% 60% at 55% 50%, #000 50%, transparent 100%);
+}
+@keyframes ws-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+@keyframes ws-float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@media (max-width: 1100px) {
+  .ws-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ws-hero {
+    max-width: 520px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-hero {
+    animation: ws-hero-fade 300ms ease both;
+  }
+  @keyframes ws-hero-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}

@@ -4208,3 +4208,50 @@ html[data-tips='off'] .tip {
 .bf-su-3d {
   display: block;
 }
+
+/* generated illustrations: mode chooser cards, ELRS intro, "connect the FC" empty state */
+.mode-card img {
+  display: block;
+  height: auto;
+  width: calc(100% + 36px);
+  margin: -18px -18px 6px;
+  aspect-ratio: 16 / 8;
+  object-fit: cover;
+  background: var(--bg);
+  border-bottom: 1px solid var(--card-edge);
+}
+.mode-card {
+  overflow: hidden;
+}
+.elrs-introw {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 20px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: 4px;
+}
+.elrs-introw img {
+  max-width: 320px;
+}
+.elrs-introw .intro {
+  margin: 0;
+}
+.elrs-introw img {
+  width: 100%;
+  height: auto;
+  -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 50%, transparent 100%);
+}
+.bf-empty::before {
+  content: '';
+  display: block;
+  width: min(420px, 100%);
+  aspect-ratio: 800 / 446;
+  background: url('../assets/img/connect.webp') center / contain no-repeat;
+  -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 50%, transparent 100%);
+}

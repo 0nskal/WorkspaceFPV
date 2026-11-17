@@ -12,6 +12,8 @@ import { icon } from '../ui/icons';
 import { loadBackup } from '../settings';
 import { APP_VERSION } from '../updates';
 import './warsztat.css';
+import heroImg from '../assets/img/ws-hero.webp';
+import connectImg from '../assets/img/connect.webp';
 import { intro, tip } from '../ui/tip';
 
 function buildLabels(s: Readonly<FcState>, d: Diagnosis, bf: Readonly<BfData>): XrayLabels {
@@ -84,13 +86,16 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     ].join('');
     el.innerHTML = `
       <div class="ws-start"><div class="ws-in">
-        <header class="ws-head">
-          <h1>${t(greet)} ${t('mode.wsSub')}</h1>
-          <p>${t('start.lead')}</p>
-          <div class="ws-intro">${intro('tips.warsztat.intro')}</div>
-        </header>
+        <div class="ws-top">
+          <header class="ws-head">
+            <h1>${t(greet)} ${t('mode.wsSub')}</h1>
+            <p>${t('start.lead')}</p>
+            <div class="ws-intro">${intro('tips.warsztat.intro')}</div>
+          </header>
+          <img class="ws-hero" src="${heroImg}" alt="" aria-hidden="true" width="1200" height="670" decoding="async" />
+        </div>
         <section class="ws-zone">
-          <svg class="ws-zone-ico" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M9 3h6v6H9zM10.5 5.5v1M13.5 5.5v1M8 9h8v3a4 4 0 0 1-8 0V9zM12 16v5"/></svg>
+          <img class="ws-zone-img" src="${connectImg}" alt="" aria-hidden="true" width="800" height="446" decoding="async" />
           <div class="ws-zone-body">
             <h2>${t('mode.wsZoneTitle')}</h2>
             <p>${t('mode.wsZoneHelp')}</p>

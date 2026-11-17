@@ -1,4 +1,5 @@
 import type { AppContext, ScreenMount } from '../context';
+import elrsImg from '../assets/img/elrs.webp';
 import { hwInfo, type HwJob } from '../bf/hw-info';
 import { readRxConfig } from '../fc/read';
 import { jobText } from './bf-esc-info';
@@ -20,8 +21,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let disposed = false;
   let sceneKey = '';
 
-  el.innerHTML = `${intro('tips.elrs.intro')}<div class="elrs">
-    <div class="elrs-stage"><div class="elrs-art"></div><div class="elrs-data" aria-label="${t('elrs.dataAria')}"></div></div>
+  el.innerHTML = `<div class="elrs">
+    <div class="elrs-stage"><div class="elrs-art"></div><div class="elrs-data" aria-label="${t('elrs.dataAria')}"></div>
+      <div class="elrs-introw" data-only="basic"><img src="${elrsImg}" alt="" aria-hidden="true" width="800" height="446" decoding="async" />${intro('tips.elrs.intro')}</div></div>
     <aside class="elrs-card" aria-label="${t('elrs.cardAria')}"></aside>
   </div>`;
   const art = el.querySelector<HTMLElement>('.elrs-art') as HTMLElement;

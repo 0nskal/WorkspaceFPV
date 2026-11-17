@@ -278,7 +278,7 @@ export function createApp(root: HTMLElement): AppContext {
         prev = sc.group;
         return `${sep}<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`;
       })
-      .join('');
+      .join('') + '<span class="nav-ind" aria-hidden="true"></span>';
   }
 
   /** (Re)builds the whole shell: top bar, tab bar from the screen registry, empty screen area. Called on start and on language change. */
@@ -380,7 +380,28 @@ export function createApp(root: HTMLElement): AppContext {
       screenEl.innerHTML = `<div class="expert-only"><p>${t('mode.expertOnly')}</p><button class="btn p" data-act="to-expert">${t('mode.expertOnlyAction')}</button></div>`;
     } else if (def) unmount = def.mount(screenEl, ctx);
     navEl.querySelectorAll<HTMLElement>('a').forEach((a) => a.classList.toggle('on', a.dataset.route === current));
+    moveIndicator();
     syncLayout();
+    enterScreen();
+  }
+
+  const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** Slides the tab underline to the active tab (transform only; the first placement does not animate). */
+  function moveIndicator(): void {
+    const ind = navEl.querySelector<HTMLElement>('.nav-ind');
+    if (!ind) return;
+    const a = navEl.querySelector<HTMLElement>('a.on');
+    ind.hidden = !a;
+    if (!a) return;
+    ind.style.transform = `translateX(${a.offsetLeft}px) scaleX(${a.offsetWidth})`;
+    if (!ind.classList.contains('ready')) requestAnimationFrame(() => ind.classList.add('ready'));
+  }
+
+  /** New tab content fades up 4px (WAAPI: runs on the compositor while the screen is still rendering). */
+  function enterScreen(): void {
+    if (reduceMotion()) return;
+    screenEl.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   }
 
   function renderBar(): void {

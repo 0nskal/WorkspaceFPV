@@ -7,6 +7,7 @@ import { MSP } from '../serial/msp';
 import { escapeHtml } from '../ui/dom';
 import { mountEscInfo } from './bf-esc-info';
 import { icon } from '../ui/icons';
+import { intro, tip } from '../ui/tip';
 import { mountMotorConfig, type MotorCfgHandle } from './bf-motors-cfg';
 import { mountMotorTelemetry, type MotorTelHandle } from './bf-motors-tel';
 
@@ -332,22 +333,23 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           <div class="esc-art"></div>
           <div class="bf-motors-tel"></div>
           <div class="esc-info">
-            <div><small class="mono">${t('esc.infoView')}</small><b>${t('esc.infoViewVal')}</b></div>
-            <div><small class="mono">${t('esc.infoProps')}</small>
+            <div data-level="expert"><small class="mono">${t('esc.infoView')}</small><b>${t('esc.infoViewVal')}</b></div>
+            <div><small class="mono">${t('esc.infoProps')} ${tip('tips.motors.direction')}</small>
               <span class="esc-tog"><button type="button" data-props="in" aria-pressed="true">props in</button><button type="button" data-props="out" aria-pressed="false">props out</button></span></div>
-            <div><small class="mono">${t('esc.infoNumbering')}</small><b>${t('esc.infoNumberingVal')}</b></div>
+            <div><small class="mono">${t('esc.infoNumbering')} ${tip('tips.motors.numbering')}</small><b>${t('esc.infoNumberingVal')}</b></div>
           </div>
         </div>
         <div class="esc-side">
+          ${intro('tips.motors.intro')}
           <section class="esc-panel bf-motors-cfg"></section>
           <div class="bf-esc-info-host"></div>
           <section class="esc-panel">
-            <header><span class="mono">${t('esc.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
-            <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>${t('esc.propsOff')}</span></label>
+            <header><span class="mono">${t('esc.testHead')} ${tip('tips.motors.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
+            <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>${t('esc.propsOff')}</span>${tip('tips.motors.propsOff')}</label>
             <div class="esc-warn" role="alert"></div>
             ${rows}
             <label class="esc-slider all dis"><span class="esc-sl-n">${t('esc.all')}</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="all" disabled aria-label="${t('esc.allPower')}"><span class="esc-val mono">0%</span></label>
-            <label class="esc-check small"><input type="checkbox" id="esc-unlock" disabled><span>${t('esc.unlock', { max: SAFE_MAX })}</span></label>
+            <label class="esc-check small"><input type="checkbox" id="esc-unlock" disabled><span>${t('esc.unlock', { max: SAFE_MAX })}</span>${tip('tips.motors.unlock')}</label>
             <button type="button" class="esc-stop">${icon('stop', 20)}<span>${t('esc.stop')}</span><kbd class="mono">${t('esc.space')}</kbd></button>
           </section>
         </div>

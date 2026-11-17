@@ -7,6 +7,7 @@ import type { Values } from '../bf/fieldtable';
 import { escapeHtml } from '../ui/dom';
 import { fmtNum, t } from '../i18n';
 import { icon } from '../ui/icons';
+import { tip, type TipKey } from '../ui/tip';
 
 export class Form {
   cur: Record<string, Values> = {};
@@ -55,6 +56,8 @@ export interface FieldSpec {
   k: string;
   label: string;
   tip?: string;
+  /** Lightbulb tip (docs/TIPS.md); replaces the native title tooltip. */
+  tipKey?: TipKey;
   /** Raw range (as stored in the MSP payload). */
   min: number;
   max: number;
@@ -76,8 +79,8 @@ const numStr = (raw: number, scale: number) => (raw * scale).toFixed(decimals(sc
 
 /** Renders one control; a field the firmware does not report is shown dimmed with a tooltip. */
 export function fieldHtml(f: Form, s: FieldSpec): string {
-  const tip = s.tip ? ` title="${escapeHtml(s.tip)}"` : '';
-  const label = s.bare ? '' : `<span class="bf-tuning-lb"${tip}>${escapeHtml(s.label)}</span>`;
+  const title = s.tip && !s.tipKey ? ` title="${escapeHtml(s.tip)}"` : '';
+  const label = s.bare ? '' : `<span class="bf-tuning-lb"${title}>${escapeHtml(s.label)}${s.tipKey ? ` ${tip(s.tipKey)}` : ''}</span>`;
   if (!f.has(s.g, s.k)) {
     return `<div class="bf-tuning-f na ${s.cls ?? ''}" title="${escapeHtml(t('bfTuning.common.unsupported'))}">${label}<span class="bf-tuning-na mono">—</span></div>`;
   }
@@ -97,8 +100,8 @@ export function fieldHtml(f: Form, s: FieldSpec): string {
   return `<div class="bf-tuning-f${ch} ${s.slider ? 'sl' : ''} ${s.cls ?? ''}" data-fk="${s.g}.${s.k}">${label}<span class="bf-tuning-c">${ctl}</span></div>`;
 }
 
-export const sectionHtml = (title: string, body: string, note = ''): string =>
-  `<section class="bf-tuning-sec"><div class="bf-tuning-cap mono"><span>${escapeHtml(title)}</span>${note ? `<span class="dim">${escapeHtml(note)}</span>` : ''}</div>${body}</section>`;
+export const sectionHtml = (title: string, body: string, note = '', opts: { tip?: TipKey; expert?: boolean } = {}): string =>
+  `<section class="bf-tuning-sec"${opts.expert ? ' data-level="expert"' : ''}><div class="bf-tuning-cap mono"><span>${escapeHtml(title)}${opts.tip ? ` ${tip(opts.tip)}` : ''}</span>${note ? `<span class="dim">${escapeHtml(note)}</span>` : ''}</div>${body}</section>`;
 
 /**
  * Delegated handler for [data-g][data-k] controls. Out-of-range or non-numeric typing is marked `.bad` and ignored;

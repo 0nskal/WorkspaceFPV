@@ -13,11 +13,29 @@ import {
 } from '../bf/receiver';
 import { escapeHtml } from '../ui/dom';
 import { fmtNum, t, type Key } from '../i18n';
+import { intro, tip, type TipKey } from '../ui/tip';
 import { barHtml, bindForm, disconnectedHtml, errorHtml, fieldHtml, Form, noticeHtml, sectionHtml, updateBar, type FieldSpec } from './bf-tuning-ui';
 
 const k = (x: string) => `bfReceiver.${x}` as Key;
 const CH_MIN = 1000;
 const CH_MAX = 2000;
+
+/** Lightbulb text per field key (tips.receiver.<key>). */
+const FIELD_TIPS: Record<string, TipKey> = {
+  provider: 'tips.receiver.provider',
+  ch: 'tips.receiver.rssiChannel',
+  minCheck: 'tips.receiver.minCheck',
+  midRc: 'tips.receiver.midRc',
+  maxCheck: 'tips.receiver.maxCheck',
+  deadband: 'tips.receiver.deadband',
+  yawDeadband: 'tips.receiver.yawDeadband',
+  smoothMode: 'tips.receiver.smoothMode',
+  smoothSetpointCutoff: 'tips.receiver.smoothSetpointCutoff',
+  smoothThrottleCutoff: 'tips.receiver.smoothThrottleCutoff',
+  smoothFeedforwardCutoff: 'tips.receiver.smoothFeedforwardCutoff',
+  smoothAutoFactor: 'tips.receiver.smoothAutoFactor',
+  smoothAutoFactorThrottle: 'tips.receiver.smoothAutoFactorThrottle',
+};
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const form = new Form();
@@ -44,11 +62,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const api = () => ctx.bf.get().api || 46;
   const connected = () => ctx.state.get().conn === 'connected' && ctx.link() !== null;
   const map = (): number[] => Array.from({ length: 8 }, (_, i) => form.get('map', `m${i}`));
-  const tipFor = (key: string) => {
-    const v = t(k(`tips.${key}`));
-    return v === k(`tips.${key}`) ? undefined : v;
-  };
-  const s = (g: string, key: string, label: string, min: number, max: number, extra: Partial<FieldSpec> = {}): FieldSpec => ({ g, k: key, label, min, max, tip: tipFor(key), ...extra });
+  const s = (g: string, key: string, label: string, min: number, max: number, extra: Partial<FieldSpec> = {}): FieldSpec => ({ g, k: key, label, min, max, ...extra });
 
   function specs(): FieldSpec[] {
     const cur = form.get('rx', 'provider');
@@ -163,7 +177,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       .map((us, i) => {
         const name = link && i === 14 ? 'LQ' : link && i === 15 ? 'RSSI' : channelName(i, m);
         const tag = rssiCh === i + 1 ? `<em class="mono">RSSI</em>` : '';
-        return `<div class="bf-receiver-ch" data-ch="${i}"><span class="n mono">CH${i + 1}</span><span class="nm">${escapeHtml(name)}${tag}</span><span class="bar"><i style="width:${(norm(us) * 100).toFixed(1)}%"></i><b></b></span><span class="us mono">${us}</span></div>`;
+        return `<div class="bf-receiver-ch" data-ch="${i}"${i >= 12 ? ' data-level="expert"' : ''}><span class="n mono">CH${i + 1}</span><span class="nm">${escapeHtml(name)}${tag}</span><span class="bar"><i style="width:${(norm(us) * 100).toFixed(1)}%"></i><b></b></span><span class="us mono">${us}</span></div>`;
       })
       .join('');
   }
@@ -173,7 +187,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const link = elrsLink(rc, prov);
     if (prov !== PROVIDER_CRSF) return `<div class="bf-receiver-lq dim">${t('bfReceiver.lqNotCrsf')}</div>`;
     if (!link) return `<div class="bf-receiver-lq dim">${t('bfReceiver.lqNone')}</div>`;
-    return `<div class="bf-receiver-lq"><div class="bf-tuning-k"><div class="l mono">${t('bfReceiver.lq')}</div><div class="v">${fmtNum(link.lq, 0)}<small>%</small></div></div><div class="bf-tuning-k"><div class="l mono">${t('bfReceiver.rssiDbm')}</div><div class="v">~${fmtNum(link.rssiDbm, 0)}<small>dBm</small></div></div></div><p class="bf-tuning-hint">${t('bfReceiver.lqNote')}</p>`;
+    return `<div class="bf-receiver-lq"><div class="bf-tuning-k"><div class="l mono">${t('bfReceiver.lq')}${tip('tips.receiver.link')}</div><div class="v">${fmtNum(link.lq, 0)}<small>%</small></div></div><div class="bf-tuning-k"><div class="l mono">${t('bfReceiver.rssiDbm')}</div><div class="v">~${fmtNum(link.rssiDbm, 0)}<small>dBm</small></div></div></div><p class="bf-tuning-hint">${t('bfReceiver.lqNote')}</p>`;
   }
 
   function updateLive(): void {
@@ -238,22 +252,33 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       root.innerHTML = errorHtml(error);
       return;
     }
-    const f = (key: string, g = 'rx') => fieldHtml(form, spec(key, g));
+    /** Field with a lightbulb next to its label (bf-tuning-ui renders the label itself). */
+    const f = (key: string, g = 'rx') => {
+      const tk = FIELD_TIPS[key];
+      const html = fieldHtml(form, spec(key, g));
+      return tk ? html.replace(/(<span class="bf-tuning-lb"[^>]*>[^<]*<\/span>)/, `$1${tip(tk)}`) : html;
+    };
+    /** Marks a whole section as Expert-only (hidden in Basic mode) and adds a bulb after its caption. */
+    const sec = (html: string, bulbs: string, expert: boolean) => {
+      let out = html.replace('</span>', `</span>${bulbs}`);
+      if (expert) out = out.replace('<section class="bf-tuning-sec">', '<section class="bf-tuning-sec" data-level="expert">');
+      return out;
+    };
     const cur = mapToString(map());
     const preset = RX_MAP_PRESETS.includes(cur) ? cur : 'custom';
     const mapChanged = form.groupChanged('map');
-    const mapSel = `<div class="bf-tuning-f${mapChanged ? ' chg' : ''}"><span class="bf-tuning-lb" title="${escapeHtml(t('bfReceiver.tips.map'))}">${t('bfReceiver.map')}</span><span class="bf-tuning-c"><select data-preset aria-label="${escapeHtml(t('bfReceiver.map'))}">${RX_MAP_PRESETS.map((p) => `<option value="${p}"${p === preset ? ' selected' : ''}>${p.slice(0, 4)}</option>`).join('')}${preset === 'custom' ? `<option value="custom" selected>${escapeHtml(cur)}</option>` : ''}</select></span></div>`;
+    const mapSel = `<div class="bf-tuning-f${mapChanged ? ' chg' : ''}"><span class="bf-tuning-lb">${t('bfReceiver.map')}</span>${tip('tips.receiver.map')}<span class="bf-tuning-c"><select data-preset aria-label="${escapeHtml(t('bfReceiver.map'))}">${RX_MAP_PRESETS.map((p) => `<option value="${p}"${p === preset ? ' selected' : ''}>${p.slice(0, 4)}</option>`).join('')}${preset === 'custom' ? `<option value="custom" selected>${escapeHtml(cur)}</option>` : ''}</select></span></div>`;
     const smoothKeys = ['smoothMode', 'smoothSetpointCutoff', api() >= 47 ? 'smoothThrottleCutoff' : 'smoothFeedforwardCutoff', 'smoothAutoFactor', ...(api() >= 47 ? ['smoothAutoFactorThrottle'] : [])];
     const prov = form.get('rx', 'provider');
-    root.innerHTML = `<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfReceiver.tab')}</div><span class="bf-tuning-pnote dim">${t('bfReceiver.note')}</span></div>
+    root.innerHTML = `${intro('tips.receiver.intro')}<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfReceiver.tab')}</div><span class="bf-tuning-pnote dim">${t('bfReceiver.note')}</span></div>
       <div class="bf-tuning-body"><div class="bf-tuning-rates">
         <div class="bf-tuning-rcol">
           ${sectionHtml(t('bfReceiver.capSetup'), `${prov === 0 ? noticeHtml('warn', t('bfReceiver.noProvider')) : ''}<div class="bf-tuning-grid">${f('provider')}${mapSel}${f('ch', 'rssi')}</div>`, needsReboot() ? t('bfReceiver.rebootNeeded') : '')}
-          ${sectionHtml(t('bfReceiver.capSticks'), `<div class="bf-tuning-grid">${f('minCheck')}${f('midRc')}${f('maxCheck')}${hasDb ? `${f('deadband', 'db')}${f('yawDeadband', 'db')}` : ''}</div>`)}
-          ${sectionHtml(t('bfReceiver.capSmooth'), `<div class="bf-tuning-grid">${smoothKeys.map((x) => f(x)).join('')}</div>`, t('bfReceiver.smoothNote'))}
+          ${sec(sectionHtml(t('bfReceiver.capSticks'), `<div class="bf-tuning-grid">${f('minCheck')}${f('midRc')}${f('maxCheck')}${hasDb ? `${f('deadband', 'db')}${f('yawDeadband', 'db')}` : ''}</div>`), tip('tips.receiver.sticks'), true)}
+          ${sec(sectionHtml(t('bfReceiver.capSmooth'), `<div class="bf-tuning-grid">${smoothKeys.map((x) => f(x)).join('')}</div>`, t('bfReceiver.smoothNote')), '', true)}
         </div>
         <div class="bf-tuning-rcol">
-          ${sectionHtml(t('bfReceiver.capLive'), `<div class="bf-receiver-live"><div class="bf-receiver-sticks">${stickSvg(`${t('bfReceiver.yaw')} / ${t('bfReceiver.throttle')}`, 'yaw', 'thr')}${stickSvg(`${t('bfReceiver.roll')} / ${t('bfReceiver.pitch')}`, 'roll', 'pitch')}</div><div data-link>${linkHtml()}</div></div><div class="bf-receiver-bars" data-bars>${barsHtml()}</div>`, t('bfReceiver.live10'))}
+          ${sec(sectionHtml(t('bfReceiver.capLive'), `<div class="bf-receiver-live"><div class="bf-receiver-sticks">${stickSvg(`${t('bfReceiver.yaw')} / ${t('bfReceiver.throttle')}`, 'yaw', 'thr')}${stickSvg(`${t('bfReceiver.roll')} / ${t('bfReceiver.pitch')}`, 'roll', 'pitch')}</div><div data-link>${linkHtml()}</div></div><div class="bf-receiver-bars" data-bars>${barsHtml()}</div>`, t('bfReceiver.live10')), `${tip('tips.receiver.live')}${tip('tips.receiver.failsafe')}`, false)}
         </div>
       </div></div>${barHtml()}`;
     root.scrollTop = top;

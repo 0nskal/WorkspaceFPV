@@ -4,6 +4,7 @@ import { partLabel, type Check } from '../fc/diagnose';
 import { t } from '../i18n';
 import { findScreen } from '../screens/registry';
 import { copyText, escapeHtml } from './dom';
+import { tip } from './tip';
 import { captureSnip, pointTo, refLabel, snipText, startSnip, type Snip } from './snip';
 import { icon } from './icons';
 
@@ -100,7 +101,7 @@ function cliBlockHtml(code: string, closed: boolean, caveat?: string): string {
   const cmds = cliLines(code);
   const data = escapeHtml(JSON.stringify(cmds));
   const buttons = closed
-    ? `<div class="btns"><button class="btn p" data-act="apply" data-cmds="${data}">${icon('check', 15)}${t('drawer.apply')}</button><button class="btn s" data-act="copy" data-cmds="${data}">${icon('copy', 15)}${t('drawer.copy')}</button></div>`
+    ? `<div class="btns"><button class="btn p" data-act="apply" data-cmds="${data}">${icon('check', 15)}${t('drawer.apply')}</button><button class="btn s" data-act="copy" data-cmds="${data}">${icon('copy', 15)}${t('drawer.copy')}</button>${tip('tips.drawer.apply', t('drawer.apply'))}</div>`
     : '';
   return `<div class="code">${highlightCli(code)}</div>${caveat ? `<div class="caveat">${escapeHtml(caveat)}</div>` : ''}${buttons}`;
 }
@@ -155,6 +156,7 @@ export function createDrawer(ctx: AppContext): Drawer {
         <button data-nav="esc">${icon('chip')}${t('drawer.escProtocol')}</button>
         <button data-nav="autotune">${icon('sliders')}${t('drawer.autotune')}</button>
       </div>
+      <div class="snip-line" data-only="basic">${icon('scissors', 13)}<span>${t('snip.button')}</span>${tip('tips.drawer.snip', t('snip.button'))}</div>
       <div class="attach" hidden></div>
       <form class="in">
         <button type="button" class="clip" title="${t('drawer.attachTitle')}" aria-label="${t('drawer.attachAria')}">${icon('paperclip', 18)}</button>

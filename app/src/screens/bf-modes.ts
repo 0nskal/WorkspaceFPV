@@ -12,6 +12,7 @@ import { decodeRc } from '../bf/receiver';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { t } from '../i18n';
+import { intro, tip, type TipKey } from '../ui/tip';
 import { barHtml, disconnectedHtml, errorHtml, noticeHtml, updateBar } from './bf-tuning-ui';
 
 const US_MIN = 900;
@@ -24,6 +25,23 @@ interface Box {
 }
 
 let onlyConfigured = false;
+
+const norm1 = (n: string) => n.toUpperCase().replace(/[\s_]+/g, ' ').trim();
+
+/** Modes a beginner needs; the rest is Expert-only unless the mode already has a range. Tip per known mode. */
+const BASIC_MODES: Record<string, TipKey> = {
+  ARM: 'tips.modes.arm',
+  ANGLE: 'tips.modes.angle',
+  HORIZON: 'tips.modes.horizon',
+  'AIR MODE': 'tips.modes.airmode',
+  AIRMODE: 'tips.modes.airmode',
+  BEEPER: 'tips.modes.beeper',
+  'BEEPER ON': 'tips.modes.beeper',
+  'FLIP OVER AFTER CRASH': 'tips.modes.turtle',
+  TURTLE: 'tips.modes.turtle',
+  PREARM: 'tips.modes.prearm',
+  FAILSAFE: 'tips.modes.failsafe',
+};
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const root = document.createElement('div');
@@ -125,7 +143,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         <input type="range" data-f="start" min="0" max="${STEP_COUNT}" step="1" value="${r.start}" aria-label="${t('bfModes.from')}">
         <input type="range" data-f="end" min="0" max="${STEP_COUNT}" step="1" value="${r.end}" aria-label="${t('bfModes.to')}"></div>
       <span class="bf-modes-us"><input type="number" class="bf-tuning-num mono" data-f="startUs" min="${US_MIN}" max="${US_MAX}" step="25" value="${stepToUs(r.start)}" aria-label="${t('bfModes.from')}"><i>–</i><input type="number" class="bf-tuning-num mono" data-f="endUs" min="${US_MIN}" max="${US_MAX}" step="25" value="${stepToUs(r.end)}" aria-label="${t('bfModes.to')}"></span>
-      <span class="bf-modes-logic"><select data-f="logic" aria-label="${t('bfModes.logic')}" title="${escapeHtml(t('bfModes.tips.logic'))}"><option value="0"${r.logic === 0 ? ' selected' : ''}>OR</option><option value="1"${r.logic === 1 ? ' selected' : ''}>AND</option></select>${r.logic === 1 ? `<select data-f="link" aria-label="${t('bfModes.linked')}">${linkOpts}</select>` : ''}</span>
+      <span class="bf-modes-logic"><select data-f="logic" aria-label="${t('bfModes.logic')}"><option value="0"${r.logic === 0 ? ' selected' : ''}>OR</option><option value="1"${r.logic === 1 ? ' selected' : ''}>AND</option></select>${r.logic === 1 ? `<select data-f="link" aria-label="${t('bfModes.linked')}">${linkOpts}</select>` : ''}</span>
       <button class="bf-modes-x" data-act="remove" data-slot="${r.slot}" aria-label="${t('bfModes.remove')}" title="${t('bfModes.remove')}">${icon('x', 14)}</button>
     </div>`;
   }
@@ -135,8 +153,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (onlyConfigured && !rs.length) return '';
     const on = active.has(b.id);
     const free = live().length < MODE_SLOTS;
-    return `<div class="bf-modes-mode${on ? ' on' : ''}${rs.length ? '' : ' empty'}" data-box="${b.id}">
-      <div class="bf-modes-mh"><i class="bf-modes-dot" aria-hidden="true"></i><span class="bf-modes-name">${escapeHtml(b.name)}</span>${on ? `<em class="mono">${t('bfModes.active')}</em>` : ''}<span class="bf-modes-sp"></span><button class="bf-modes-add" data-act="add" data-id="${b.id}" ${free ? '' : 'disabled'} title="${free ? '' : escapeHtml(t('bfModes.noSlots'))}">${icon('check', 12)}${t('bfModes.add')}</button></div>
+    const tk = BASIC_MODES[norm1(b.name)];
+    const hide = !tk && !rs.length ? ' data-level="expert"' : '';
+    return `<div class="bf-modes-mode${on ? ' on' : ''}${rs.length ? '' : ' empty'}" data-box="${b.id}"${hide}>
+      <div class="bf-modes-mh"><i class="bf-modes-dot" aria-hidden="true"></i><span class="bf-modes-name">${escapeHtml(b.name)}</span>${tk ? tip(tk) : ''}${on ? `<em class="mono">${t('bfModes.active')}</em>` : ''}<span class="bf-modes-sp"></span><button class="bf-modes-add" data-act="add" data-id="${b.id}" ${free ? '' : 'disabled'} title="${free ? '' : escapeHtml(t('bfModes.noSlots'))}">${icon('check', 12)}${t('bfModes.add')}</button></div>
       ${rs.map(rangeHtml).join('')}
     </div>`;
   }
@@ -159,12 +179,12 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const scale = [900, 1200, 1500, 1800, 2100].map((u) => `<span style="left:${pct(u)}%">${u}</span>`).join('');
     const arm = boxes.find((b) => b.id === 0);
     const noArm = arm && !live().some((r) => r.id === 0);
-    root.innerHTML = `<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfModes.tab')}</div>
+    root.innerHTML = `${intro('tips.modes.intro')}<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfModes.tab')}</div>
         <label class="bf-tuning-pl bf-modes-only"><input type="checkbox" data-only ${onlyConfigured ? 'checked' : ''}> ${t('bfModes.onlyConfigured')}</label>
         <span class="bf-tuning-pnote dim">${t('bfModes.note', { used: live().length, max: MODE_SLOTS })}</span></div>
       <div class="bf-tuning-body">
         ${noArm ? noticeHtml('warn', t('bfModes.noArm')) : ''}
-        <div class="bf-modes-scale"><span class="bf-modes-scalelabel mono">${t('bfModes.pulse')}</span><div class="bf-modes-scaleax mono">${scale}</div></div>
+        <div class="bf-modes-scale"><span class="bf-modes-scalelabel mono">${t('bfModes.pulse')}${tip('tips.modes.ranges')}${tip('tips.modes.logic')}</span><div class="bf-modes-scaleax mono">${scale}</div></div>
         <div class="bf-modes-list">${boxes.map(modeHtml).join('')}</div>
       </div>${barHtml()}`;
     root.scrollTop = top;

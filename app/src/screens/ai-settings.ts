@@ -7,6 +7,7 @@ import { t } from '../i18n';
 import { MODELS } from '../settings';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
+import { tip, type TipKey } from '../ui/tip';
 
 const keyField = (name: string, value: string, placeholder: string, label: string) => `
   <label class="field">
@@ -16,6 +17,13 @@ const keyField = (name: string, value: string, placeholder: string, label: strin
       <button class="btn s" type="button" data-act="toggle" data-for="${name}">${t('settings.show')}</button>
     </div>
   </label>`;
+
+const TIP_OF: Record<ProviderId, TipKey> = {
+  'claude-code': 'tips.settings.claudeCode',
+  gemini: 'tips.settings.gemini',
+  ollama: 'tips.settings.ollama',
+  anthropic: 'tips.settings.anthropic',
+};
 
 export function aiSettingsHtml(ctx: AppContext): string {
   const s = ctx.settings.get();
@@ -72,7 +80,7 @@ export function aiSettingsHtml(ctx: AppContext): string {
         ${id === 'claude-code' && desktop ? `<span class="prov-tag">${t('aiProviders.recommended')}</span>` : ''}
         <span class="prov-st mono" data-st="${id}">${initial}</span>
       </label>
-      <p class="about">${t(`aiProviders.desc.${id}`)}</p>
+      <p class="about">${t(`aiProviders.desc.${id}`)} ${tip(TIP_OF[id])}</p>
       <div class="prov-body" ${id === sel ? '' : 'hidden'}>
         ${disabled ? '' : body[id]}
         ${
@@ -91,7 +99,7 @@ export function aiSettingsHtml(ctx: AppContext): string {
   return `
       <section class="card" id="ai">
         <div class="ch">${t('settings.ai')}</div>
-        <p class="about">${t('aiProviders.intro')}</p>
+        <p class="about">${t('aiProviders.intro')} ${tip('tips.settings.aiProviders')}</p>
         <div class="prov-list" role="radiogroup" aria-label="${t('aiProviders.head')}">${cards}</div>
         <div class="field-row actions">
           <button class="btn p" type="button" data-act="save">${icon('check')}${t('settings.save')}</button>

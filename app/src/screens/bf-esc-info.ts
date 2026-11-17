@@ -8,6 +8,21 @@ import { onReconnectStatus } from '../serial/reconnect-status';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { t, type Key } from '../i18n';
+import { tip, type TipKey } from '../ui/tip';
+
+/** Lightbulb per ESC setting (only the ones a beginner can act on). */
+const FIELD_TIP: Record<string, TipKey> = {
+  direction: 'tips.motors.escInfo.direction',
+  pwm: 'tips.motors.escInfo.pwm',
+  timing: 'tips.motors.escInfo.timing',
+  startupPower: 'tips.motors.escInfo.startupPower',
+  brakeOnStop: 'tips.motors.escInfo.brakeOnStop',
+  beaconStrength: 'tips.motors.escInfo.beacon',
+  beaconDelay: 'tips.motors.escInfo.beacon',
+  tempProtection: 'tips.motors.escInfo.tempProtection',
+};
+
+type Row = [label: string, value: string, tipKey?: TipKey, expert?: boolean];
 
 /** Fields shown on the card itself; the rest sits behind "All settings". */
 const PRIMARY = ['direction', 'pwm', 'timing', 'bidirMode', 'brakeOnStop', 'beaconStrength', 'beaconDelay'];
@@ -48,16 +63,17 @@ function cardHtml(e: EscDevice): string {
   const label = escLabel(e);
   const s = e.settings && e.settings.firmware !== 'unknown' ? e.settings : null;
   const title = label ?? (e.note === 'unknownLayout' ? t('bfInfo.esc.unknownLayout') : e.mcuName ?? '?');
-  const rows: Array<[string, string]> = [];
+  const rows: Row[] = [];
   if (s) {
-    rows.push([t('bfInfo.esc.firmware'), s.firmwareName], [t('bfInfo.esc.version'), s.version ?? '—']);
-    if (s.target) rows.push([t('bfInfo.esc.target'), s.target]);
+    rows.push([t('bfInfo.esc.firmware'), s.firmwareName, 'tips.motors.escInfo.firmware'], [t('bfInfo.esc.version'), s.version ?? '—']);
+    if (s.target) rows.push([t('bfInfo.esc.target'), s.target, undefined, true]);
   }
-  if (e.mcuName) rows.push([t('bfInfo.esc.mcu'), e.mcuName]);
+  if (e.mcuName) rows.push([t('bfInfo.esc.mcu'), e.mcuName, undefined, true]);
   const primary = s ? s.fields.filter((f) => PRIMARY.includes(f.id)) : [];
   const rest = s ? s.fields.filter((f) => !PRIMARY.includes(f.id)) : [];
-  const dl = (list: Array<[string, string]>) => `<dl>${list.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>`;
-  rows.push(...primary.map((f): [string, string] => [fieldLabel(f.id), fieldValue(f)]));
+  const lv = (x?: boolean) => (x ? ' data-level="expert"' : '');
+  const dl = (list: Row[]) => `<dl>${list.map(([k, v, tk, x]) => `<dt${lv(x)}>${escapeHtml(k)}${tk ? ' ' + tip(tk) : ''}</dt><dd${lv(x)}>${escapeHtml(v)}</dd>`).join('')}</dl>`;
+  rows.push(...primary.map((f): Row => [fieldLabel(f.id), fieldValue(f), FIELD_TIP[f.id]]));
 
   let note = '';
   const mcu = e.mcuName ?? '';
@@ -72,8 +88,8 @@ function cardHtml(e: EscDevice): string {
   return `<article class="bf-esc-card ${cls}">
     <header><b class="mono">${m}</b><span>${escapeHtml(title)}</span></header>
     ${rows.length ? dl(rows) : ''}
-    ${rest.length ? `<details><summary class="mono">${t('bfInfo.esc.more')}</summary>${dl(rest.map((f): [string, string] => [fieldLabel(f.id), fieldValue(f)]))}</details>` : ''}
-    ${bidir !== 'unknown' || s ? `<p class="bf-esc-bidir mono ${bidir}">${bidirTxt}</p>` : ''}
+    ${rest.length ? `<details data-level="expert"><summary class="mono">${t('bfInfo.esc.more')}</summary>${dl(rest.map((f): Row => [fieldLabel(f.id), fieldValue(f), FIELD_TIP[f.id]]))}</details>` : ''}
+    ${bidir !== 'unknown' || s ? `<p class="bf-esc-bidir mono ${bidir}">${bidirTxt} ${tip('tips.motors.escInfo.bidirStatus')}</p>` : ''}
     ${note ? `<p class="bf-esc-note">${escapeHtml(note)}</p>` : ''}
   </article>`;
 }
@@ -82,7 +98,7 @@ function cardHtml(e: EscDevice): string {
 export function mountEscInfo(host: HTMLElement, ctx: AppContext): () => void {
   const hw = hwInfo();
   host.innerHTML = `<section class="esc-panel bf-esc-panel" aria-label="${t('bfInfo.esc.head')}">
-    <header><span class="mono">${t('bfInfo.esc.head')}</span><span class="mono esc-key">${t('bfInfo.esc.key')}</span></header>
+    <header><span class="mono">${t('bfInfo.esc.head')} ${tip('tips.motors.escInfo.head')}</span><span class="mono esc-key" data-level="expert">${t('bfInfo.esc.key')}</span></header>
     <div class="bf-esc-body">
       <p class="bf-esc-lead">${t('bfInfo.esc.lead')} ${t('bfInfo.esc.needs')}</p>
       <div class="bf-esc-status mono" role="status" aria-live="polite"></div>

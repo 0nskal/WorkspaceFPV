@@ -70,7 +70,11 @@ export function startSnip(): Promise<Box | null> {
     });
     ov.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
-      ov.setPointerCapture(e.pointerId);
+      try {
+        ov.setPointerCapture(e.pointerId);
+      } catch {
+        /* synthetic events have no capturable pointer */
+      }
       start = { x: e.clientX, y: e.clientY };
       cur = { x: start.x, y: start.y, w: 0, h: 0 };
       box.hidden = false;

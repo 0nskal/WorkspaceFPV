@@ -15,6 +15,11 @@ export const enMode = {
   toExpert: 'Expert mode. All tabs are visible.',
   expertOnly: 'This tab is only in Expert mode.',
   expertOnlyAction: 'Switch to Expert',
+  tipDiag: 'Diagnosis',
+  tipParts: 'Parts',
+  tipBattery: 'Battery',
+  tipReceiver: 'Receiver',
+  tipEsc: 'ESC',
 };
 
 export const enTipsUi = {

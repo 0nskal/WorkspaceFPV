@@ -7,6 +7,7 @@ import type { FcLink } from '../serial/types';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { t } from '../i18n';
+import { intro, tip, type TipKey } from '../ui/tip';
 import { FLASHER_URL, compat, loadLocal, providerLabel, saveLocal, type ElrsLocal, type Method, type Region } from './elrs-data';
 import { renderElrsScene } from './elrs-scene';
 
@@ -19,7 +20,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let disposed = false;
   let sceneKey = '';
 
-  el.innerHTML = `<div class="elrs">
+  el.innerHTML = `${intro('tips.elrs.intro')}<div class="elrs">
     <div class="elrs-stage"><div class="elrs-art"></div><div class="elrs-data" aria-label="${t('elrs.dataAria')}"></div></div>
     <aside class="elrs-card" aria-label="${t('elrs.cardAria')}"></aside>
   </div>`;
@@ -77,16 +78,16 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const dash = '<span class="elrs-na">—</span>';
     const na = (k: 'elrs.notGiven' | 'elrs.notChosen' | 'elrs.phraseNotConfirmed') => `<span class="elrs-na">${t(k)}</span>`;
     const rssi = s.telemetry ? `${rssiPct(s.telemetry.rssi)}%` : '—';
-    const rows: Array<[string, string]> = [
-      [t('elrs.rowProtocol'), connected() ? (prov ? `${escapeHtml(prov.text)}${prov.elrs ? '' : ` <small>${t('elrs.usuallyCrsf')}</small>`}` : dash) : dash],
-      [t('elrs.rowRx'), rx ? escapeHtml(rx) : `<span class="elrs-na">${t('bfInfo.elrs.notRead')}</span>`],
-      [t('elrs.rowTx'), tx ? escapeHtml(tx) : na('elrs.notGiven')],
-      [t('elrs.rowRssi'), `<span data-live="rssi">${rssi}</span>`],
-      [t('elrs.rowRegion'), local.region ? (local.region === 'LBT' ? 'LBT (EU)' : 'FCC') : na('elrs.notChosen')],
-      [t('elrs.rowPhrase'), local.phrase ? `${t('elrs.phraseSaved')} ${icon('check', 15)}` : na('elrs.phraseNotConfirmed')],
+    const rows: Array<[string, string, TipKey]> = [
+      [t('elrs.rowProtocol'), connected() ? (prov ? `${escapeHtml(prov.text)}${prov.elrs ? '' : ` <small>${t('elrs.usuallyCrsf')}</small>`}` : dash) : dash, 'tips.elrs.protocol'],
+      [t('elrs.rowRx'), rx ? escapeHtml(rx) : `<span class="elrs-na">${t('bfInfo.elrs.notRead')}</span>`, 'tips.elrs.rxVersion'],
+      [t('elrs.rowTx'), tx ? escapeHtml(tx) : na('elrs.notGiven'), 'tips.elrs.txVersion'],
+      [t('elrs.rowRssi'), `<span data-live="rssi">${rssi}</span>`, 'tips.elrs.rssi'],
+      [t('elrs.rowRegion'), local.region ? (local.region === 'LBT' ? 'LBT (EU)' : 'FCC') : na('elrs.notChosen'), 'tips.elrs.region'],
+      [t('elrs.rowPhrase'), local.phrase ? `${t('elrs.phraseSaved')} ${icon('check', 15)}` : na('elrs.phraseNotConfirmed'), 'tips.elrs.phrase'],
     ];
     dataEl.innerHTML =
-      rows.map(([k, v]) => `<div class="elrs-row"><span class="elrs-k mono">${k}</span><span class="elrs-v">${v}</span></div>`).join('') +
+      rows.map(([k, v, tk]) => `<div class="elrs-row"><span class="elrs-k mono">${k}${tip(tk)}</span><span class="elrs-v">${v}</span></div>`).join('') +
       (connected() ? '' : `<div class="elrs-off">${t('elrs.off')}</div>`);
   }
 
@@ -133,16 +134,18 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const chk = (name: string, on: boolean, label: string) =>
       `<label class="elrs-chk"><input type="checkbox" name="${name}" ${on ? 'checked' : ''}/><span class="box">${icon('check', 13)}</span><span>${label}</span></label>`;
 
-    const items: Array<{ t: string; sub: string; subCls?: string; body: string }> = [
+    const items: Array<{ t: string; sub: string; subCls?: string; body: string; tip: TipKey }> = [
       {
         t: t('elrs.s1'),
+        tip: 'tips.elrs.versionMatch',
         sub: c.text,
         subCls: c.kind,
         body: step1Body(rx),
       },
-      { t: t('elrs.s2'), sub: t('elrs.s2sub'), body: chk('phrase', local.phrase, t('elrs.s2chk')) },
+      { t: t('elrs.s2'), tip: 'tips.elrs.phrase', sub: t('elrs.s2sub'), body: chk('phrase', local.phrase, t('elrs.s2chk')) },
       {
         t: t('elrs.s3'),
+        tip: 'tips.elrs.region',
         sub: t('elrs.s3sub'),
         body: seg('region', local.region, [
           ['LBT', 'LBT (EU)'],
@@ -151,13 +154,14 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       },
       {
         t: t('elrs.s4'),
+        tip: 'tips.elrs.method',
         sub: t('elrs.s4sub'),
         body: seg('method', local.method, [
           ['passthrough', t('elrs.s4pass')],
           ['wifi', t('elrs.s4wifi')],
         ]),
       },
-      { t: t('elrs.s5'), sub: t('elrs.s5sub', { rssi }), body: chk('verified', local.verified, t('elrs.s5chk')) },
+      { t: t('elrs.s5'), tip: 'tips.elrs.verify', sub: t('elrs.s5sub', { rssi }), body: chk('verified', local.verified, t('elrs.s5chk')) },
     ];
 
     const how =
@@ -165,11 +169,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
     const hot = curIdx === -1 ? 'ok' : st.some((x) => x.state === 'warn') ? 'warn' : '';
     card.innerHTML = `
-      <div class="elrs-h"><i class="${hot}"></i><span>${t('elrs.headTitle')}</span><span class="r">${escapeHtml(rx || '?')} → ${escapeHtml(local.txVersion || '?')}</span></div>
+      <div class="elrs-h"><i class="${hot}"></i><span>${t('elrs.headTitle')}${tip('tips.elrs.settings')}</span><span class="r">${escapeHtml(rx || '?')} → ${escapeHtml(local.txVersion || '?')}</span></div>
       <div class="elrs-body">
         <ol class="elrs-steps">${items
           .map(
-            (it, i) => `<li class="${st[i].state}${i === curIdx ? ' cur' : ''}">${marker(i, st[i].state, i === curIdx)}<div class="elrs-st"><div class="elrs-t">${it.t}</div><div class="elrs-sub mono ${it.subCls ?? ''}">${escapeHtml(it.sub)}</div><div class="elrs-ctl">${it.body}</div></div></li>`,
+            (it, i) => `<li class="${st[i].state}${i === curIdx ? ' cur' : ''}">${marker(i, st[i].state, i === curIdx)}<div class="elrs-st"><div class="elrs-t">${it.t}${tip(it.tip)}</div><div class="elrs-sub mono ${it.subCls ?? ''}">${escapeHtml(it.sub)}</div><div class="elrs-ctl">${it.body}</div></div></li>`,
           )
           .join('')}</ol>
         <div class="elrs-how"><div class="elrs-how-h mono">${local.method === 'wifi' ? t('elrs.howWifiHead') : t('elrs.howPassHead')}</div><ol>${how}</ol></div>

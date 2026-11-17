@@ -3748,3 +3748,126 @@ html[data-tips='off'] .tip {
     animation: ai-ring-fade 0.2s ease;
   }
 }
+
+
+/* ================= motion polish (Emil Kowalski's rules: transform/opacity, ease-out, short) ================= */
+/* buttons: press feedback, hover colour eased */
+.btn,
+.qa button,
+.ib {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s var(--ease-out);
+}
+.btn:active:not(:disabled),
+.qa button:active,
+.ib:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ib:hover {
+    background: rgba(207, 230, 242, 0.08);
+  }
+}
+.nav a {
+  transition: color 0.15s ease;
+}
+/* tab bar: one indicator that slides to the active tab (replaces the per-tab underline) */
+.nav {
+  position: relative;
+}
+.nav a.on::after {
+  content: none;
+}
+.nav-ind {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--text);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.nav-ind.ready {
+  transition: transform 0.24s var(--ease-in-out);
+}
+/* modal: overlay fades, the card grows out of 97% (centred: modals are not anchored to a trigger) */
+.modal-overlay {
+  animation: fade-in 0.18s var(--ease-out);
+}
+.modal-overlay > .modal {
+  animation: modal-in 0.2s var(--ease-out);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+/* toast keeps its transition (rapidly re-triggered), only the curve gets stronger */
+.toast {
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+/* the AI is thinking: three dots, already animated; new chat answers do not animate (they stream in) */
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled),
+  .qa button:active,
+  .ib:active {
+    transform: none;
+  }
+  .nav-ind.ready {
+    transition: none;
+  }
+  .modal-overlay > .modal {
+    animation: fade-in 0.18s ease;
+  }
+  .toast {
+    transform: none;
+  }
+}
+
+/* workshop: labelled tip chips in the corner of the X-ray scene */
+.scene-tips {
+  position: absolute;
+  left: 16px;
+  top: 44px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  font: 400 11.5px var(--mono);
+  color: var(--sub);
+}
+.st-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.drawer .btns .tip {
+  align-self: center;
+}
+
+.bf-motors-protohead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px 6px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sub);
+}
+.snip-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font: 400 12px var(--sans);
+  color: var(--muted);
+}

@@ -10,6 +10,7 @@ import { errMsg } from '../bf/steps';
 import { bindConnect, downloadBytes, emptyHtml } from '../bf/ui-bits';
 import { copyText, escapeHtml, stamp } from '../ui/dom';
 import { icon } from '../ui/icons';
+import { intro, tip } from '../ui/tip';
 
 const COMMANDS = ['adjrange', 'aux', 'beeper', 'bl', 'defaults', 'diff', 'dump', 'dshotprog', 'exit', 'feature', 'flash_info', 'get', 'help', 'map', 'mixer', 'motor', 'name', 'profile', 'rateprofile', 'resource', 'save', 'serial', 'set', 'status', 'tasks', 'version'];
 const RISKY = /^(defaults|bl|dfu|flash_erase|flash_write|msc|resource|dshotprog|motor)(\s|$)/i;
@@ -69,18 +70,19 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     root.innerHTML = `
       <div class="bf-cli-page">
         <div class="bf-cli-title"><h1>${t('bfCli.title')}</h1><span class="mono">${t('bfCli.sub')}</span></div>
-        <div class="bf-cli-warn" role="note">${icon('alert', 18)}<span>${t('bfCli.warn')}</span></div>
+        ${intro('tips.cli.intro')}
+        <div class="bf-cli-warn" role="note">${icon('alert', 18)}<span>${t('bfCli.warn')} ${tip('tips.cli.warn')}</span></div>
         <div class="bf-cli-term">
           <pre class="bf-cli-out mono" tabindex="0" aria-label="${t('bfCli.outAria')}"></pre>
           <div class="bf-cli-hint mono"></div>
           <textarea class="bf-cli-in mono" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="${escapeHtml(t('bfCli.placeholder'))}" aria-label="${t('bfCli.inAria')}"></textarea>
         </div>
         <div class="bf-cli-bar">
-          <label class="esc-check small bf-cli-save"><input type="checkbox" data-f="save"><span>${t('bfCli.saveAfter')}</span></label>
+          <label class="esc-check small bf-cli-save"><input type="checkbox" data-f="save"><span>${t('bfCli.saveAfter')}</span></label>${tip('tips.cli.save')}
           <button type="button" class="btn light" data-act="run">${icon('play', 16)}${t('bfCli.run')}</button>
-          <button type="button" class="btn ghost" data-act="diff">${t('bfCli.readDiff')}</button>
-          <button type="button" class="btn ghost" data-act="dump">${t('bfCli.readDump')}</button>
-          <button type="button" class="btn ghost" data-act="names" title="${escapeHtml(t('bfCli.namesTip'))}">${t('bfCli.loadNames')} <span class="mono" data-names></span></button>
+          <button type="button" class="btn ghost" data-act="diff">${t('bfCli.readDiff')}</button>${tip('tips.cli.backup')}
+          <button type="button" class="btn ghost" data-act="dump">${t('bfCli.readDump')}</button>${tip('tips.cli.dump')}
+          <button type="button" class="btn ghost" data-act="names" title="${escapeHtml(t('bfCli.namesTip'))}">${t('bfCli.loadNames')} <span class="mono" data-names></span></button>${tip('tips.cli.names')}
           <button type="button" class="btn ghost" data-act="load">${icon('download', 16)}${t('bfCli.loadFile')}</button>
           <button type="button" class="btn ghost" data-act="copy">${icon('copy', 16)}${t('bfCli.copy')}</button>
           <button type="button" class="btn ghost" data-act="savefile">${t('bfCli.saveFile')}</button>

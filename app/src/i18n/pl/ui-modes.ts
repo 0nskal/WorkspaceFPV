@@ -16,6 +16,11 @@ export const plMode: typeof enMode = {
   toExpert: 'Tryb ekspert. Widać wszystkie zakładki.',
   expertOnly: 'Ta zakładka jest tylko w trybie ekspert.',
   expertOnlyAction: 'Przełącz na Ekspert',
+  tipDiag: 'Diagnoza',
+  tipParts: 'Części',
+  tipBattery: 'Akumulator',
+  tipReceiver: 'Odbiornik',
+  tipEsc: 'ESC',
 };
 
 export const plTipsUi: typeof enTipsUi = {

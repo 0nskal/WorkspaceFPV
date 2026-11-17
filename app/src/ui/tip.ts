@@ -78,9 +78,8 @@ function open(trigger: HTMLElement): void {
   trigger.classList.add('lit');
   trigger.setAttribute('aria-describedby', 'tip-bubble');
   b.classList.remove('on');
-  place(trigger, b);
-  // next frame so the start state is committed and the transition runs
-  requestAnimationFrame(() => b.classList.add('on'));
+  place(trigger, b); // reads layout, so the closed state is committed and the transition below runs
+  b.classList.add('on');
 }
 
 function close(): void {

@@ -31,6 +31,7 @@ import { MSPM, DEBUG_MODES_45, decodeAdvancedConfig, encodeAdvancedConfig, debug
 import { bindConnect, downloadBytes, emptyHtml, sleep } from '../bf/ui-bits';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
+import { intro, tip } from '../ui/tip';
 
 /**
  * Bytes requested per MSP_DATAFLASH_READ. Betaflight builds with flash have a 4096 + 16 byte MSP reply buffer
@@ -126,13 +127,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         ${dl.phase === 'done' ? doneBlock(dl) : ''}
         ${erasing ? `<p class="bf-blackbox-msg mono" data-erasing>${t('bfBlackbox.erasing', { s: Math.round((Date.now() - erasing.t0) / 1000) })}</p>` : ''}
         <div class="bf-blackbox-actions">
-          ${running ? `<button type="button" class="btn ghost" data-act="cancel">${icon('x', 16)}${t('bfBlackbox.cancel')}</button>` : `<button type="button" class="btn light" data-act="download" ${used === 0 || !f!.ready || !!erasing ? 'disabled' : ''}>${icon('download', 16)}${t('bfBlackbox.download')}</button>`}
-          <button type="button" class="btn ghost bf-blackbox-danger" data-act="erase" ${running || !!erasing || used === 0 ? 'disabled' : ''}>${icon('trash', 16)}${t('bfBlackbox.erase')}</button>
-          <button type="button" class="btn ghost" data-act="msc" ${running || !!erasing ? 'disabled' : ''} title="${escapeHtml(t('bfBlackbox.mscTip'))}">${icon('plug', 16)}${t('bfBlackbox.msc')}</button>
+          ${running ? `<button type="button" class="btn ghost" data-act="cancel">${icon('x', 16)}${t('bfBlackbox.cancel')}</button>` : `<button type="button" class="btn light" data-act="download" ${used === 0 || !f!.ready || !!erasing ? 'disabled' : ''}>${icon('download', 16)}${t('bfBlackbox.download')}</button>`}${running ? '' : tip('tips.blackbox.download')}
+          <button type="button" class="btn ghost bf-blackbox-danger" data-act="erase" ${running || !!erasing || used === 0 ? 'disabled' : ''}>${icon('trash', 16)}${t('bfBlackbox.erase')}</button>${tip('tips.blackbox.erase')}
+          <button type="button" class="btn ghost" data-act="msc" ${running || !!erasing ? 'disabled' : ''} title="${escapeHtml(t('bfBlackbox.mscTip'))}">${icon('plug', 16)}${t('bfBlackbox.msc')}</button>${tip('tips.blackbox.msc')}
         </div>
         <p class="esc-note mono">${t('bfBlackbox.downloadNote')}</p>`;
     }
-    return `<section class="esc-panel"><header><span class="mono">${t('bfBlackbox.flashHead')}</span><span class="mono esc-key">MSP_DATAFLASH_*</span></header>${body}</section>`;
+    return `<section class="esc-panel"><header><span class="mono">${t('bfBlackbox.flashHead')} ${tip('tips.blackbox.flash')}</span><span class="mono esc-key">MSP_DATAFLASH_*</span></header>${body}</section>`;
   }
 
   function runBlock(d: Extract<Dl, { phase: 'run' }>): string {
@@ -197,11 +198,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (changed.rate) list.push(t('bfBlackbox.chRate', { to: `1/${2 ** rate}` }));
     if (changed.debug) list.push(t('bfBlackbox.chDebug', { to: debugModeName(debug, minor()) }));
     return `<section class="esc-panel"><header><span class="mono">${t('bfBlackbox.cfgHead')}</span><span class="mono esc-key">MSP_BLACKBOX_CONFIG</span></header>
-      <div class="bf-blackbox-lbl mono${changed.dev ? ' bf-blackbox-changed' : ''}">${t('bfBlackbox.device')}</div>
+      <div class="bf-blackbox-lbl mono${changed.dev ? ' bf-blackbox-changed' : ''}">${t('bfBlackbox.device')} ${tip('tips.blackbox.device')}</div>
       <div class="esc-seg bf-blackbox-seg" role="radiogroup" aria-label="${t('bfBlackbox.device')}">${devs}</div>
-      <div class="bf-blackbox-f${changed.rate ? ' bf-blackbox-changed' : ''}"><label for="bf-bb-rate"><b>${t('bfBlackbox.rate')}</b><small class="mono" title="${escapeHtml(t('bfBlackbox.rateTip'))}">blackbox_sample_rate</small></label>
+      <div class="bf-blackbox-f${changed.rate ? ' bf-blackbox-changed' : ''}"><label for="bf-bb-rate"><b>${t('bfBlackbox.rate')}</b> ${tip('tips.blackbox.rate')}<small class="mono" title="${escapeHtml(t('bfBlackbox.rateTip'))}">blackbox_sample_rate</small></label>
         ${supportsRate ? `<select id="bf-bb-rate" data-f="rate">${rateOpts}</select>` : `<span class="mono">${t('bfBlackbox.rateLegacy', { d: b.rateDenom })}</span>`}</div>
-      <div class="bf-blackbox-f${changed.debug ? ' bf-blackbox-changed' : ''}"><label><b>${t('bfBlackbox.debug')}</b><small class="mono" title="${escapeHtml(t('bfBlackbox.debugTip'))}">debug_mode</small></label>${debugField || `<span class="mono">${t('bfBlackbox.noValue')}</span>`}</div>
+      <div class="bf-blackbox-f${changed.debug ? ' bf-blackbox-changed' : ''}"><label><b>${t('bfBlackbox.debug')}</b> ${tip('tips.blackbox.debug')}<small class="mono" title="${escapeHtml(t('bfBlackbox.debugTip'))}">debug_mode</small></label>${debugField || `<span class="mono">${t('bfBlackbox.noValue')}</span>`}</div>
       ${armed() ? `<p class="bf-blackbox-err mono" role="alert">${t('bfBlackbox.armed')}</p>` : ''}
       <div class="bf-motors-bar">
         <pre class="esc-cmds mono${list.length ? '' : ' empty'}">${list.length ? escapeHtml(list.join('\n')) : t('esc.noChanges')}</pre>
@@ -231,6 +232,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     }
     root.innerHTML = `<div class="bf-blackbox-page">
       <div class="bf-blackbox-title"><h1>${t('bfBlackbox.title')}</h1><span class="mono">${t('bfBlackbox.sub')}</span></div>
+      ${intro('tips.blackbox.intro')}
       <div class="bf-blackbox-cols"><div class="bf-blackbox-col">${flashPanel()}</div><div class="bf-blackbox-col">${configPanel()}</div></div></div>`;
   }
 

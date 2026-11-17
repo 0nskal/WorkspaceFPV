@@ -5,6 +5,8 @@ import { mountFormTab, type Draft, type Group, type TabSpec } from '../bf/form';
 import type { BfCommand, BfData, MspWrite } from '../bf/store';
 import type { ScreenMount } from '../context';
 import { fmtNum, t, type Key } from '../i18n';
+import { intro, tip } from '../ui/tip';
+import { decorateForm, type RowRule } from '../bf/form-decor';
 
 const K = (k: string) => `bfPower.${k}` as Key;
 
@@ -114,8 +116,8 @@ const spec: TabSpec = {
   validate: (d) => (Number(d.minCell) < Number(d.warnCell) && Number(d.warnCell) < Number(d.maxCell) ? null : t(K('errOrder'))),
   top: (bf) => {
     const cap = bf.battery?.capacityMah ?? 0;
-    return `<section class="bf-panel wide bf-power-live">
-      <header><span>${t(K('live'))}</span><small class="bf-pw-cells" data-live="cells"></small></header>
+    return `${intro('tips.power.intro')}<section class="bf-panel wide bf-power-live">
+      <header><span>${t(K('live'))} ${tip('tips.power.live')}</span><small class="bf-pw-cells" data-live="cells"></small></header>
       <div class="bf-pw-grid">
         <div><small>${t(K('pack'))}</small><b class="mono" data-live="v">—</b></div>
         <div><small>${t(K('cell'))}</small><b class="mono" data-live="cell">—</b></div>
@@ -124,7 +126,7 @@ const spec: TabSpec = {
         <div><small>&nbsp;</small><span class="bf-pw-state" data-live="state">—</span></div>
       </div>
       <div class="bf-pw-cal">
-        <div><b>${t(K('calHead'))}</b><small>${t(K('calText'))}</small></div>
+        <div><b>${t(K('calHead'))} ${tip('tips.power.calibrate')}</b><small>${t(K('calText'))}</small></div>
         <label><span>${t(K('calMeasured'))}</span><input type="number" step="0.01" min="1" max="60" data-cal="measured" /><span class="bf-unit mono">V</span></label>
         <button class="btn ghost" data-cal="apply">${t(K('calApply'))}</button>
       </div>
@@ -186,4 +188,26 @@ const spec: TabSpec = {
   },
 };
 
-export const mount: ScreenMount = (el, ctx) => mountFormTab(el, ctx, { ...spec, title: t(K('title')) });
+/** vScale stays visible in Basic because the calibration helper above writes to it. */
+const ROWS: RowRule[] = [
+  { key: 'voltSrc', tip: 'tips.power.voltSrc' },
+  { key: 'vScale', tip: 'tips.power.vScale' },
+  { key: 'vDiv', tip: 'tips.power.vDiv', expert: true },
+  { key: 'vMult', tip: 'tips.power.vMult', expert: true },
+  { key: 'curSrc', tip: 'tips.power.curSrc' },
+  { key: 'cScale', tip: 'tips.power.cScale', expert: true },
+  { key: 'cOffset', tip: 'tips.power.cOffset', expert: true },
+  { key: 'minCell', tip: 'tips.power.minCell' },
+  { key: 'warnCell', tip: 'tips.power.warnCell' },
+  { key: 'maxCell', tip: 'tips.power.maxCell' },
+  { key: 'capacity', tip: 'tips.power.capacity' },
+];
+
+export const mount: ScreenMount = (el, ctx) => {
+  const off = mountFormTab(el, ctx, { ...spec, title: t(K('title')) });
+  const stop = decorateForm(el, ROWS);
+  return () => {
+    stop();
+    off();
+  };
+};

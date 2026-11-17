@@ -9,6 +9,7 @@ import { escapeHtml } from '../ui/dom';
 import { fmtDate, fmtNum, t } from '../i18n';
 import { ENTRY_Y, VIEW_H, VIEW_W, renderDrone, updateMotorBars, type XrayLabels } from '../ui/drone-xray';
 import { icon, logo } from '../ui/icons';
+import { intro, tip } from '../ui/tip';
 
 function buildLabels(s: Readonly<FcState>, d: Diagnosis, bf: Readonly<BfData>): XrayLabels {
   const tel = s.telemetry;
@@ -75,10 +76,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           <div class="start-brand">${logo(28)}<span>WorkspaceFPV</span></div>
           <h1>${t('start.title')}</h1>
           <p>${t('start.lead')}</p>
+          ${intro('tips.warsztat.intro')}
           ${busy ? `<div class="bf-progress mono" role="status"><span>${progressText()}</span><i><b style="width:${progressPct()}%"></b></i></div>` : ''}
           <div class="start-btns">
-            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('start.connect')}</button>
-            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('start.demo')}</button>
+            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('start.connect')}</button>${tip('tips.warsztat.connect')}
+            <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('start.demo')}</button>${tip('tips.warsztat.demo')}
           </div>
           ${noSerial ? `<div class="start-msg warn">${t('start.noSerial')}</div>` : ''}
           ${s.error ? `<div class="start-msg err" role="alert">${escapeHtml(s.error)}</div>` : ''}
@@ -100,7 +102,19 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const labels = buildLabels(s, d, ctx.bf.get());
     const key = JSON.stringify([d.focus, { ...labels, motors: null }, s.conn]);
     if (view !== 'scene' || !stage) {
-      el.innerHTML = `<div class="stage"></div><div class="overlay" hidden></div>`;
+      el.innerHTML = `<div class="stage"></div>
+        <div class="scene-tips">${(
+          [
+            ['tips.warsztat.diagnosis', t('mode.tipDiag')],
+            ['tips.warsztat.parts', t('mode.tipParts')],
+            ['tips.warsztat.battery', t('mode.tipBattery')],
+            ['tips.warsztat.receiver', t('mode.tipReceiver')],
+            ['tips.warsztat.esc', t('mode.tipEsc')],
+          ] as const
+        )
+          .map(([k, l]) => `<span class="st-tip">${tip(k, l)}<span>${l}</span></span>`)
+          .join('')}</div>
+        <div class="overlay" hidden></div>`;
       stage = el.querySelector('.stage');
       if (stage) ro.observe(stage);
       renderedKey = '';

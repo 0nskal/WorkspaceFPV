@@ -4200,3 +4200,11 @@ html[data-tips='off'] .tip {
   flex: 1 1 auto;
   justify-content: center;
 }
+
+/* Setup: 3D attitude model (the SVG stays as the fallback without WebGL) */
+.bf-su-attitude.has-3d .bf-su-model {
+  display: none;
+}
+.bf-su-3d {
+  display: block;
+}

@@ -11,6 +11,7 @@ import { fmtNum, t, type Key } from '../i18n';
 import { escapeHtml } from '../ui/dom';
 import { intro, tip, type TipKey } from '../ui/tip';
 import { modelSvg, updateModel } from './bf-setup-model';
+import { mountAttitudeModel, type AttitudeModel } from './bf-setup-3d';
 
 const K = (k: string) => `bfSetup.${k}` as Key;
 const ATTITUDE: BfCommand<D.Attitude> = { code: C.ATTITUDE, decode: (p) => D.decodeAttitude(p) };
@@ -81,9 +82,30 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     return `${real.length === 0 ? `<p class="bf-su-ok">${escapeHtml(t(K('armOk')))}</p>` : ''}${items ? `<ul class="bf-su-flags">${items}</ul>` : ''}${st.rebootRequired ? `<p class="bf-note">${escapeHtml(t(K('rebootReq')))}</p>` : ''}<p class="bf-su-small">${escapeHtml(t(K('armWorkspaceFPV')))}</p>`;
   }
 
+  /** 3D quad (three.js, loaded on demand); null while loading or when WebGL is missing (the SVG drawing stays). */
+  let model3d: AttitudeModel | null = null;
+  let model3dGen = 0;
+  function drop3d(): void {
+    model3dGen++;
+    model3d?.destroy();
+    model3d = null;
+  }
+  function mount3d(): void {
+    const host = el.querySelector<HTMLElement>('.bf-su-attitude');
+    if (!host) return;
+    const gen = ++model3dGen;
+    void mountAttitudeModel(host).then((m) => {
+      if (!m) return;
+      if (gen !== model3dGen || !host.isConnected) return m.destroy();
+      model3d = m;
+      host.classList.add('has-3d');
+    });
+  }
+
   function render(): void {
     const s = ctx.state.get();
     stopPoll();
+    drop3d();
     if (s.conn !== 'connected' || !ctx.bf.store.isReady()) {
       el.innerHTML = `<div class="bf-tab"><header class="bf-head"><h2>${escapeHtml(t(K('title')))}</h2></header><div class="bf-empty"><p>${escapeHtml(t(s.conn === 'connected' ? 'bfCore.loading' : 'bfCore.needConnect'))}</p>${s.conn === 'disconnected' ? `<button class="btn light" data-su="demo">${escapeHtml(t('start.demo'))}</button>` : ''}</div></div>`;
       return;
@@ -121,6 +143,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           ${btn('reset', t(K('resetBtn')), t(K('resetText')), 'ghost danger', false, 'tips.setup.reset')}
         </div></section>
       </div></div></div>`;
+    mount3d();
     startPoll();
   }
 
@@ -146,7 +169,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         .read(ATTITUDE)
         .then((a) => {
           if (!a || !el.isConnected) return;
-          updateModel(svg, a.rollDeg, a.pitchDeg, a.headingDeg);
+          if (model3d) model3d.set(a.rollDeg, a.pitchDeg, a.headingDeg);
+          else updateModel(svg, a.rollDeg, a.pitchDeg, a.headingDeg);
           const set = (k: string, v: string) => {
             const e = el.querySelector<HTMLElement>(`[data-att="${k}"]`);
             if (e) e.textContent = v;
@@ -156,7 +180,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           set('heading', `${Math.round(a.headingDeg)}°`);
         })
         .finally(() => (inflight = false));
-    }, 150);
+    }, 100);
   }
   function stopPoll(): void {
     if (poll) clearInterval(poll);
@@ -261,6 +285,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     offA();
     offB();
     stopPoll();
+    drop3d();
     if (magTimer) clearInterval(magTimer);
   };
 };

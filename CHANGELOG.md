@@ -2,6 +2,10 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 0.6.1 – 2026-11-17
+
+- **Setup: a real 3D quad instead of the wireframe.** The attitude view is now a generic 5-inch freestyle quad (X frame, motors, 3-blade props, FC stack, camera with a red lens at the nose, battery, antenna) drawn with three.js. It follows the FC smoothly at the screen refresh rate instead of jumping with every telemetry sample. three.js loads only on this tab; without WebGL the old drawing stays.
+
 ## 0.6.0 – 2026-11-17
 
 - **New look, same X-ray colours.** Tabs moved to a sidebar grouped into Start, Hardware, Flight, Tuning and Tools, with a red/amber counter next to tabs that have problems. Ctrl+K searches tabs and settings (it finds a setting by its tip text, opens the tab and lights the bulb). The top bar shows the connection, craft and Betaflight version, VBAT and RSSI.
@@ -58,6 +62,10 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.6.1 – 2026-11-17
+
+- **Setup: prawdziwy dron 3D zamiast siatki.** Widok położenia to teraz uniwersalny dron freestyle 5" (rama X, silniki, trójłopatowe śmigła, stos FC, kamera z czerwonym obiektywem z przodu, bateria, antena) rysowany w three.js. Płynnie podąża za FC z częstotliwością odświeżania ekranu zamiast przeskakiwać przy każdej próbce telemetrii. three.js ładuje się tylko w tej zakładce; bez WebGL zostaje stary rysunek.
 
 ## 0.6.0 – 2026-11-17
 

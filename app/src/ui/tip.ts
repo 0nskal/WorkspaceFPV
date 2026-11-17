@@ -21,6 +21,12 @@ export function tip(key: TipKey, label?: string): string {
   return `<button type="button" class="tip" data-tip="${key}"${label ? ` data-tip-label="${escapeHtml(label)}"` : ''} aria-label="${escapeHtml(aria)}">${BULB}</button>`;
 }
 
+/** Bulb for a plain (already translated) text, e.g. the tip of a form field built at runtime. */
+export function tipText(text: string, label?: string): string {
+  const aria = `${t('tipsUi.aria')}${label ? `: ${label}` : ''}`;
+  return `<button type="button" class="tip" data-tip-text="${escapeHtml(text)}"${label ? ` data-tip-label="${escapeHtml(label)}"` : ''} aria-label="${escapeHtml(aria)}">${BULB}</button>`;
+}
+
 /** "What is this tab for" block at the top of a screen; shown in Basic mode only. */
 export function intro(key: TipKey): string {
   return `<div class="intro" data-only="basic">${BULB.replace('class="bulb"', 'class="bulb lit"')}<p>${format(t(key))}</p></div>`;
@@ -68,10 +74,11 @@ function place(trigger: HTMLElement, b: HTMLElement): void {
 
 function open(trigger: HTMLElement): void {
   const key = trigger.dataset.tip;
-  if (!key) return;
+  const raw = trigger.dataset.tipText;
+  if (!key && raw === undefined) return;
   const b = ensureBubble();
   const label = trigger.dataset.tipLabel;
-  b.innerHTML = `${label ? `<b>${escapeHtml(label)}</b>` : ''}<span>${format(t(key as Key))}</span>`;
+  b.innerHTML = `${label ? `<b>${escapeHtml(label)}</b>` : ''}<span>${format(key ? t(key as Key) : (raw ?? ''))}</span>`;
   active?.classList.remove('lit');
   active?.removeAttribute('aria-describedby');
   active = trigger;

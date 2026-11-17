@@ -45,6 +45,18 @@ export const enNav = {
   searchEmpty: 'Nothing found.',
   tab: 'Tab',
   problems: '{n} to fix',
+  links: {
+    betaflight: 'Betaflight App',
+    elrs: 'ELRS Configurator',
+    esc: 'ESC Configurator',
+    dji: 'DJI Assistant 2',
+    cp210x: 'CP210x drivers',
+    zadig: 'Zadig',
+    impulserc: 'ImpulseRC Fixer',
+    driversHead: 'USB drivers',
+    linksHead: 'Configurators',
+    openExt: 'Opens in the browser',
+  },
 };
 
 export const enTipsUi = {

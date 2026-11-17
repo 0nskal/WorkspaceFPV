@@ -25,6 +25,21 @@ export const enTipsMotors = {
       'This lock is the safety check: the sliders unlock only after you confirm that no props are on the motors. Do not tick it unless it is true.',
     unlock:
       'Normally the sliders stop at 30 % of throttle, which is plenty to see which way a motor spins. Lifting the limit allows 100 %. Only do it with props off and the quad held down or on a bench.',
+    mixer:
+      'The frame layout Betaflight mixes the motors for. A normal 4-motor quad is **QUAD X**. Change it only for other frames (hexa, tricopter, wing). Needs a reboot.',
+    motorStop:
+      'With MOTOR_STOP the motors stand still when you arm with zero throttle instead of spinning at idle. Most pilots leave it off: spinning props show that the quad is armed. It does nothing while AIRMODE is on. Needs a reboot.',
+    escSensor:
+      'Reads telemetry (RPM, temperature, current) from a separate ESC telemetry wire on a UART, as KISS and BLHeli_32 ESCs offer. With bidirectional DShot you usually do not need it. Needs a reboot.',
+    dynIdle:
+      'Dynamic idle keeps the motors at least at this speed (in hundreds of RPM) when the throttle is low, which helps against desyncs and keeps control in flips and dives. It needs bidirectional DShot. 0 turns it off. For 5-inch props about **30 to 40** (3000 to 4000 RPM) is common.',
+    threeD:
+      'For reversible (3D) ESCs only: the motors can spin both ways, so the quad can fly upside down. On a normal quad it must stay off, because the throttle centre becomes motor stop. Needs a reboot and ESCs set to 3D.',
+    d3: 'In 3D mode the throttle range is split: below **deadband low** the motors spin backwards, above **deadband high** forwards, and **neutral** is the stop point in between. Defaults: 1406, 1514, 1460.',
+    liveGraph:
+      'Live gyro (rotation in deg/s) or accelerometer (g) of the FC, with voltage, current and used capacity below. Use it with the motor test: a motor that shakes the frame much more than the others shows up as a bigger wave. Data comes from the normal telemetry loop, only while this tab is open.',
+    master:
+      'Moves all four motors together. Useful to compare RPM of all motors at the same throttle.',
     escInfo: {
       head: 'Reads the settings stored inside each ESC over the signal wire. It is read-only here. The motors do not spin during the read, but take the props off anyway. The result tells you which ESC firmware you have and whether it can do bidirectional DShot.',
       firmware:

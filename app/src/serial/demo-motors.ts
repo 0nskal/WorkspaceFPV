@@ -4,7 +4,7 @@
  */
 import { synthLog } from '../analysis/synth';
 import { encodeFlashReadResponse, encodeFlashSummary, encodeBlackboxConfigRead, MSPB } from '../bf/blackbox';
-import { encodeMotorTelemetry, MSPM } from '../bf/motors';
+import { encodeMotor3d, decodeMotor3d, encodeMotorTelemetry, featureOn, MOTOR_3D_DEFAULTS, MOTOR_FEATURE, MSPM } from '../bf/motors';
 import { encodeOsdConfig, encodePos, MSPO, type OsdConfig } from '../bf/osd';
 
 /** The part of the demo FC config that demo.ts owns (and the CLI path of demo.ts edits). */
@@ -161,7 +161,10 @@ const st = {
   pwmRate: 480,
   debug: 0,
   reversed: false,
-  escSensor: true,
+  /** Feature mask (the Motors tab answers FEATURE_CONFIG so ESC_SENSOR and MOTOR_CONFIG stay in sync):
+   *  RX_SERIAL, TELEMETRY, LED_STRIP, OSD, AIRMODE, ESC_SENSOR, ANTI_GRAVITY. */
+  features: ((1 << 3) | (1 << 7) | (1 << 10) | (1 << 16) | (1 << 18) | (1 << 22) | (1 << 27) | (1 << 28)) >>> 0,
+  d3: { ...MOTOR_3D_DEFAULTS },
   mixer: 3,
   device: 1,
   sampleRate: 1,
@@ -228,7 +231,7 @@ export function demoMsp(cmd: number, payload: Uint8Array | undefined, cfg: DemoC
       b[6] = 4;
       b[7] = cfg.poles;
       b[8] = cfg.bidir ? 1 : 0;
-      b[9] = st.escSensor ? 1 : 0;
+      b[9] = featureOn(st.features, MOTOR_FEATURE.ESC_SENSOR) ? 1 : 0;
       return b;
     }
     case MSPM.SET_MOTOR_CONFIG:
@@ -246,7 +249,7 @@ export function demoMsp(cmd: number, payload: Uint8Array | undefined, cfg: DemoC
       }
       return new Uint8Array(0);
     case MSPM.MOTOR_TELEMETRY: {
-      const on = st.escSensor || cfg.bidir;
+      const on = featureOn(st.features, MOTOR_FEATURE.ESC_SENSOR) || cfg.bidir;
       const base = [62, 71, 58, 66];
       return encodeMotorTelemetry(
         base.map((pct, i) => {
@@ -262,6 +265,21 @@ export function demoMsp(cmd: number, payload: Uint8Array | undefined, cfg: DemoC
           };
         }),
       );
+    }
+    case MSPM.FEATURE_CONFIG: {
+      const { b, v } = dv(4);
+      v.setUint32(0, st.features, true);
+      return b;
+    }
+    case MSPM.SET_FEATURE_CONFIG:
+      if (p.length >= 4) st.features = new DataView(p.buffer, p.byteOffset, p.byteLength).getUint32(0, true);
+      return new Uint8Array(0);
+    case MSPM.MOTOR_3D_CONFIG:
+      return encodeMotor3d(st.d3);
+    case MSPM.SET_MOTOR_3D_CONFIG: {
+      const c = decodeMotor3d(p);
+      if (c) st.d3 = c;
+      return new Uint8Array(0);
     }
     case MSPM.EEPROM_WRITE:
       return new Uint8Array(0);

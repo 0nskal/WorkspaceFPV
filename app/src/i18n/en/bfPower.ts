@@ -19,7 +19,13 @@ export const enBfPower = {
   calMeasured: 'Measured voltage',
   calApply: 'Calculate scale',
   calNeedBattery: 'Connect a battery and use the on-board ADC as voltage source first.',
-  gMeters: 'Meters',
+  gBattery: 'Battery',
+  gState: 'Power state',
+  gVoltmeter: 'Voltage meter',
+  gAmmeter: 'Current meter',
+  connected: 'Connected',
+  power: 'Power draw',
+
   voltSrc: 'Voltage meter source',
   voltSrcTip: 'Where the battery voltage comes from.',
   curSrc: 'Current meter source',
@@ -39,7 +45,7 @@ export const enBfPower = {
   cScaleTip: 'Scale of the current sensor (ibata_scale). Adjust until the used mAh match a charger readout.',
   cOffset: 'Current offset',
   cOffsetTip: 'Offset of the current sensor (ibata_offset).',
-  gPack: 'Pack and warnings',
+
   minCell: 'Minimum cell voltage',
   minCellTip: 'Below this the battery counts as critical.',
   warnCell: 'Warning cell voltage',

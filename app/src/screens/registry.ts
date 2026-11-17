@@ -14,6 +14,8 @@ import * as bfPower from './bf-power';
 import * as bfSetup from './bf-setup';
 import * as bfModes from './bf-modes';
 import * as bfReceiver from './bf-receiver';
+import * as bfSensors from './bf-sensors';
+import * as bfGps from './bf-gps';
 import * as bfTuning from './bf-tuning';
 import * as bfBlackbox from './bf-blackbox';
 import * as bfCli from './bf-cli';
@@ -45,24 +47,26 @@ export const SCREENS: ScreenDef[] = [
   { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'expert' },
   { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'power', titleKey: 'bfPower.tab', icon: 'battery', mount: bfPower.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'shield', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc', level: 'expert' },
   { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'esc', titleKey: 'tabs.esc', icon: 'fan', mount: esc.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'sensors', titleKey: 'sensors.tab', icon: 'gauge', mount: bfSensors.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'shield', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc', level: 'expert' },
+  { id: 'gps', titleKey: 'gps.tab', icon: 'pin', mount: bfGps.mount, requiresConnection: true, group: 'fc', level: 'expert' },
+  { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools', level: 'basic' },
+  { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'osd', titleKey: 'bfOsd.tab', icon: 'monitor', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning', level: 'basic' },
   { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'wave', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
   { id: 'autotune', titleKey: 'tabs.autotune', icon: 'target', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'basic' },
-  { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools', level: 'basic' },
   { id: 'cli', titleKey: 'bfCli.tab', icon: 'terminal', mount: bfCli.mount, requiresConnection: true, group: 'tools', level: 'expert' },
   { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false, group: 'tools', level: 'basic' },
 ];
 
 export const DEFAULT_SCREEN = SCREENS[0]!.id;
 
-/** Sidebar sections (Start, Hardware, Flight, Tuning, Tools) and which tab belongs where. */
-export type Section = 'start' | 'hardware' | 'flight' | 'tuning' | 'tools';
-export const SECTIONS: Section[] = ['start', 'hardware', 'flight', 'tuning', 'tools'];
+/** Sidebar sections (Start, Hardware, Tuning; Tools holds external links) and which tab belongs where. */
+export type Section = 'start' | 'hardware' | 'tuning' | 'tools';
+export const SECTIONS: Section[] = ['start', 'hardware', 'tuning', 'tools'];
 const SECTION_OF: Record<string, Section> = {
   warsztat: 'start',
   setup: 'start',
@@ -71,16 +75,34 @@ const SECTION_OF: Record<string, Section> = {
   power: 'hardware',
   'bf-receiver': 'hardware',
   esc: 'hardware',
-  'bf-modes': 'flight',
-  failsafe: 'flight',
-  osd: 'flight',
+  sensors: 'hardware',
+  failsafe: 'hardware',
+  gps: 'hardware',
+  elrs: 'hardware',
   'bf-tuning': 'tuning',
+  'bf-modes': 'tuning',
+  osd: 'tuning',
   blackbox: 'tuning',
   autotune: 'tuning',
-  elrs: 'tools',
-  cli: 'tools',
+  cli: 'tuning',
 };
 export const sectionOf = (id: string): Section => SECTION_OF[id] ?? 'tools';
+
+/** Tools: links to the official configurators and USB driver utilities (open in the system browser). */
+export interface ToolLink {
+  id: string;
+  labelKey: Key;
+  url: string;
+}
+export const TOOL_LINKS: ToolLink[] = [
+  { id: 'betaflight', labelKey: 'nav.links.betaflight', url: 'https://app.betaflight.com/' },
+  { id: 'elrs', labelKey: 'nav.links.elrs', url: 'https://github.com/ExpressLRS/ExpressLRS-Configurator/releases' },
+  { id: 'esc', labelKey: 'nav.links.esc', url: 'https://esc-configurator.com/' },
+  { id: 'dji', labelKey: 'nav.links.dji', url: 'https://www.dji.com/pl/downloads/softwares/dji-assistant-2-consumer-drones-series' },
+  { id: 'cp210x', labelKey: 'nav.links.cp210x', url: 'https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers' },
+  { id: 'zadig', labelKey: 'nav.links.zadig', url: 'https://zadig.akeo.ie/' },
+  { id: 'impulserc', labelKey: 'nav.links.impulserc', url: 'https://github.com/ImpulseRC/ImpulseRC_Driver_Fixer' },
+];
 
 /** Tabs visible in the given interface mode. */
 export const screenVisible = (sc: ScreenDef, mode: 'basic' | 'expert'): boolean => mode === 'expert' || sc.level === 'basic';

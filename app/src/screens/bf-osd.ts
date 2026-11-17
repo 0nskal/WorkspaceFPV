@@ -26,9 +26,8 @@ import type { MspWrite } from '../bf/store';
 import { bindConnect, emptyHtml } from '../bf/ui-bits';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
+import './bf-osd.css';
 
-type Tab = 'elements' | 'warnings' | 'stats' | 'general';
-const TABS: Tab[] = ['elements', 'warnings', 'stats', 'general'];
 type K = 'bfOsd.item.rssi';
 const VIDEO = ['auto', 'pal', 'ntsc', 'hd'];
 
@@ -71,7 +70,6 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let edit: OsdConfig | null = null;
   let canvas: OsdGrid | null = null;
   let status: 'idle' | 'loading' | 'ready' | 'unsupported' = 'idle';
-  let tab: Tab = 'elements';
   let prof = 0;
   let sel = -1;
   let filter = '';
@@ -126,62 +124,74 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     return out.join('');
   }
 
-  function elementsTab(): string {
+  const sw = (attr: string, idx: number | string, on: boolean, label: string) =>
+    `<label class="bf-sw${on ? ' on' : ''}"><input type="checkbox" data-${attr}="${idx}" ${on ? 'checked' : ''} aria-label="${escapeHtml(label)}"><i></i></label>`;
+
+  function elementsPanel(): string {
     const e = edit!;
     const f = filter.toLowerCase();
     const rows = e.items
       .map((w, i) => ({ i, p: decodePos(w), name: itemName(i) }))
       .filter((r) => !f || r.name.toLowerCase().includes(f))
-      .map(
-        (r) => `<div class="bf-osd-row${sel === r.i ? ' sel' : ''}${changedItem(r.i) ? ' chg' : ''}" data-row="${r.i}">
-          <label><input type="checkbox" data-vis="${r.i}" ${r.p.vis[prof] ? 'checked' : ''} aria-label="${escapeHtml(r.name)}"><span>${escapeHtml(r.name)}</span></label>${ITEM_TIPS[OSD_ITEMS[r.i]?.key ?? ''] ? tip(ITEM_TIPS[OSD_ITEMS[r.i]!.key]!) : ''}
-          <span class="mono bf-osd-xy">${r.p.x},${r.p.y}</span>
-        </div>`,
-      )
+      .map((r) => {
+        const tk = ITEM_TIPS[OSD_ITEMS[r.i]?.key ?? ''];
+        return `<div class="bf-row bf-osd-el${sel === r.i ? ' sel' : ''}${changedItem(r.i) ? ' chg' : ''}" data-row="${r.i}">
+          <div class="bf-ctl">${sw('vis', r.i, !!r.p.vis[prof], r.name)}</div>
+          <span class="bf-lbl"><span>${escapeHtml(r.name)}</span><small class="mono bf-osd-xy">${r.p.x},${r.p.y}</small></span>${tk ? tip(tk) : '<span class="bf-tip-gap"></span>'}
+        </div>`;
+      })
       .join('');
-    return `<div class="bf-osd-prof mono" data-level="expert"><span>${t('bfOsd.profile')}</span>${tip('tips.osd.profile')}${Array.from({ length: Math.min(e.profileCount || 3, 3) }, (_, k) => `<button type="button" data-prof="${k}" class="${k === prof ? 'on' : ''}" aria-pressed="${k === prof}">${k + 1}${k === e.profile ? ' ●' : ''}</button>`).join('')}<button type="button" data-act="activate" ${prof === e.profile ? 'disabled' : ''}>${t('bfOsd.makeActive')}</button></div>
+    const profs = Array.from({ length: Math.min(e.profileCount || 3, 3) }, (_, k) => `<button type="button" data-prof="${k}" class="${k === prof ? 'on' : ''}" aria-pressed="${k === prof}">${k + 1}${k === e.profile ? ' ●' : ''}</button>`).join('');
+    return `<section class="bf-panel bf-osd-elements"><header><span class="bf-legend">${t('bfOsd.sub.elements')} ${tip('tips.osd.elements')}</span></header>
+      <div class="bf-osd-profile" data-level="expert"><span>${t('bfOsd.profile')}</span>${tip('tips.osd.profile')}<div class="bf-osd-seg">${profs}</div><button type="button" class="btn ghost" data-act="activate" ${prof === e.profile ? 'disabled' : ''}>${t('bfOsd.makeActive')}</button></div>
       <input class="bf-osd-search" type="search" placeholder="${escapeHtml(t('bfOsd.search'))}" value="${escapeHtml(filter)}" data-search aria-label="${t('bfOsd.search')}">
-      <div class="bf-osd-list">${rows || `<p class="bf-osd-empty mono">${t('bfOsd.noMatch')}</p>`}</div>`;
+      <div class="bf-osd-list">${rows || `<p class="bf-osd-empty">${t('bfOsd.noMatch')}</p>`}</div></section>`;
   }
 
-  function warningsTab(): string {
+  function warningsPanel(): string {
     const e = edit!;
     const n = Math.min(Math.max(e.warningCount, 0), 32);
-    return `<div class="bf-osd-prof mono"><span>${t('bfOsd.sub.warnings')}</span>${tip('tips.osd.warnings')}</div><div class="bf-osd-list">${OSD_WARNINGS.slice(0, n || OSD_WARNINGS.length)
+    const rows = OSD_WARNINGS.slice(0, n || OSD_WARNINGS.length)
       .map((k, b) => {
         const on = ((e.warnings >>> b) & 1) === 1;
         const was = ((cfg!.warnings >>> b) & 1) === 1;
-        return `<div class="bf-osd-row${on !== was ? ' chg' : ''}"><label><input type="checkbox" data-warn="${b}" ${on ? 'checked' : ''}><span>${t(`bfOsd.warn.${k}` as 'bfOsd.warn.rssi')}</span></label>${WARN_TIPS[k] ? tip(WARN_TIPS[k]!) : ''}</div>`;
+        const name = t(`bfOsd.warn.${k}` as 'bfOsd.warn.rssi');
+        return `<div class="bf-row${on !== was ? ' chg' : ''}"><div class="bf-ctl">${sw('warn', b, on, name)}</div><label class="bf-lbl">${name}</label>${WARN_TIPS[k] ? tip(WARN_TIPS[k]!) : '<span class="bf-tip-gap"></span>'}</div>`;
       })
-      .join('')}</div>`;
+      .join('');
+    return `<section class="bf-panel"><header><span class="bf-legend">${t('bfOsd.sub.warnings')} ${tip('tips.osd.warnings')}</span></header><div class="bf-osd-sw">${rows}</div></section>`;
   }
 
-  function statsTab(): string {
+  function statsPanel(): string {
     const e = edit!;
-    return `<div class="bf-osd-prof mono"><span>${t('bfOsd.sub.stats')}</span>${tip('tips.osd.stats')}</div><div class="bf-osd-list">${e.stats
-      .map((s, i) => {
+    const rows = e.stats
+      .map((st, i) => {
         const key = OSD_STATS[i];
         const name = key ? t(`bfOsd.stat.${key}` as 'bfOsd.stat.timer1') : t('bfOsd.itemN', { n: i });
-        return `<div class="bf-osd-row${s !== cfg!.stats[i] ? ' chg' : ''}"><label><input type="checkbox" data-stat="${i}" ${s ? 'checked' : ''}><span>${escapeHtml(name)}</span></label></div>`;
+        return `<div class="bf-row${st !== cfg!.stats[i] ? ' chg' : ''}"><div class="bf-ctl">${sw('stat', i, !!st, name)}</div><label class="bf-lbl">${escapeHtml(name)}</label><span class="bf-tip-gap"></span></div>`;
       })
-      .join('')}</div>`;
+      .join('');
+    return `<section class="bf-panel" data-level="expert"><header><span class="bf-legend">${t('bfOsd.sub.stats')} ${tip('tips.osd.stats')}</span></header><div class="bf-osd-sw">${rows}</div></section>`;
   }
 
-  function generalTab(): string {
+  function settingsPanels(): string {
     const e = edit!;
     const c = cfg!;
-    const fld = (key: string, label: string, val: number, was: number, unit: string, max: number, tk: TipKey, expert = false) =>
-      `<label class="bf-motors-f${val !== was ? ' bf-motors-changed' : ''}"${expert ? ' data-level="expert"' : ''}><span>${label}${tip(tk)}</span><span class="bf-motors-in"><input type="number" min="0" max="${max}" step="1" value="${val}" data-num="${key}" aria-label="${escapeHtml(label)}"><em class="mono">${unit}</em></span></label>`;
+    const num1 = (key: string, label: string, val: number, was: number, unit: string, max: number, tk: TipKey, expert = false) =>
+      `<div class="bf-row${val !== was ? ' chg' : ''}"${expert ? ' data-level="expert"' : ''}><div class="bf-ctl"><input type="number" min="0" max="${max}" step="1" value="${val}" data-num="${key}" aria-label="${escapeHtml(label)}"><span class="bf-unit">${unit}</span></div><label class="bf-lbl">${label}</label>${tip(tk)}</div>`;
     const video = [0, 1, 2, 3].map((v) => `<option value="${v}" ${e.video === v ? 'selected' : ''}>${t(`bfOsd.video.${VIDEO[v] ?? 'pal'}` as 'bfOsd.video.pal')}</option>`).join('');
-    return `<div class="bf-osd-gen">
-      <label class="bf-osd-sel${e.video !== c.video ? ' chg' : ''}"><span>${t('bfOsd.videoSystem')}${tip('tips.osd.video')}</span><select data-sel="video">${video}</select></label>
-      <label class="bf-osd-sel${e.units !== c.units ? ' chg' : ''}"><span>${t('bfOsd.units')}${tip('tips.osd.units')}</span><select data-sel="units"><option value="1" ${e.units === 1 ? 'selected' : ''}>${t('bfOsd.metric')}</option><option value="0" ${e.units === 0 ? 'selected' : ''}>${t('bfOsd.imperial')}</option></select></label>
-      <div class="bf-motors-grid">
-        ${fld('rssiAlarm', t('bfOsd.rssiAlarm'), e.rssiAlarm, c.rssiAlarm, '%', 100, 'tips.osd.rssiAlarm')}
-        ${fld('capAlarm', t('bfOsd.capAlarm'), e.capAlarm, c.capAlarm, 'mAh', 65535, 'tips.osd.capAlarm')}
-        ${fld('altAlarm', t('bfOsd.altAlarm'), e.altAlarm, c.altAlarm, 'm', 65535, 'tips.osd.altAlarm', true)}
-        ${e.lqAlarm !== null ? fld('lqAlarm', t('bfOsd.lqAlarm'), e.lqAlarm, c.lqAlarm ?? 0, '%', 100, 'tips.osd.lqAlarm') : ''}
-      </div></div>`;
+    return `<section class="bf-panel"><header><span class="bf-legend">${t('bfOsd.videoHead')}</span></header>
+        <div class="bf-row${e.video !== c.video ? ' chg' : ''}"><div class="bf-ctl"><select data-sel="video" aria-label="${t('bfOsd.videoSystem')}">${video}</select></div><label class="bf-lbl">${t('bfOsd.videoSystem')}</label>${tip('tips.osd.video')}</div>
+      </section>
+      <section class="bf-panel"><header><span class="bf-legend">${t('bfOsd.alarmsHead')}</span></header>
+        ${num1('rssiAlarm', t('bfOsd.rssiAlarm'), e.rssiAlarm, c.rssiAlarm, '%', 100, 'tips.osd.rssiAlarm')}
+        ${num1('capAlarm', t('bfOsd.capAlarm'), e.capAlarm, c.capAlarm, 'mAh', 65535, 'tips.osd.capAlarm')}
+        ${num1('altAlarm', t('bfOsd.altAlarm'), e.altAlarm, c.altAlarm, 'm', 65535, 'tips.osd.altAlarm', true)}
+        ${e.lqAlarm !== null ? num1('lqAlarm', t('bfOsd.lqAlarm'), e.lqAlarm, c.lqAlarm ?? 0, '%', 100, 'tips.osd.lqAlarm') : ''}
+      </section>
+      <section class="bf-panel"><header><span class="bf-legend">${t('bfOsd.units')}</span></header>
+        <div class="bf-row${e.units !== c.units ? ' chg' : ''}"><div class="bf-ctl"><select data-sel="units" aria-label="${t('bfOsd.units')}"><option value="1" ${e.units === 1 ? 'selected' : ''}>${t('bfOsd.metric')}</option><option value="0" ${e.units === 0 ? 'selected' : ''}>${t('bfOsd.imperial')}</option></select></div><label class="bf-lbl">${t('bfOsd.units')}</label>${tip('tips.osd.units')}</div>
+      </section>`;
   }
 
   function paint(): void {
@@ -192,36 +202,36 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       return;
     }
     if (status !== 'ready' || !edit || !cfg) {
-      root.innerHTML = `<p class="bf-osd-msg mono">${status === 'unsupported' ? t('bfOsd.unsupported') : t('bfOsd.loading')}</p>`;
+      root.innerHTML = `<p class="bf-osd-msg">${status === 'unsupported' ? t('bfOsd.unsupported') : t('bfOsd.loading')}</p>`;
       return;
     }
-    if (tab === 'stats' && document.documentElement.dataset.mode === 'basic') tab = 'elements';
     const g = grid();
     const hd = edit.video === 3;
     const n = nChanges();
-    const body = tab === 'elements' ? elementsTab() : tab === 'warnings' ? warningsTab() : tab === 'stats' ? statsTab() : generalTab();
     const keep = root.querySelector<HTMLElement>('.bf-osd-list')?.scrollTop ?? 0;
-    root.innerHTML = `${intro('tips.osd.intro')}<div class="bf-osd-page">
-      <div class="bf-osd-stage">
-        <div class="bf-osd-title"><h1>${t('bfOsd.title')} ${tip('tips.osd.elements')}</h1><span class="mono">${t(`bfOsd.video.${VIDEO[edit.video] ?? 'pal'}` as 'bfOsd.video.pal')} · ${g.cols} × ${g.rows}${hd && !canvas ? ' · ' + t('bfOsd.defaultCanvas') : ''}</span></div>
-        <div class="bf-osd-frame"><div class="bf-osd-grid" style="aspect-ratio:${g.cols * 12} / ${g.rows * 18};--cols:${g.cols};--rows:${g.rows}">${chips()}</div></div>
-        <p class="esc-note mono">${t('bfOsd.dragNote')}</p>
-      </div>
-      <div class="bf-osd-side esc-panel">
-        <header><span class="mono">${t('bfOsd.head')}</span><span class="mono esc-key">MSP_OSD_CONFIG</span></header>
-        <div class="bf-osd-tabs" role="tablist">${TABS.map((x) => `<button type="button" role="tab" data-tab="${x}" aria-selected="${x === tab}" class="${x === tab ? 'on' : ''}"${x === 'stats' ? ' data-level="expert"' : ''}>${t(`bfOsd.sub.${x}` as 'bfOsd.sub.elements')}</button>`).join('')}</div>
-        <div class="bf-osd-body">${body}</div>
-        <div class="bf-motors-bar">
-          <pre class="esc-cmds mono${n ? '' : ' empty'}">${n ? escapeHtml(t('bfOsd.pending', { n })) : t('esc.noChanges')}</pre>
-          <div class="bf-motors-btns">
-            <button type="button" class="btn light" data-act="save" ${n === 0 || saving ? 'disabled' : ''}>${icon('check', 16)}${t('bfOsd.save')}</button>
-            <button type="button" class="btn ghost" data-act="revert" ${n === 0 || saving ? 'disabled' : ''}>${t('bfMotors.revert')}</button>
-            <button type="button" class="btn ghost" data-act="ask">${icon('chip', 16)}${t('bfOsd.askAi')}</button>
-          </div>
+    const keepSide = root.querySelector<HTMLElement>('.bf-osd-scroll')?.scrollTop ?? 0;
+    root.innerHTML = `<div class="bf-osd-wrap">
+      <header class="bf-head"><h2>${t('bfOsd.title')}</h2><span class="bf-osd-sub">${t(`bfOsd.video.${VIDEO[edit.video] ?? 'pal'}` as 'bfOsd.video.pal')} · ${g.cols} × ${g.rows}${hd && !canvas ? ' · ' + t('bfOsd.defaultCanvas') : ''}</span></header>
+      <div class="bf-osd-scroll">
+        ${intro('tips.osd.intro')}
+        <div class="bf-osd-cols">
+          <div class="bf-osd-colL">${elementsPanel()}</div>
+          <div class="bf-osd-stage"><section class="bf-panel"><header><span class="bf-legend">${t('bfOsd.previewHead')}</span></header>
+            <div class="bf-osd-frame"><div class="bf-osd-grid" style="aspect-ratio:${g.cols * 12} / ${g.rows * 18};--cols:${g.cols};--rows:${g.rows}">${chips()}</div></div>
+            <p class="bf-osd-note">${t('bfOsd.dragNote')}</p></section></div>
+          <div class="bf-osd-colR">${settingsPanels()}${warningsPanel()}${statsPanel()}</div>
         </div>
-      </div></div>`;
+      </div>
+      <footer class="bf-osd-save">
+        <span class="bf-osd-pending${n ? ' has' : ''}">${n ? escapeHtml(t('bfOsd.pending', { n })) : t('esc.noChanges')}</span>
+        <button type="button" class="btn ghost" data-act="ask">${icon('chip', 16)}${t('bfOsd.askAi')}</button>
+        <button type="button" class="btn ghost" data-act="revert" ${n === 0 || saving ? 'disabled' : ''}>${t('bfMotors.revert')}</button>
+        <button type="button" class="btn amber" data-act="save" ${n === 0 || saving ? 'disabled' : ''}>${icon('check', 16)}${t('bfOsd.save')}</button>
+      </footer></div>`;
     const list = root.querySelector<HTMLElement>('.bf-osd-list');
     if (list) list.scrollTop = keep;
+    const side = root.querySelector<HTMLElement>('.bf-osd-scroll');
+    if (side) side.scrollTop = keepSide;
   }
 
   async function save(): Promise<void> {
@@ -266,7 +276,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     sel = i;
     chip.setPointerCapture(ev.pointerId);
     ev.preventDefault();
-    root.querySelectorAll('.bf-osd-chip.sel,.bf-osd-row.sel').forEach((n) => n.classList.remove('sel'));
+    root.querySelectorAll('.bf-osd-chip.sel,.bf-osd-el.sel').forEach((n) => n.classList.remove('sel'));
     chip.classList.add('sel');
     root.querySelector(`[data-row="${i}"]`)?.classList.add('sel');
   });
@@ -298,18 +308,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   root.addEventListener('click', (e) => {
     const tg = e.target as HTMLElement;
     if (tg.closest('.tip')) return;
-    const tb = tg.closest<HTMLElement>('[data-tab]');
-    if (tb) {
-      tab = tb.dataset.tab as Tab;
-      return paint();
-    }
     const pf = tg.closest<HTMLElement>('[data-prof]');
     if (pf) {
       prof = Number(pf.dataset.prof);
       return paint();
     }
     const row = tg.closest<HTMLElement>('[data-row]');
-    if (row && !(tg as HTMLInputElement).matches('input')) {
+    if (row && !tg.closest('.bf-sw,.tip')) {
       sel = Number(row.dataset.row);
       return paint();
     }

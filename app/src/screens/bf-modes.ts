@@ -12,8 +12,9 @@ import { decodeRc } from '../bf/receiver';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { t } from '../i18n';
-import { intro, tip, type TipKey } from '../ui/tip';
+import { intro, tip, tipText, type TipKey } from '../ui/tip';
 import { barHtml, disconnectedHtml, errorHtml, noticeHtml, updateBar } from './bf-tuning-ui';
+import './bf-modes.css';
 
 const US_MIN = 900;
 const US_MAX = 2100;
@@ -45,7 +46,7 @@ const BASIC_MODES: Record<string, TipKey> = {
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const root = document.createElement('div');
-  root.className = 'bf-tuning bf-modes';
+  root.className = 'bf-tuning bf-modes bf-md';
   el.appendChild(root);
 
   let disposed = false;
@@ -133,18 +134,18 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   function rangeHtml(r: ModeRange): string {
     const chg = JSON.stringify(norm(r)) !== JSON.stringify(norm(orig[r.slot]!));
-    const aux = Array.from({ length: auxCount() }, (_, i) => `<option value="${i}"${i === r.aux ? ' selected' : ''}>AUX${i + 1}</option>`).join('');
+    const aux = Array.from({ length: auxCount() }, (_, i) => `<option value="${i}"${i === r.aux ? ' selected' : ''}>AUX ${i + 1}</option>`).join('');
     const linkOpts = `<option value="0"${r.linkedTo === 0 ? ' selected' : ''}>${t('bfModes.noLink')}</option>${boxes.filter((b) => b.id !== r.id).map((b) => `<option value="${b.id}"${r.linkedTo === b.id ? ' selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}`;
     const lo = pct(stepToUs(r.start));
     const hi = pct(stepToUs(r.end));
-    return `<div class="bf-modes-range${chg ? ' chg' : ''}" data-slot="${r.slot}">
+    return `<div class="md-range${chg ? ' chg' : ''}" data-slot="${r.slot}">
       <select data-f="aux" aria-label="${t('bfModes.aux')}">${aux}</select>
-      <div class="bf-modes-track"><span class="bf-modes-fill" style="left:${lo}%;width:${hi - lo}%"></span><span class="bf-modes-mark" data-mark></span>
+      <div class="md-track"><span class="md-fill" style="left:${lo}%;width:${hi - lo}%"></span><span class="md-mark" data-mark></span>
         <input type="range" data-f="start" min="0" max="${STEP_COUNT}" step="1" value="${r.start}" aria-label="${t('bfModes.from')}">
         <input type="range" data-f="end" min="0" max="${STEP_COUNT}" step="1" value="${r.end}" aria-label="${t('bfModes.to')}"></div>
-      <span class="bf-modes-us"><input type="number" class="bf-tuning-num mono" data-f="startUs" min="${US_MIN}" max="${US_MAX}" step="25" value="${stepToUs(r.start)}" aria-label="${t('bfModes.from')}"><i>–</i><input type="number" class="bf-tuning-num mono" data-f="endUs" min="${US_MIN}" max="${US_MAX}" step="25" value="${stepToUs(r.end)}" aria-label="${t('bfModes.to')}"></span>
-      <span class="bf-modes-logic"><select data-f="logic" aria-label="${t('bfModes.logic')}"><option value="0"${r.logic === 0 ? ' selected' : ''}>OR</option><option value="1"${r.logic === 1 ? ' selected' : ''}>AND</option></select>${r.logic === 1 ? `<select data-f="link" aria-label="${t('bfModes.linked')}">${linkOpts}</select>` : ''}</span>
-      <button class="bf-modes-x" data-act="remove" data-slot="${r.slot}" aria-label="${t('bfModes.remove')}" title="${t('bfModes.remove')}">${icon('x', 14)}</button>
+      <span class="md-us"><input type="number" class="mono" data-f="startUs" min="${US_MIN}" max="${US_MAX}" step="25" value="${stepToUs(r.start)}" aria-label="${t('bfModes.from')}"><i>–</i><input type="number" class="mono" data-f="endUs" min="${US_MIN}" max="${US_MAX}" step="25" value="${stepToUs(r.end)}" aria-label="${t('bfModes.to')}"></span>
+      <span class="md-logic"><select data-f="logic" aria-label="${t('bfModes.logic')}"><option value="0"${r.logic === 0 ? ' selected' : ''}>${t('bfModes.or')}</option><option value="1"${r.logic === 1 ? ' selected' : ''}>${t('bfModes.and')}</option></select>${r.logic === 1 ? `<select data-f="link" aria-label="${t('bfModes.linked')}">${linkOpts}</select>` : ''}</span>
+      <button class="md-x" data-act="remove" data-slot="${r.slot}" aria-label="${t('bfModes.remove')}" title="${t('bfModes.remove')}">${icon('x', 14)}</button>
     </div>`;
   }
 
@@ -155,10 +156,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const free = live().length < MODE_SLOTS;
     const tk = BASIC_MODES[norm1(b.name)];
     const hide = !tk && !rs.length ? ' data-level="expert"' : '';
-    return `<div class="bf-modes-mode${on ? ' on' : ''}${rs.length ? '' : ' empty'}" data-box="${b.id}"${hide}>
-      <div class="bf-modes-mh"><i class="bf-modes-dot" aria-hidden="true"></i><span class="bf-modes-name">${escapeHtml(b.name)}</span>${tk ? tip(tk) : ''}${on ? `<em class="mono">${t('bfModes.active')}</em>` : ''}<span class="bf-modes-sp"></span><button class="bf-modes-add" data-act="add" data-id="${b.id}" ${free ? '' : 'disabled'} title="${free ? '' : escapeHtml(t('bfModes.noSlots'))}">${icon('check', 12)}${t('bfModes.add')}</button></div>
-      ${rs.map(rangeHtml).join('')}
-    </div>`;
+    return `<section class="md-mode${on ? ' on' : ''}${rs.length ? '' : ' empty'}" data-box="${b.id}"${hide}>
+      <div class="md-tile"><span class="md-name">${escapeHtml(b.name)}</span>${tk ? tip(tk) : ''}<em class="md-act"${on ? '' : ' hidden'}>${t('bfModes.active')}</em></div>
+      <div class="md-ranges">
+        ${rs.map(rangeHtml).join('')}
+        <div class="md-foot"><button class="btn ghost md-add" data-act="add" data-id="${b.id}" ${free ? '' : 'disabled'} title="${free ? '' : escapeHtml(t('bfModes.noSlots'))}"><b aria-hidden="true">+</b>${t('bfModes.add')}</button></div>
+      </div>
+    </section>`;
   }
 
   function render(): void {
@@ -179,13 +183,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const scale = [900, 1200, 1500, 1800, 2100].map((u) => `<span style="left:${pct(u)}%">${u}</span>`).join('');
     const arm = boxes.find((b) => b.id === 0);
     const noArm = arm && !live().some((r) => r.id === 0);
-    root.innerHTML = `${intro('tips.modes.intro')}<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfModes.tab')}</div>
-        <label class="bf-tuning-pl bf-modes-only"><input type="checkbox" data-only ${onlyConfigured ? 'checked' : ''}> ${t('bfModes.onlyConfigured')}</label>
-        <span class="bf-tuning-pnote dim">${t('bfModes.note', { used: live().length, max: MODE_SLOTS })}</span></div>
-      <div class="bf-tuning-body">
+    root.innerHTML = `<header class="bf-head md-head"><h2>${t('bfModes.tab')}</h2><span class="md-count">${t('bfModes.note', { used: live().length, max: MODE_SLOTS })}</span><span class="md-sp"></span>
+        <label class="md-only"><span class="bf-sw${onlyConfigured ? ' on' : ''}"><input type="checkbox" data-only ${onlyConfigured ? 'checked' : ''}><i></i></span>${t('bfModes.onlyConfigured')}</label></header>
+      <div class="bf-tuning-body md-body">
+        ${intro('tips.modes.intro')}
         ${noArm ? noticeHtml('warn', t('bfModes.noArm')) : ''}
-        <div class="bf-modes-scale"><span class="bf-modes-scalelabel mono">${t('bfModes.pulse')}${tip('tips.modes.ranges')}${tip('tips.modes.logic')}</span><div class="bf-modes-scaleax mono">${scale}</div></div>
-        <div class="bf-modes-list">${boxes.map(modeHtml).join('')}</div>
+        <div class="md-scale"><div class="md-scale-h">${t('bfModes.modeCol')}</div><div class="md-scale-in"><span class="md-sc-aux">${t('bfModes.aux')}</span><div class="md-ax mono">${scale}</div><span class="md-sc-us">${t('bfModes.pulse')}${tip('tips.modes.ranges')}</span><span class="md-sc-logic">${t('bfModes.logic')}${tip('tips.modes.logic')}</span><span></span></div></div>
+        <div class="md-list">${boxes.map(modeHtml).join('')}</div>
       </div>${barHtml()}`;
     root.scrollTop = top;
     updateBar(root, changedSlots().length, { busy });
@@ -194,7 +198,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   /** Marker positions + active highlights without re-rendering (10 Hz). */
   function updateLive(): void {
-    root.querySelectorAll<HTMLElement>('.bf-modes-range').forEach((row) => {
+    root.querySelectorAll<HTMLElement>('.md-range').forEach((row) => {
       const r = ranges[Number(row.dataset.slot)];
       if (!r) return;
       const us = rc[4 + r.aux];
@@ -203,15 +207,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         mark.style.display = us === undefined ? 'none' : '';
         if (us !== undefined) mark.style.left = `${pct(us)}%`;
       }
-      row.classList.toggle('in', us !== undefined && us >= stepToUs(r.start) && us < stepToUs(r.end));
+      row.classList.toggle('hit', us !== undefined && us >= stepToUs(r.start) && us < stepToUs(r.end));
     });
-    root.querySelectorAll<HTMLElement>('.bf-modes-mode').forEach((m) => {
+    root.querySelectorAll<HTMLElement>('.md-mode').forEach((m) => {
       const on = active.has(Number(m.dataset.box));
-      if (m.classList.contains('on') !== on) {
-        m.classList.toggle('on', on);
-        m.querySelector('.bf-modes-mh em')?.remove();
-        if (on) m.querySelector('.bf-modes-sp')?.insertAdjacentHTML('beforebegin', `<em class="mono">${t('bfModes.active')}</em>`);
-      }
+      m.classList.toggle('on', on);
+      const em = m.querySelector<HTMLElement>('.md-act');
+      if (em) em.hidden = !on;
     });
   }
 
@@ -253,7 +255,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function updateRow(row: HTMLElement, r: ModeRange): void {
     const lo = pct(stepToUs(r.start));
     const hi = pct(stepToUs(r.end));
-    const fill = row.querySelector<HTMLElement>('.bf-modes-fill');
+    const fill = row.querySelector<HTMLElement>('.md-fill');
     if (fill) {
       fill.style.left = `${lo}%`;
       fill.style.width = `${hi - lo}%`;
@@ -279,7 +281,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       return;
     }
     const f = inp.dataset.f;
-    const row = inp.closest<HTMLElement>('.bf-modes-range');
+    const row = inp.closest<HTMLElement>('.md-range');
     if (!f || !row) return;
     const r = ranges[Number(row.dataset.slot)]!;
     const v = Number(inp.value);

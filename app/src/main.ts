@@ -13,6 +13,7 @@ import '@fontsource/ibm-plex-mono/latin-ext-500.css';
 import './ui/styles.css';
 import { createApp } from './app';
 import './ui/soft.css'; // after the screens' own stylesheets: rounded panels, pills, round slider thumbs
+import './ui/v1.css'; // 1.0 layout layer: Betaflight-like panels and form rows, loaded last
 import { migrateLegacyStorage } from './migrate-storage';
 
 migrateLegacyStorage(); // before anything reads settings / language

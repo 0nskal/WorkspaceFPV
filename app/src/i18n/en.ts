@@ -5,6 +5,9 @@
  * Plural entries use { one, few, many } (English only needs one + many, `few` repeats `many`).
  */
 import { enBfConfig } from './en/bfConfig';
+import { enSensors } from './en/sensors';
+import { enGps } from './en/gps';
+import { enTipsSensors } from './en/tips-sensors';
 import { enBfCore } from './en/bfCore';
 import { enBfFailsafe } from './en/bfFailsafe';
 import { enBfPorts } from './en/bfPorts';
@@ -430,6 +433,8 @@ export const en = {
   bfSetup: enBfSetup,
   bfPorts: enBfPorts,
   bfConfig: enBfConfig,
+  sensors: enSensors,
+  gps: enGps,
   bfPower: enBfPower,
   bfFailsafe: enBfFailsafe,
   bfInfo: enBfInfo,
@@ -447,7 +452,7 @@ export const en = {
   nav: enNav,
   snip: enSnip,
   tipsUi: enTipsUi,
-  tips: { ...enTipsCore, ...enTipsFc, ...enTipsRx, ...enTipsMotors, ...enTipsTuning },
+  tips: { ...enTipsCore, ...enTipsFc, ...enTipsSensors, ...enTipsRx, ...enTipsMotors, ...enTipsTuning },
 };
 
 export type Dict = typeof en;

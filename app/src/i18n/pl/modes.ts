@@ -5,7 +5,7 @@ export const plBfModes: typeof enBfModes = {
   tab: 'Tryby',
   note: 'Użyto {used} z {max} zakresów',
   onlyConfigured: 'Tylko tryby z zakresami',
-  pulse: 'IMPULS µs',
+  pulse: 'Impuls (µs)',
   noArm: 'ARM nie ma zakresu: quada nie da się uzbroić przełącznikiem. Dodaj zakres dla ARM.',
   aux: 'Kanał AUX',
   from: 'Początek zakresu',
@@ -16,6 +16,9 @@ export const plBfModes: typeof enBfModes = {
   remove: 'Usuń zakres',
   active: 'AKTYWNY',
   add: 'Dodaj zakres',
+  or: 'LUB',
+  and: 'ORAZ',
+  modeCol: 'Tryb',
   noSlots: 'Wszystkie 20 miejsc na zakresy jest zajętych.',
   tips: {
     logic: 'OR: tryb włącza się, gdy zakres pasuje. AND: wymaga też włączonego powiązanego trybu.',

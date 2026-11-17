@@ -1,7 +1,7 @@
 /** English strings for reading ESC info (4-way) and the ELRS receiver version from the hardware. */
 export const enBfInfo = {
   esc: {
-    head: 'ESC INFO',
+    head: 'ESC info',
     key: '4-way interface',
     lead: 'Reads firmware, version and settings from every ESC. Read-only: nothing is written to the ESCs.',
     needs: 'Needs the battery connected, props off and the transmitter off.',
@@ -123,6 +123,12 @@ export const enBfInfo = {
     failed: 'The FC did not come back in time.',
   },
   elrs: {
+    pageTitle: 'ELRS',
+    updateHead: 'ELRS update',
+    pageSub: 'ExpressLRS receiver and link setup',
+    rxHead: 'Receiver',
+    toolsHead: 'Update tools',
+    configurator: 'ELRS Configurator',
     head: 'Receiver version',
     readBtn: 'Read from receiver',
     rereadBtn: 'Read again',

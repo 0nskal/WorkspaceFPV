@@ -1,6 +1,9 @@
 /** Polish dictionary. Must satisfy the same type as en.ts (Dict). */
 import type { Dict } from './en';
 import { plBfConfig } from './pl/bfConfig';
+import { plSensors } from './pl/sensors';
+import { plGps } from './pl/gps';
+import { plTipsSensors } from './pl/tips-sensors';
 import { plBfCore } from './pl/bfCore';
 import { plBfFailsafe } from './pl/bfFailsafe';
 import { plBfPorts } from './pl/bfPorts';
@@ -420,6 +423,8 @@ export const pl: Dict = {
   bfSetup: plBfSetup,
   bfPorts: plBfPorts,
   bfConfig: plBfConfig,
+  sensors: plSensors,
+  gps: plGps,
   bfPower: plBfPower,
   bfFailsafe: plBfFailsafe,
   bfInfo: plBfInfo,
@@ -437,5 +442,5 @@ export const pl: Dict = {
   nav: plNav,
   snip: plSnip,
   tipsUi: plTipsUi,
-  tips: { ...plTipsCore, ...plTipsFc, ...plTipsRx, ...plTipsMotors, ...plTipsTuning },
+  tips: { ...plTipsCore, ...plTipsFc, ...plTipsSensors, ...plTipsRx, ...plTipsMotors, ...plTipsTuning },
 };

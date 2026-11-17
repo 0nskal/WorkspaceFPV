@@ -96,7 +96,7 @@ export async function mountAttitudeModel(host: HTMLElement): Promise<AttitudeMod
 
   const resize = () => {
     const w = Math.max(1, host.clientWidth);
-    const h = Math.max(1, Math.round(Math.min(320, Math.max(220, w * 0.62))));
+    const h = Math.max(1, Math.round(Math.min(380, Math.max(260, w * 0.34))));
     renderer.setSize(w, h, false);
     canvas.style.width = '100%';
     canvas.style.height = `${h}px`;

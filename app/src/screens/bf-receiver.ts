@@ -14,7 +14,8 @@ import {
 import { escapeHtml } from '../ui/dom';
 import { fmtNum, t, type Key } from '../i18n';
 import { intro, tip, type TipKey } from '../ui/tip';
-import { barHtml, bindForm, disconnectedHtml, errorHtml, fieldHtml, Form, noticeHtml, sectionHtml, updateBar, type FieldSpec } from './bf-tuning-ui';
+import { bindForm, disconnectedHtml, errorHtml, Form, updateBar, type FieldSpec } from './bf-tuning-ui';
+import './bf-receiver.css';
 
 const k = (x: string) => `bfReceiver.${x}` as Key;
 const CH_MIN = 1000;
@@ -40,7 +41,8 @@ const FIELD_TIPS: Record<string, TipKey> = {
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const form = new Form();
   const root = document.createElement('div');
-  root.className = 'bf-tuning bf-receiver';
+  root.className = 'bf-tab rx';
+  root.dataset.tab = 'bf-receiver';
   el.appendChild(root);
 
   let disposed = false;
@@ -161,13 +163,14 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const norm = (us: number) => Math.max(0, Math.min(1, (us - CH_MIN) / (CH_MAX - CH_MIN)));
 
   function stickSvg(label: string, xKey: string, yKey: string): string {
-    return `<figure class="bf-receiver-stick"><svg viewBox="-60 -60 120 120" role="img" aria-label="${escapeHtml(label)}">
+    return `<figure class="rx-stick"><svg viewBox="-60 -60 120 120" role="img" aria-label="${escapeHtml(label)}">
       <rect x="-56" y="-56" width="112" height="112" fill="none" stroke="#DCEFF8" stroke-opacity=".5"/>
       <path d="M-56 0H56M0 -56V56" stroke="#DCEFF8" stroke-opacity=".15"/>
       <circle cx="0" cy="0" r="28" fill="none" stroke="#DCEFF8" stroke-opacity=".12"/>
       <circle data-dot="${xKey}${yKey}" cx="0" cy="0" r="5" fill="#FF4A2E"/></svg><figcaption class="mono">${escapeHtml(label)}</figcaption></figure>`;
   }
 
+  const LETTER: Record<string, string> = { Roll: 'A', Pitch: 'E', Yaw: 'R', Throttle: 'T' };
   function barsHtml(): string {
     const m = map();
     const prov = form.get('rx', 'provider');
@@ -175,9 +178,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const rssiCh = form.get('rssi', 'ch');
     return rc
       .map((us, i) => {
-        const name = link && i === 14 ? 'LQ' : link && i === 15 ? 'RSSI' : channelName(i, m);
+        const base = link && i === 14 ? 'LQ' : link && i === 15 ? 'RSSI' : channelName(i, m);
+        const name = LETTER[base] ? `${base} [${LETTER[base]}]` : base;
         const tag = rssiCh === i + 1 ? `<em class="mono">RSSI</em>` : '';
-        return `<div class="bf-receiver-ch" data-ch="${i}"${i >= 12 ? ' data-level="expert"' : ''}><span class="n mono">CH${i + 1}</span><span class="nm">${escapeHtml(name)}${tag}</span><span class="bar"><i style="width:${(norm(us) * 100).toFixed(1)}%"></i><b></b></span><span class="us mono">${us}</span></div>`;
+        const kind = LETTER[base] ? 'stick' : link && i >= 14 ? 'link' : 'aux';
+        return `<div class="rx-ch ${kind}" data-ch="${i}"${i >= 12 ? ' data-level="expert"' : ''}><span class="nm">${escapeHtml(name)}${tag}</span><span class="bar"><i style="width:${(norm(us) * 100).toFixed(1)}%"></i><b class="us mono">${us}</b></span></div>`;
       })
       .join('');
   }
@@ -185,9 +190,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   function linkHtml(): string {
     const prov = form.get('rx', 'provider');
     const link = elrsLink(rc, prov);
-    if (prov !== PROVIDER_CRSF) return `<div class="bf-receiver-lq dim">${t('bfReceiver.lqNotCrsf')}</div>`;
-    if (!link) return `<div class="bf-receiver-lq dim">${t('bfReceiver.lqNone')}</div>`;
-    return `<div class="bf-receiver-lq"><div class="bf-tuning-k"><div class="l mono">${t('bfReceiver.lq')}${tip('tips.receiver.link')}</div><div class="v">${fmtNum(link.lq, 0)}<small>%</small></div></div><div class="bf-tuning-k"><div class="l mono">${t('bfReceiver.rssiDbm')}</div><div class="v">~${fmtNum(link.rssiDbm, 0)}<small>dBm</small></div></div></div><p class="bf-tuning-hint">${t('bfReceiver.lqNote')}</p>`;
+    if (prov !== PROVIDER_CRSF) return `<div class="rx-lq dim">${t('bfReceiver.lqNotCrsf')}</div>`;
+    if (!link) return `<div class="rx-lq dim">${t('bfReceiver.lqNone')}</div>`;
+    return `<dl class="v1-kv rx-lqkv"><dt>${t('bfReceiver.lq')} ${tip('tips.receiver.link')}</dt><dd>${fmtNum(link.lq, 0)} %</dd><dt>${t('bfReceiver.rssiDbm')}</dt><dd>~${fmtNum(link.rssiDbm, 0)} dBm</dd></dl><p class="rx-lqnote">${t('bfReceiver.lqNote')}</p>`;
   }
 
   function updateLive(): void {
@@ -213,7 +218,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     }
     const lq = root.querySelector('[data-link]');
     if (lq) lq.innerHTML = linkHtml();
-    root.classList.toggle('bf-receiver-stale', stale >= 3);
+    root.classList.toggle('rx-stale', stale >= 3);
   }
 
   function startPoll(): void {
@@ -237,52 +242,65 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   }
 
   /* ---------------- view ---------------- */
+  const head = () => `<header class="bf-head"><h2>${t('bfReceiver.tab')}</h2><button class="btn ghost bf-ask" data-act="ask">${t('bfCore.askAi')}</button></header>`;
+
+  /** One Betaflight-style row: [control | label | bulb]. Works with bindForm (data-g / data-k). */
+  function rowHtml(key: string, g = 'rx', kind: 'num' | 'sw' = 'num'): string {
+    const sp = spec(key, g);
+    const tk = FIELD_TIPS[key];
+    const bulb = tk ? tip(tk) : '<span class="bf-tip-gap"></span>';
+    const lbl = escapeHtml(sp.label);
+    if (!form.has(g, key)) return `<div class="bf-row na" data-fk="${g}.${key}"><div class="bf-ctl"><span class="bf-info mono">—</span></div><label class="bf-lbl">${lbl}</label>${bulb}</div>`;
+    const v = form.get(g, key);
+    const dat = `data-g="${g}" data-k="${key}"`;
+    let ctl: string;
+    if (kind === 'sw') ctl = `<label class="bf-sw ${v ? 'on' : ''}"><input type="checkbox" ${dat} ${v ? 'checked' : ''} aria-label="${lbl}" /><i></i></label>`;
+    else if (sp.options) ctl = `<select ${dat} aria-label="${lbl}">${sp.options.map((o) => `<option value="${o.v}"${o.v === v ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
+    else ctl = `<input type="number" ${dat} min="${sp.min}" max="${sp.max}" step="1" value="${v}" aria-label="${lbl}" />${sp.unit ? `<span class="bf-unit mono">${escapeHtml(sp.unit)}</span>` : ''}`;
+    return `<div class="bf-row${form.isChanged(g, key) ? ' chg' : ''}" data-fk="${g}.${key}"><div class="bf-ctl">${ctl}</div><label class="bf-lbl">${lbl}</label>${bulb}</div>`;
+  }
+  const panel = (title: string, body: string, opts: { tip?: TipKey; tip2?: TipKey; hint?: string; expert?: boolean; cls?: string } = {}) =>
+    `<section class="bf-panel ${opts.cls ?? ''}"${opts.expert ? ' data-level="expert"' : ''}><header><span class="bf-legend">${escapeHtml(title)}${opts.tip ? ` ${tip(opts.tip)}` : ''}${opts.tip2 ? tip(opts.tip2) : ''}</span>${opts.hint ? `<small>${escapeHtml(opts.hint)}</small>` : ''}</header>${body}</section>`;
+
   function render(): void {
     if (disposed) return;
-    const top = root.scrollTop;
+    const top = root.querySelector<HTMLElement>('.bf-body')?.scrollTop ?? 0;
     if (!connected() || phase === 'idle') {
-      root.innerHTML = disconnectedHtml();
+      root.innerHTML = `${head()}<div class="bf-body">${disconnectedHtml()}</div>`;
       return;
     }
     if (phase === 'loading') {
-      root.innerHTML = `<div class="bf-tuning-empty"><div class="bf-tuning-film mono">${t('bfTuning.common.film')}</div><h1>${t('bfTuning.common.loading')}</h1></div>`;
+      root.innerHTML = `${head()}<div class="bf-body"><div class="bf-empty"><p>${t('bfTuning.common.loading')}</p></div></div>`;
       return;
     }
     if (phase === 'error') {
-      root.innerHTML = errorHtml(error);
+      root.innerHTML = `${head()}<div class="bf-body">${errorHtml(error)}</div>`;
       return;
     }
-    /** Field with a lightbulb next to its label (bf-tuning-ui renders the label itself). */
-    const f = (key: string, g = 'rx') => {
-      const tk = FIELD_TIPS[key];
-      const html = fieldHtml(form, spec(key, g));
-      return tk ? html.replace(/(<span class="bf-tuning-lb"[^>]*>[^<]*<\/span>)/, `$1${tip(tk)}`) : html;
-    };
-    /** Marks a whole section as Expert-only (hidden in Basic mode) and adds a bulb after its caption. */
-    const sec = (html: string, bulbs: string, expert: boolean) => {
-      let out = html.replace('</span>', `</span>${bulbs}`);
-      if (expert) out = out.replace('<section class="bf-tuning-sec">', '<section class="bf-tuning-sec" data-level="expert">');
-      return out;
-    };
     const cur = mapToString(map());
     const preset = RX_MAP_PRESETS.includes(cur) ? cur : 'custom';
     const mapChanged = form.groupChanged('map');
-    const mapSel = `<div class="bf-tuning-f${mapChanged ? ' chg' : ''}"><span class="bf-tuning-lb">${t('bfReceiver.map')}</span>${tip('tips.receiver.map')}<span class="bf-tuning-c"><select data-preset aria-label="${escapeHtml(t('bfReceiver.map'))}">${RX_MAP_PRESETS.map((p) => `<option value="${p}"${p === preset ? ' selected' : ''}>${p.slice(0, 4)}</option>`).join('')}${preset === 'custom' ? `<option value="custom" selected>${escapeHtml(cur)}</option>` : ''}</select></span></div>`;
-    const smoothKeys = ['smoothMode', 'smoothSetpointCutoff', api() >= 47 ? 'smoothThrottleCutoff' : 'smoothFeedforwardCutoff', 'smoothAutoFactor', ...(api() >= 47 ? ['smoothAutoFactorThrottle'] : [])];
+    const mapRow = `<div class="bf-row${mapChanged ? ' chg' : ''}"><div class="bf-ctl"><select data-preset aria-label="${escapeHtml(t('bfReceiver.map'))}">${RX_MAP_PRESETS.map((p) => `<option value="${p}"${p === preset ? ' selected' : ''}>${p.slice(0, 4)}</option>`).join('')}${preset === 'custom' ? `<option value="custom" selected>${escapeHtml(cur)}</option>` : ''}</select></div><label class="bf-lbl">${t('bfReceiver.map')}</label>${tip('tips.receiver.map')}</div>`;
+    const smoothKeys = [api() >= 47 ? 'smoothThrottleCutoff' : 'smoothFeedforwardCutoff', 'smoothSetpointCutoff', 'smoothAutoFactor', ...(api() >= 47 ? ['smoothAutoFactorThrottle'] : [])];
     const prov = form.get('rx', 'provider');
-    root.innerHTML = `${intro('tips.receiver.intro')}<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfReceiver.tab')}</div><span class="bf-tuning-pnote dim">${t('bfReceiver.note')}</span></div>
-      <div class="bf-tuning-body"><div class="bf-tuning-rates">
-        <div class="bf-tuning-rcol">
-          ${sectionHtml(t('bfReceiver.capSetup'), `${prov === 0 ? noticeHtml('warn', t('bfReceiver.noProvider')) : ''}<div class="bf-tuning-grid">${f('provider')}${mapSel}${f('ch', 'rssi')}</div>`, needsReboot() ? t('bfReceiver.rebootNeeded') : '')}
-          ${sec(sectionHtml(t('bfReceiver.capSticks'), `<div class="bf-tuning-grid">${f('minCheck')}${f('midRc')}${f('maxCheck')}${hasDb ? `${f('deadband', 'db')}${f('yawDeadband', 'db')}` : ''}</div>`), tip('tips.receiver.sticks'), true)}
-          ${sec(sectionHtml(t('bfReceiver.capSmooth'), `<div class="bf-tuning-grid">${smoothKeys.map((x) => f(x)).join('')}</div>`, t('bfReceiver.smoothNote')), '', true)}
-        </div>
-        <div class="bf-tuning-rcol">
-          ${sec(sectionHtml(t('bfReceiver.capLive'), `<div class="bf-receiver-live"><div class="bf-receiver-sticks">${stickSvg(`${t('bfReceiver.yaw')} / ${t('bfReceiver.throttle')}`, 'yaw', 'thr')}${stickSvg(`${t('bfReceiver.roll')} / ${t('bfReceiver.pitch')}`, 'roll', 'pitch')}</div><div data-link>${linkHtml()}</div></div><div class="bf-receiver-bars" data-bars>${barsHtml()}</div>`, t('bfReceiver.live10')), `${tip('tips.receiver.live')}${tip('tips.receiver.failsafe')}`, false)}
-        </div>
-      </div></div>${barHtml()}`;
-    root.scrollTop = top;
-    updateBar(root, form.count(), { busy, reboot: needsReboot() });
+    const reboot = needsReboot();
+    const live = panel(
+      t('bfReceiver.capLive'),
+      `<div class="rx-top"><div class="rx-sticks">${stickSvg(`${t('bfReceiver.yaw')} / ${t('bfReceiver.throttle')}`, 'yaw', 'thr')}${stickSvg(`${t('bfReceiver.roll')} / ${t('bfReceiver.pitch')}`, 'roll', 'pitch')}</div><div class="rx-lqbox" data-link>${linkHtml()}</div></div><div class="rx-bars" data-bars>${barsHtml()}</div>`,
+      { tip: 'tips.receiver.live', tip2: 'tips.receiver.failsafe', hint: t('bfReceiver.live10'), cls: 'rx-live' },
+    );
+    const side = [
+      panel(t('bfReceiver.capSetup'), `${prov === 0 ? `<div class="v1-warn">${escapeHtml(t('bfReceiver.noProvider'))}</div>` : ''}${rowHtml('provider')}${reboot ? `<div class="v1-note">${escapeHtml(t('bfReceiver.rebootNeeded'))}</div>` : ''}`),
+      panel(t('bfReceiver.capRssi'), rowHtml('ch', 'rssi')),
+      panel(t('bfReceiver.capMap'), mapRow),
+      panel(t('bfReceiver.capSticks'), `${rowHtml('minCheck')}${rowHtml('midRc')}${rowHtml('maxCheck')}${hasDb ? `${rowHtml('deadband', 'db')}${rowHtml('yawDeadband', 'db')}` : ''}`, { tip: 'tips.receiver.sticks', expert: true }),
+      panel(t('bfReceiver.capSmooth'), `${rowHtml('smoothMode', 'rx', 'sw')}${smoothKeys.map((x) => rowHtml(x)).join('')}`, { hint: t('bfReceiver.smoothNote'), expert: true }),
+    ].join('');
+    root.innerHTML = `${head()}<div class="bf-body">${intro('tips.receiver.intro')}<div class="rx-cols">${live}<div class="rx-side">${side}</div></div></div>
+      <footer class="bf-save"><span class="bf-save-msg" data-bar-n></span><button class="btn ghost" data-act="revert" disabled>${t('bfTuning.common.revert')}</button><button class="btn light" data-act="save" disabled><span data-bar-save>${t('bfTuning.common.save')}</span></button></footer>`;
+    const bodyEl = root.querySelector<HTMLElement>('.bf-body');
+    if (bodyEl) bodyEl.scrollTop = top;
+    updateBar(root, form.count(), { busy, reboot });
     updateLive();
   }
 
@@ -301,6 +319,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
 
   /* ---------------- events ---------------- */
   const unbind = bindForm(root, form, specs, (g, key) => {
+    const rowEl = root.querySelector<HTMLElement>(`[data-fk="${g}.${key}"]`);
+    rowEl?.classList.toggle('chg', form.isChanged(g, key));
+    rowEl?.querySelector('.bf-sw')?.classList.toggle('on', !!form.get(g, key));
     updateBar(root, form.count(), { busy, reboot: needsReboot() });
     if (g === 'rx' && (key === 'provider' || key === 'midRc')) render();
     else if (g === 'rssi') root.querySelector('[data-bars]')!.innerHTML = barsHtml();

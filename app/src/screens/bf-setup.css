@@ -1,0 +1,38 @@
+/* Setup tab (Betaflight-like): big 3D stage on top, a row of info panels below. Scoped under .su. */
+.su .su-model { margin-bottom: 8px; }
+.su .bf-su-attitude { position: relative; padding: 0; min-height: 300px; border-radius: 8px; overflow: hidden; }
+.su .bf-su-model { display: block; width: 100%; height: 340px; max-height: none; }
+.su .bf-su-attitude.has-3d .bf-su-model { display: none; }
+.su .su-angles { position: absolute; left: 4px; top: 4px; display: grid; gap: 4px; padding: 10px 14px; border-radius: 10px; background: rgba(7, 11, 16, 0.72); border: 1px solid var(--v1-line-2); }
+.su .su-angles div { display: flex; align-items: baseline; gap: 12px; }
+.su .su-angles small { width: 44px; font-size: 13px; color: var(--sub); }
+.su .su-angles b { font: 500 17px var(--mono); color: var(--ink); min-width: 68px; text-align: right; }
+.su .su-inst { position: absolute; right: 6px; bottom: 6px; display: flex; gap: 10px; }
+.su .su-inst svg { width: 104px; height: 104px; display: block; }
+.su .su-cols { margin-top: 26px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 1720px) { .su .su-cols { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1000px) { .su .su-cols { grid-template-columns: minmax(0, 1fr); } }
+.su .su-cols .bf-panel { height: 100%; box-sizing: border-box; }
+.su .v1-kv { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: baseline; gap: 8px 14px; margin: 0; }
+.su .v1-kv dt { font-weight: 500; color: var(--text); }
+.su .v1-kv dd { text-align: right; overflow-wrap: anywhere; margin: 0; }
+.su .v1-kv dd.dim { color: var(--sub); }
+.su .v1-kv dt .tip { display: inline-flex; vertical-align: middle; margin-left: 4px; }
+.su .su-act span .tip { display: inline-flex; vertical-align: middle; margin-left: 2px; }
+.su .su-btns { display: grid; gap: 12px; margin-top: 16px; }
+.su .su-cols .bf-panel > .su-btns:first-of-type { margin-top: 4px; }
+.su .su-act { display: grid; gap: 6px; }
+.su .su-act .btn { width: 100%; height: 38px; justify-content: center; font-size: 14px; }
+.su .su-act span { font-size: 12.5px; line-height: 1.45; color: var(--sub); }
+.su .su-small { font-size: 12.5px; color: var(--sub); }
+.su .su-small:empty { display: none; }
+.su .su-arming { margin-top: 30px; }
+.su .su-ok { font-size: 14px; color: #5fd3a5; margin-bottom: 8px; }
+.su .su-flags { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 4px 28px; }
+.su .su-flags li { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--v1-line-2); font-size: 13.5px; }
+.su .su-flags li.block b { color: var(--hot); }
+.su .su-flags li b { font-size: 13px; font-weight: 600; color: var(--ink); }
+.su .su-flags li em { font-style: normal; color: var(--sub); }
+.su .su-flags li span { color: var(--text); }
+.su .su-arming .su-small { margin-top: 12px; }
+.su .su-arming .v1-note { margin-top: 12px; }

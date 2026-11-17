@@ -474,6 +474,120 @@ export function decodeSensorConfig(p: Uint8Array): SensorConfig {
   return { acc: r.u8(), baro: r.u8(), mag: r.u8() };
 }
 
+/** MSP_SET_SENSOR_CONFIG: acc/baro/mag hardware (1 = NONE, 0 = auto), then the extra bytes the API version expects, kept as the FC reported them. */
+export function encodeSensorConfig(v: SensorConfig, raw: Uint8Array | undefined, api: number): Uint8Array {
+  const o = [v.acc, v.baro, v.mag];
+  if (api >= API.BF2025_12) o.push(raw?.[3] ?? 0, raw?.[4] ?? 0); // sonar, optical flow
+  if (api >= API.MASTER) o.push(raw?.[5] ?? 0); // pitot
+  return Uint8Array.from(o);
+}
+/** Hardware id that switches a sensor off in MSP_SENSOR_CONFIG (acc, baro and mag all use 1 = NONE). */
+export const SENSOR_NONE = 1;
+
+/* ---------------- live sensor data (Sensors tab) ---------------- */
+
+/** MSP_RAW_IMU: accelerometer in g, gyro in deg/s, magnetometer raw (scalings as the Betaflight Configurator shows them). */
+export interface RawImu {
+  acc: [number, number, number];
+  gyro: [number, number, number];
+  mag: [number, number, number];
+}
+export function decodeRawImu(p: Uint8Array): RawImu {
+  const r = new Rd(p);
+  const acc: [number, number, number] = [r.s16() / 2048, r.s16() / 2048, r.s16() / 2048];
+  const gyro: [number, number, number] = [r.s16() * (4 / 16.4), r.s16() * (4 / 16.4), r.s16() * (4 / 16.4)];
+  const mag: [number, number, number] = [r.s16(), r.s16(), r.s16()];
+  return { acc, gyro, mag };
+}
+
+/** MSP_ALTITUDE: estimated altitude in metres (s32 cm) and vertical speed in m/s (s16 cm/s, when sent). */
+export function decodeAltitude(p: Uint8Array): { altM: number; varioMs: number } {
+  const r = new Rd(p);
+  const altM = (r.u32() | 0) / 100;
+  return { altM, varioMs: r.has(2) ? r.s16() / 100 : 0 };
+}
+
+/** MSP_COMPASS_CONFIG (API 1.46+): magnetic declination in degrees. */
+export const decodeCompassDeclination = (p: Uint8Array): number => new Rd(p).s16() / 10;
+
+/* ---------------- GPS ---------------- */
+
+/** MSP_GPS_CONFIG: provider (0 NMEA, 1 UBLOX, 2 MSP, 3 VIRTUAL), SBAS mode, auto config, auto baud, home point once, Galileo. */
+export interface GpsConfig {
+  provider: number;
+  sbas: number;
+  autoConfig: boolean;
+  autoBaud: boolean;
+  homePointOnce: boolean;
+  useGalileo: boolean;
+}
+export function decodeGpsConfig(p: Uint8Array): GpsConfig {
+  const r = new Rd(p);
+  return { provider: r.u8(), sbas: r.u8(), autoConfig: r.u8() === 1, autoBaud: r.u8() === 1, homePointOnce: r.u8() === 1, useGalileo: r.u8() === 1 };
+}
+export function encodeGpsConfig(v: GpsConfig, raw?: Uint8Array): Uint8Array {
+  const o = patchBase(raw, 6);
+  o.set([v.provider, v.sbas, v.autoConfig ? 1 : 0, v.autoBaud ? 1 : 0, v.homePointOnce ? 1 : 0, v.useGalileo ? 1 : 0], 0);
+  return o;
+}
+
+/** MSP_RAW_GPS. Latitude/longitude in degrees, altitude in m, speed in cm/s, course in degrees, positional DOP (API 1.46+, 0 when absent). */
+export interface RawGps {
+  fix: number;
+  numSat: number;
+  lat: number;
+  lon: number;
+  altM: number;
+  speedCms: number;
+  courseDeg: number;
+  pdop: number;
+}
+export function decodeRawGps(p: Uint8Array): RawGps {
+  const r = new Rd(p);
+  const fix = r.u8();
+  const numSat = r.u8();
+  const lat = (r.u32() | 0) / 1e7;
+  const lon = (r.u32() | 0) / 1e7;
+  const altM = r.u16();
+  const speedCms = r.u16();
+  const courseDeg = r.u16() / 10;
+  const pdop = r.has(2) ? r.u16() / 100 : 0;
+  return { fix, numSat, lat, lon, altM, speedCms, courseDeg, pdop };
+}
+
+/** MSP_COMP_GPS: distance (m) and direction (deg) from the aircraft to the home point. */
+export interface CompGps {
+  distanceM: number;
+  directionDeg: number;
+  update: number;
+}
+export function decodeCompGps(p: Uint8Array): CompGps {
+  const r = new Rd(p);
+  return { distanceM: r.u16(), directionDeg: r.u16(), update: r.u8() };
+}
+
+/** One channel of MSP_GPS_SV_INFO: `gnss` is the constellation id (more than 16 channels) or the channel number (older firmware). */
+export interface SvChannel {
+  gnss: number;
+  svid: number;
+  quality: number;
+  cno: number;
+}
+export function decodeGpsSvInfo(p: Uint8Array): SvChannel[] {
+  const r = new Rd(p);
+  const n = p.length > 0 ? r.u8() : 0;
+  const out: SvChannel[] = [];
+  for (let i = 0; i < n && r.has(4); i++) out.push({ gnss: r.u8(), svid: r.u8(), quality: r.u8(), cno: r.u8() });
+  return out;
+}
+export const GNSS_NAMES = ['GPS', 'SBAS', 'Galileo', 'BeiDou', 'IMES', 'QZSS', 'Glonass'] as const;
+
+/** Receiver position: the quad's offset from home in metres (east, north), from MSP_COMP_GPS (direction TO home). */
+export function offsetFromHome(c: CompGps): { east: number; north: number } {
+  const b = ((c.directionDeg + 180) * Math.PI) / 180;
+  return { east: Math.sin(b) * c.distanceM, north: Math.cos(b) * c.distanceM };
+}
+
 /** Receiver config: only what the core tabs need (the Receiver tab owns the rest). */
 export interface RxConfigLite {
   serialRxProvider: number;

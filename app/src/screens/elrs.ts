@@ -1,5 +1,9 @@
+/**
+ * ELRS tab (1.0 layout): receiver facts (read from the receiver over CRSF passthrough), an update checklist
+ * (versions, binding phrase, region, method, link check) and links to the ELRS Web Flasher and Configurator.
+ * Nothing is flashed from here and nothing is written to the FC.
+ */
 import type { AppContext, ScreenMount } from '../context';
-import elrsImg from '../assets/img/elrs.webp';
 import { hwInfo, type HwJob } from '../bf/hw-info';
 import { readRxConfig } from '../fc/read';
 import { jobText } from './bf-esc-info';
@@ -9,26 +13,20 @@ import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { t } from '../i18n';
 import { intro, tip, type TipKey } from '../ui/tip';
-import { FLASHER_URL, compat, loadLocal, providerLabel, saveLocal, type ElrsLocal, type Method, type Region } from './elrs-data';
-import { renderElrsScene } from './elrs-scene';
-
-type StepState = 'done' | 'warn' | 'todo';
+import { CONFIGURATOR_URL, FLASHER_URL, compat, loadLocal, providerLabel, saveLocal, type ElrsLocal, type Method, type Region } from './elrs-data';
+import './elrs.css';
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let local: ElrsLocal = loadLocal();
   let rxProvider: number | null = null;
   let rxLink: FcLink | null = null;
   let disposed = false;
-  let sceneKey = '';
 
-  el.innerHTML = `<div class="elrs">
-    <div class="elrs-stage"><div class="elrs-art"></div><div class="elrs-data" aria-label="${t('elrs.dataAria')}"></div>
-      <div class="elrs-introw" data-only="basic"><img src="${elrsImg}" alt="" aria-hidden="true" width="800" height="446" decoding="async" />${intro('tips.elrs.intro')}</div></div>
-    <aside class="elrs-card" aria-label="${t('elrs.cardAria')}"></aside>
+  el.innerHTML = `<div class="elrs-v1">
+    <header class="bf-head"><h2>${t('bfInfo.elrs.pageTitle')}</h2><span class="elrs-sub">${t('bfInfo.elrs.pageSub')}</span><button class="btn ghost bf-ask" type="button" data-act="ai">${icon('chip', 16)}${t('elrs.askAi')}</button></header>
+    <div class="bf-body elrs-body"></div>
   </div>`;
-  const art = el.querySelector<HTMLElement>('.elrs-art') as HTMLElement;
-  const dataEl = el.querySelector<HTMLElement>('.elrs-data') as HTMLElement;
-  const card = el.querySelector<HTMLElement>('.elrs-card') as HTMLElement;
+  const body = el.querySelector<HTMLElement>('.elrs-body') as HTMLElement;
 
   /** The receiver version is only ever read from the receiver (state.hw.elrs); nothing is typed in. */
   const rxVersion = () => ctx.state.get().hw.elrs?.version ?? '';
@@ -41,7 +39,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     render();
   }
 
-  /** Odczyt MSP_RX_CONFIG raz na polaczenie. */
+  /** MSP_RX_CONFIG once per connection. */
   function loadRx(): void {
     const link = connected() ? ctx.link() : null;
     if (!link) {
@@ -61,147 +59,88 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       .catch(() => undefined);
   }
 
-  function steps(): Array<{ state: StepState }> {
-    const c = compat(rxVersion(), local.txVersion);
-    return [
-      { state: c.kind === 'ok' ? 'done' : c.kind === 'warn' ? 'warn' : 'todo' },
-      { state: local.phrase ? 'done' : 'todo' },
-      { state: local.region ? 'done' : 'todo' },
-      { state: local.method ? 'done' : 'todo' },
-      { state: local.verified ? 'done' : 'todo' },
-    ];
-  }
+  const sw = (name: string, on: boolean, label: string) => `<label class="bf-sw${on ? ' on' : ''}"><input type="checkbox" name="${name}" ${on ? 'checked' : ''} aria-label="${escapeHtml(label)}"><i></i></label>`;
+  const row = (ctl: string, label: string, tk: TipKey, extra = '') => `<div class="bf-row"><div class="bf-ctl">${ctl}</div><label class="bf-lbl">${label}</label>${tip(tk)}${extra}</div>`;
+  const opt = (v: string, cur: string, label: string) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${label}</option>`;
 
-  function renderData(): void {
+  /** Receiver panel: facts read from the FC / receiver, the read button and its status. */
+  function receiverPanel(): string {
     const s = ctx.state.get();
     const rx = rxVersion();
     const tx = local.txVersion.trim();
     const prov = rxProvider === null ? null : providerLabel(rxProvider);
     const dash = '<span class="elrs-na">—</span>';
-    const na = (k: 'elrs.notGiven' | 'elrs.notChosen' | 'elrs.phraseNotConfirmed') => `<span class="elrs-na">${t(k)}</span>`;
     const rssi = s.telemetry ? `${rssiPct(s.telemetry.rssi)}%` : '—';
-    const rows: Array<[string, string, TipKey]> = [
-      [t('elrs.rowProtocol'), connected() ? (prov ? `${escapeHtml(prov.text)}${prov.elrs ? '' : ` <small>${t('elrs.usuallyCrsf')}</small>`}` : dash) : dash, 'tips.elrs.protocol'],
-      [t('elrs.rowRx'), rx ? escapeHtml(rx) : `<span class="elrs-na">${t('bfInfo.elrs.notRead')}</span>`, 'tips.elrs.rxVersion'],
-      [t('elrs.rowTx'), tx ? escapeHtml(tx) : na('elrs.notGiven'), 'tips.elrs.txVersion'],
-      [t('elrs.rowRssi'), `<span data-live="rssi">${rssi}</span>`, 'tips.elrs.rssi'],
-      [t('elrs.rowRegion'), local.region ? (local.region === 'LBT' ? 'LBT (EU)' : 'FCC') : na('elrs.notChosen'), 'tips.elrs.region'],
-      [t('elrs.rowPhrase'), local.phrase ? `${t('elrs.phraseSaved')} ${icon('check', 15)}` : na('elrs.phraseNotConfirmed'), 'tips.elrs.phrase'],
-    ];
-    dataEl.innerHTML =
-      rows.map(([k, v, tk]) => `<div class="elrs-row"><span class="elrs-k mono">${k}${tip(tk)}</span><span class="elrs-v">${v}</span></div>`).join('') +
-      (connected() ? '' : `<div class="elrs-off">${t('elrs.off')}</div>`);
-  }
-
-  function marker(i: number, st: StepState, current: boolean): string {
-    if (st === 'done') return `<span class="elrs-mk done">${icon('check', 14)}</span>`;
-    if (st === 'warn') return `<span class="elrs-mk warn">${icon('alert', 13)}</span>`;
-    return `<span class="elrs-mk${current ? ' cur' : ''}">${i + 1}</span>`;
-  }
-
-  /** Step 1 body: the receiver version read from the hardware (button, status) plus the optional transmitter version. */
-  function step1Body(rx: string): string {
     const job: HwJob = hw?.elrs ?? { phase: 'idle' };
     const busy = job.phase === 'checking' || job.phase === 'running' || job.phase === 'reconnecting';
-    const info = ctx.state.get().hw.elrs;
-    const cls = busy ? 'run' : job.phase === 'error' ? 'err' : job.phase === 'blocked' ? 'warn' : '';
+    const info = s.hw.elrs;
+    const cls = busy ? 'run' : job.phase === 'error' ? 'bad' : job.phase === 'blocked' ? 'warn' : '';
     let status = busy || job.phase === 'blocked' || job.phase === 'error' ? jobText(job) : '';
     const rc = hw?.reconnectLine();
-    if (rc && ctx.state.get().conn === 'reconnecting') status = rc;
+    if (rc && s.conn === 'reconnecting') status = rc;
     const canRead = connected() && !!hw && !busy;
     const showHow = job.phase === 'blocked' && ['noUart', 'noAnswer', 'noAnswerSeen', 'notCrsf'].includes(job.reason ?? '');
-    return `<div class="bf-elrs-read">
-        <div class="bf-elrs-ver"><span class="mono">${t('bfInfo.elrs.head')}</span><b>${rx ? 'ELRS ' + escapeHtml(rx) : `<span class="elrs-na">${t('bfInfo.elrs.notRead')}</span>`}</b>${info ? `<small class="mono">${escapeHtml(t('bfInfo.elrs.deviceName', { name: info.name }))}</small>` : ''}</div>
-        <div class="bf-elrs-act"><button class="btn s" type="button" data-act="read-elrs" ${canRead ? '' : 'disabled'}>${busy ? t('bfInfo.elrs.reading') : rx ? t('bfInfo.elrs.rereadBtn') : t('bfInfo.elrs.readBtn')}</button></div>
-        ${status ? `<p class="bf-elrs-st mono ${cls}" role="status" aria-live="polite">${escapeHtml(status)}</p>` : `<p class="bf-elrs-st mono">${connected() ? t('bfInfo.elrs.readLead') : t('bfInfo.elrs.needsConn')}</p>`}
-        ${showHow ? `<div class="bf-elrs-how"><b class="mono">${t('bfInfo.elrs.howHead')}</b><ol>${t('bfInfo.elrs.how')}</ol></div>` : ''}
-      </div>
-      <label class="bf-elrs-tx"><span class="mono">${t('bfInfo.elrs.txLabel')}</span><input type="text" name="tx" value="${escapeHtml(local.txVersion)}" placeholder="${t('elrs.s1ph2')}" autocomplete="off" spellcheck="false"/></label>
-      <small class="bf-elrs-txhint">${t('bfInfo.elrs.txHint')}</small>`;
+    const kv = (k: string, v: string, tk: TipKey) => `<dt>${k}${tip(tk)}</dt><dd>${v}</dd>`;
+    const na = (k: 'elrs.notGiven' | 'elrs.notChosen' | 'elrs.phraseNotConfirmed') => `<span class="elrs-na">${t(k)}</span>`;
+    return `<section class="bf-panel"><header><span class="bf-legend">${t('bfInfo.elrs.rxHead')} ${tip('tips.elrs.rxVersion')}</span>${connected() ? '' : `<small>${t('elrs.off')}</small>`}</header>
+      <dl class="v1-kv elrs-kv">
+        ${kv(t('elrs.rowProtocol'), connected() ? (prov ? `${escapeHtml(prov.text)}${prov.elrs ? '' : ` <small>${t('elrs.usuallyCrsf')}</small>`}` : dash) : dash, 'tips.elrs.protocol')}
+        ${kv(t('elrs.rowRx'), rx ? escapeHtml('ELRS ' + rx) : `<span class="elrs-na">${t('bfInfo.elrs.notRead')}</span>`, 'tips.elrs.rxVersion')}
+        ${kv(t('elrs.rowTx'), tx ? escapeHtml(tx) : na('elrs.notGiven'), 'tips.elrs.txVersion')}
+        ${kv(t('elrs.rowRssi'), `<span data-live="rssi">${rssi}</span>`, 'tips.elrs.rssi')}
+        ${kv(t('elrs.rowRegion'), local.region ? (local.region === 'LBT' ? 'LBT (EU)' : 'FCC') : na('elrs.notChosen'), 'tips.elrs.region')}
+        ${kv(t('elrs.rowPhrase'), local.phrase ? `${t('elrs.phraseSaved')} ${icon('check', 15)}` : na('elrs.phraseNotConfirmed'), 'tips.elrs.phrase')}
+      </dl>
+      ${info ? `<p class="elrs-meta">${escapeHtml(t('bfInfo.elrs.deviceName', { name: info.name }))}</p>` : ''}
+      <div class="elrs-readrow"><button class="btn amber" type="button" data-act="read-elrs" ${canRead ? '' : 'disabled'}>${busy ? t('bfInfo.elrs.reading') : rx ? t('bfInfo.elrs.rereadBtn') : t('bfInfo.elrs.readBtn')}</button></div>
+      ${status ? `<p class="elrs-status ${cls}" role="status" aria-live="polite">${escapeHtml(status)}</p>` : `<p class="elrs-status">${connected() ? t('bfInfo.elrs.readLead') : t('bfInfo.elrs.needsConn')}</p>`}
+      ${showHow ? `<div class="v1-note elrs-how2"><b>${t('bfInfo.elrs.howHead')}</b><ol>${t('bfInfo.elrs.how')}</ol></div>` : ''}
+      <div class="bf-row"><div class="bf-ctl"><input type="text" name="tx" value="${escapeHtml(local.txVersion)}" placeholder="${t('elrs.s1ph2')}" autocomplete="off" spellcheck="false" aria-label="${escapeHtml(t('bfInfo.elrs.txLabel'))}"></div><label class="bf-lbl">${t('bfInfo.elrs.txLabel')}</label>${tip('tips.elrs.txVersion')}</div>
+      <p class="elrs-hint">${t('bfInfo.elrs.txHint')}</p>
+    </section>`;
   }
 
-  function renderCard(): void {
-    const focus = document.activeElement as HTMLElement | null;
-    const focusName = focus && card.contains(focus) ? focus.getAttribute('name') : null;
+  /** Checklist panel: the same five steps as before, as Betaflight-style rows. */
+  function checklistPanel(): string {
     const rx = rxVersion();
     const c = compat(rx, local.txVersion);
-    const st = steps();
-    const curIdx = st.findIndex((x) => x.state !== 'done');
     const s = ctx.state.get();
     const rssi = s.telemetry ? `${rssiPct(s.telemetry.rssi)}%` : '—';
-    const seg = (name: string, val: string, opts: Array<[string, string]>) =>
-      `<div class="elrs-seg" role="radiogroup">${opts
-        .map(([v, l]) => `<button type="button" role="radio" aria-checked="${val === v}" class="${val === v ? 'on' : ''}" data-set="${name}" data-val="${v}">${l}</button>`)
-        .join('')}</div>`;
-    const chk = (name: string, on: boolean, label: string) =>
-      `<label class="elrs-chk"><input type="checkbox" name="${name}" ${on ? 'checked' : ''}/><span class="box">${icon('check', 13)}</span><span>${label}</span></label>`;
-
-    const items: Array<{ t: string; sub: string; subCls?: string; body: string; tip: TipKey }> = [
-      {
-        t: t('elrs.s1'),
-        tip: 'tips.elrs.versionMatch',
-        sub: c.text,
-        subCls: c.kind,
-        body: step1Body(rx),
-      },
-      { t: t('elrs.s2'), tip: 'tips.elrs.phrase', sub: t('elrs.s2sub'), body: chk('phrase', local.phrase, t('elrs.s2chk')) },
-      {
-        t: t('elrs.s3'),
-        tip: 'tips.elrs.region',
-        sub: t('elrs.s3sub'),
-        body: seg('region', local.region, [
-          ['LBT', 'LBT (EU)'],
-          ['FCC', 'FCC'],
-        ]),
-      },
-      {
-        t: t('elrs.s4'),
-        tip: 'tips.elrs.method',
-        sub: t('elrs.s4sub'),
-        body: seg('method', local.method, [
-          ['passthrough', t('elrs.s4pass')],
-          ['wifi', t('elrs.s4wifi')],
-        ]),
-      },
-      { t: t('elrs.s5'), tip: 'tips.elrs.verify', sub: t('elrs.s5sub', { rssi }), body: chk('verified', local.verified, t('elrs.s5chk')) },
-    ];
-
-    const how =
-      local.method === 'wifi' ? t('elrs.howWifi') : t('elrs.howPass');
-
-    const hot = curIdx === -1 ? 'ok' : st.some((x) => x.state === 'warn') ? 'warn' : '';
-    card.innerHTML = `
-      <div class="elrs-h"><i class="${hot}"></i><span>${t('elrs.headTitle')}${tip('tips.elrs.settings')}</span><span class="r">${escapeHtml(rx || '?')} → ${escapeHtml(local.txVersion || '?')}</span></div>
-      <div class="elrs-body">
-        <ol class="elrs-steps">${items
-          .map(
-            (it, i) => `<li class="${st[i].state}${i === curIdx ? ' cur' : ''}">${marker(i, st[i].state, i === curIdx)}<div class="elrs-st"><div class="elrs-t">${it.t}${tip(it.tip)}</div><div class="elrs-sub mono ${it.subCls ?? ''}">${escapeHtml(it.sub)}</div><div class="elrs-ctl">${it.body}</div></div></li>`,
-          )
-          .join('')}</ol>
-        <div class="elrs-how"><div class="elrs-how-h mono">${local.method === 'wifi' ? t('elrs.howWifiHead') : t('elrs.howPassHead')}</div><ol>${how}</ol></div>
-      </div>
-      <div class="elrs-foot">
-        <div class="elrs-act">
-          <a class="btn p" href="${FLASHER_URL}" target="_blank" rel="noopener noreferrer">${icon('external', 15)}${t('elrs.openFlasher')}</a>
-          <button class="btn s" type="button" data-act="ai">${t('elrs.askAi')}</button>
-        </div>
-        <div class="elrs-plan mono">${t('elrs.plan')}</div>
-      </div>`;
-    if (focusName) card.querySelector<HTMLInputElement>(`input[name="${focusName}"]`)?.focus();
+    const compatBox = `<div class="${c.kind === 'warn' ? 'v1-warn' : 'v1-note'} elrs-compat ${c.kind}"><b>${t('elrs.s1')}</b>${tip('tips.elrs.versionMatch')}<span>${escapeHtml(c.text)}</span></div>`;
+    const region = `<select name="region" aria-label="${escapeHtml(t('elrs.s3'))}">${opt('', local.region, t('elrs.notChosen'))}${opt('LBT', local.region, 'LBT (EU)')}${opt('FCC', local.region, 'FCC')}</select>`;
+    const method = `<select name="method" aria-label="${escapeHtml(t('elrs.s4'))}">${opt('', local.method, t('elrs.notChosen'))}${opt('passthrough', local.method, t('elrs.s4pass'))}${opt('wifi', local.method, t('elrs.s4wifi'))}</select>`;
+    return `<section class="bf-panel"><header><span class="bf-legend">${t('bfInfo.elrs.updateHead')} ${tip('tips.elrs.settings')}</span></header>
+      ${compatBox}
+      ${row(sw('phrase', local.phrase, t('elrs.s2')), `${t('elrs.s2')}<small class="elrs-rowsub">${t('elrs.s2chk')}</small>`, 'tips.elrs.phrase')}
+      ${row(region, `${t('elrs.s3')}<small class="elrs-rowsub">${t('elrs.s3sub')}</small>`, 'tips.elrs.region')}
+      ${row(method, `${t('elrs.s4')}<small class="elrs-rowsub">${t('elrs.s4sub')}</small>`, 'tips.elrs.method')}
+      ${row(sw('verified', local.verified, t('elrs.s5')), `${t('elrs.s5')}<small class="elrs-rowsub">${escapeHtml(t('elrs.s5sub', { rssi }))}</small>`, 'tips.elrs.verify')}
+    </section>`;
   }
 
-  function renderScene(): void {
-    const rx = rxVersion();
-    const key = rx;
-    if (key === sceneKey) return;
-    sceneKey = key;
-    art.innerHTML = renderElrsScene(`RX · ${rx ? 'ELRS ' + escapeHtml(rx) : t('elrs.receiver')}`);
+  /** Tools panel: web flasher + configurator links and the how-to for the chosen method. */
+  function toolsPanel(): string {
+    const how = local.method === 'wifi' ? t('elrs.howWifi') : t('elrs.howPass');
+    return `<section class="bf-panel"><header><span class="bf-legend">${t('bfInfo.elrs.toolsHead')}</span></header>
+      <div class="elrs-links">
+        <a class="btn amber" href="${FLASHER_URL}" target="_blank" rel="noopener noreferrer">${icon('external', 15)}${t('elrs.openFlasher')}</a>
+        <a class="btn ghost" href="${CONFIGURATOR_URL}" target="_blank" rel="noopener noreferrer">${icon('external', 15)}${t('bfInfo.elrs.configurator')}</a>
+      </div>
+      <div class="elrs-howbox"><div class="elrs-how-h">${local.method === 'wifi' ? t('elrs.howWifiHead') : t('elrs.howPassHead')}</div><ol>${how}</ol></div>
+      <p class="elrs-hint">${t('elrs.plan')}</p>
+    </section>`;
   }
 
   function render(): void {
-    renderScene();
-    renderData();
-    renderCard();
+    const focus = document.activeElement as HTMLElement | null;
+    const focusName = focus && body.contains(focus) ? focus.getAttribute('name') : null;
+    const pos = focus instanceof HTMLInputElement && focusName === 'tx' ? focus.selectionStart : null;
+    body.innerHTML = `<div class="elrs-intro" data-only="basic">${intro('tips.elrs.intro')}</div><div class="v1-cols elrs-cols"><div class="elrs-col">${receiverPanel()}</div><div class="elrs-col">${checklistPanel()}${toolsPanel()}</div></div>`;
+    if (focusName) {
+      const n = body.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${focusName}"]`);
+      n?.focus();
+      if (n instanceof HTMLInputElement && pos !== null) n.setSelectionRange(pos, pos);
+    }
   }
 
   function askAi(): void {
@@ -220,25 +159,19 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     ctx.askAi(parts.join(' '));
   }
 
-  /* zdarzenia */
-  card.addEventListener('click', (e) => {
-    const t = e.target as HTMLElement;
-    const setBtn = t.closest<HTMLElement>('[data-set]');
-    if (setBtn) {
-      const name = setBtn.dataset.set;
-      const val = setBtn.dataset.val ?? '';
-      if (name === 'region') update({ region: (local.region === val ? '' : val) as Region });
-      else if (name === 'method') update({ method: (local.method === val ? '' : val) as Method });
-      return;
-    }
-    if (t.closest('[data-act="read-elrs"]')) void hw?.runElrs('manual');
-    else if (t.closest('[data-act="ai"]')) askAi();
+  /* events */
+  el.addEventListener('click', (e) => {
+    const tg = e.target as HTMLElement;
+    if (tg.closest('[data-act="read-elrs"]')) void hw?.runElrs('manual');
+    else if (tg.closest('[data-act="ai"]')) askAi();
   });
-  card.addEventListener('change', (e) => {
+  el.addEventListener('change', (e) => {
     const inp = e.target as HTMLInputElement;
     if (inp.name === 'phrase') update({ phrase: inp.checked });
     else if (inp.name === 'verified') update({ verified: inp.checked });
     else if (inp.name === 'tx') update({ txVersion: inp.value.trim() });
+    else if (inp.name === 'region') update({ region: inp.value as Region });
+    else if (inp.name === 'method') update({ method: inp.value as Method });
   });
 
   const offState = ctx.state.subscribe(() => {
@@ -248,8 +181,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const offSettings = ctx.settings.subscribe(render);
   const offHw = hw?.subscribe(render);
   const offTel = ctx.state.subscribeTelemetry(() => {
-    const t = ctx.state.get().telemetry;
-    const txt = t ? `${rssiPct(t.rssi)}%` : '—';
+    const tl = ctx.state.get().telemetry;
+    const txt = tl ? `${rssiPct(tl.rssi)}%` : '—';
     el.querySelectorAll<HTMLElement>('[data-live="rssi"]').forEach((n) => {
       if (n.textContent !== txt) n.textContent = txt;
     });

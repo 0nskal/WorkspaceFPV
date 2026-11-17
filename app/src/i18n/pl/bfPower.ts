@@ -21,7 +21,13 @@ export const plBfPower: typeof enBfPower = {
   calMeasured: 'Zmierzone napięcie',
   calApply: 'Policz skalę',
   calNeedBattery: 'Podłącz baterię i ustaw wbudowany ADC jako źródło napięcia.',
-  gMeters: 'Mierniki',
+  gBattery: 'Akumulator',
+  gState: 'Stan zasilania',
+  gVoltmeter: 'Woltomierz',
+  gAmmeter: 'Amperomierz',
+  connected: 'Podłączone',
+  power: 'Pobór mocy',
+
   voltSrc: 'Źródło napięcia',
   voltSrcTip: 'Skąd pochodzi napięcie baterii.',
   curSrc: 'Źródło prądu',
@@ -41,7 +47,7 @@ export const plBfPower: typeof enBfPower = {
   cScaleTip: 'Skala czujnika prądu (ibata_scale). Dopasuj, aż zużyte mAh zgodzą się z odczytem ładowarki.',
   cOffset: 'Offset prądu',
   cOffsetTip: 'Offset czujnika prądu (ibata_offset).',
-  gPack: 'Pakiet i ostrzeżenia',
+
   minCell: 'Minimalne napięcie celi',
   minCellTip: 'Poniżej tego bateria jest uznana za krytyczną.',
   warnCell: 'Napięcie ostrzegawcze celi',

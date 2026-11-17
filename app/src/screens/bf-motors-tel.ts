@@ -4,7 +4,7 @@
  * MSP_MOTOR_TELEMETRY (API >= 1.42), falling back to the legacy MSP_ESC_SENSOR_DATA.
  */
 import type { AppContext } from '../context';
-import { t, fmtNum } from '../i18n';
+import { t } from '../i18n';
 import { tip } from '../ui/tip';
 import { MSPM, decodeEscSensor, decodeMotorTelemetry, telemetryActive, type MotorTel } from '../bf/motors';
 
@@ -25,29 +25,21 @@ export function mountMotorTelemetry(host: HTMLElement, ctx: AppContext, onData: 
   let legacy = false;
   let seenAny = false;
 
+  /** The per-motor values are drawn by the motor tiles (esc.ts); this host only shows the source and a hint when RPM is missing. */
   function paint(): void {
     const s = ctx.state.get();
     const connected = s.conn === 'connected';
     const cfg = s.config;
     const active = telemetryActive(latest);
-    const cards = [0, 1, 2, 3]
-      .map((i) => {
-        const m = latest[i];
-        const v = (x: number | null, d = 0, unit = '') => (x === null ? '—' : `${fmtNum(x, d)}${unit}`);
-        const rpm = m && active ? fmtNum(m.rpm) : '—';
-        const hot = m && active && m.tempC >= 60;
-        const lost = m && active && m.invalidPct >= 2;
-        return `<div class="bf-motors-card${m && active ? '' : ' off'}">
-          <div class="bf-motors-card-h mono"><b>M${i + 1}</b><span class="${lost ? 'hot' : ''}" title="${t('bfMotors.lostTip')}">${m && active ? (legacy ? '' : `${t('bfMotors.lost')} ${fmtNum(m.invalidPct, 1)}%`) : ''}</span></div>
-          <div class="bf-motors-rpm mono">${rpm}<small>${t('bfMotors.rpm')}</small></div>
-          <div class="bf-motors-card-f mono"><span class="${hot ? 'hot' : ''}">${m && active ? v(m.tempC, 0, ' °C') : '—'}</span><span>${m && active && !legacy ? v(m.voltage, 1, ' V') : '—'}</span><span>${m && active && !legacy ? v(m.current, 1, ' A') : '—'}</span></div>
-        </div>`;
-      })
-      .join('');
     let hint = '';
     if (!connected) hint = t('bfMotors.telNeedFc');
     else if (seenAny && !active) hint = cfg && !cfg.bidir && !cfg.useEscSensor ? t('bfMotors.telOffHint') : t('bfMotors.telZeroHint');
-    host.innerHTML = `<div class="bf-motors-tel-h mono"><span>${t('bfMotors.telHead')} ${tip('tips.motors.telemetry')}</span><span class="esc-key" data-level="expert">${legacy ? 'MSP_ESC_SENSOR_DATA' : 'MSP_MOTOR_TELEMETRY'}</span></div><div class="bf-motors-cards">${cards}</div><p class="bf-motors-hint mono">${t('bfMotors.rpm')} ${tip('tips.motors.rpm')} · ${t('bfMotors.lost')} ${tip('tips.motors.lost')} · °C ${tip('tips.motors.temp')}</p>${hint ? `<p class="bf-motors-hint mono">${hint}</p>` : ''}`;
+    const src = legacy ? 'MSP_ESC_SENSOR_DATA' : 'MSP_MOTOR_TELEMETRY';
+    const html = `<span class="mt-tel-l">${t('bfMotors.telBlock')} ${tip('tips.motors.telemetry')}</span>${active ? `<span class="mt-tel-ok">${t('bfMotors.telLive')}</span>` : ''}${hint ? `<span class="mt-tel-hint">${hint}</span>` : ''}<span class="mt-tel-src mono" data-level="expert">${src}</span>`;
+    if (host.dataset.sig !== html) {
+      host.dataset.sig = html;
+      host.innerHTML = html;
+    }
   }
 
   async function tick(): Promise<void> {

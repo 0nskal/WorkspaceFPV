@@ -97,12 +97,12 @@ function cardHtml(e: EscDevice): string {
 /** Mounts the panel into `host`; returns a cleanup function. */
 export function mountEscInfo(host: HTMLElement, ctx: AppContext): () => void {
   const hw = hwInfo();
-  host.innerHTML = `<section class="esc-panel bf-esc-panel" aria-label="${t('bfInfo.esc.head')}">
-    <header><span class="mono">${t('bfInfo.esc.head')} ${tip('tips.motors.escInfo.head')}</span><span class="mono esc-key" data-level="expert">${t('bfInfo.esc.key')}</span></header>
+  host.innerHTML = `<section class="bf-panel bf-esc-panel" aria-label="${t('bfInfo.esc.head')}">
+    <header><span class="bf-legend">${t('bfInfo.esc.head')} ${tip('tips.motors.escInfo.head')}</span><small data-level="expert">${t('bfInfo.esc.key')}</small></header>
     <div class="bf-esc-body">
       <p class="bf-esc-lead">${t('bfInfo.esc.lead')} ${t('bfInfo.esc.needs')}</p>
       <div class="bf-esc-status mono" role="status" aria-live="polite"></div>
-      <div class="bf-esc-actions"><button type="button" class="btn light bf-esc-read">${icon('chip', 15)}<span></span></button></div>
+      <div class="bf-esc-actions"><button type="button" class="btn amber bf-esc-read">${icon('chip', 15)}<span></span></button></div>
       <div class="bf-esc-cards"></div>
     </div>
   </section>`;

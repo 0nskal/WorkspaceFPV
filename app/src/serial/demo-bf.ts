@@ -27,6 +27,7 @@ const SET_TO_GET: Record<number, number> = {
   [C.SET_FAILSAFE_CONFIG]: C.FAILSAFE_CONFIG,
   [C.SET_BEEPER_CONFIG]: C.BEEPER_CONFIG,
   [C.SET_ACC_TRIM]: C.ACC_TRIM,
+  [C.SET_GPS_CONFIG]: C.GPS_CONFIG,
   [C.COMMON_SET_SERIAL_CONFIG]: C.COMMON_SERIAL_CONFIG,
 };
 
@@ -50,12 +51,13 @@ export class DemoBf {
 
   private defaults(): void {
     const s = this.store;
-    s.set(C.FEATURE_CONFIG, new Wr().u32((bit(FEATURE.RX_SERIAL) | bit(FEATURE.TELEMETRY) | bit(FEATURE.LED_STRIP) | bit(FEATURE.OSD) | bit(FEATURE.AIRMODE) | bit(FEATURE.ANTI_GRAVITY)) >>> 0).done());
+    s.set(C.FEATURE_CONFIG, new Wr().u32((bit(FEATURE.RX_SERIAL) | bit(FEATURE.GPS) | bit(FEATURE.TELEMETRY) | bit(FEATURE.LED_STRIP) | bit(FEATURE.OSD) | bit(FEATURE.AIRMODE) | bit(FEATURE.ANTI_GRAVITY)) >>> 0).done());
     s.set(C.MIXER_CONFIG, Uint8Array.of(3, 0)); // QUAD X, props in
     s.set(C.ARMING_CONFIG, Uint8Array.of(5, 0, 25));
     s.set(C.SENSOR_CONFIG, Uint8Array.of(0, 0, 0, 0));
-    s.set(C.SENSOR_CONFIG_ACTIVE, Uint8Array.of(15, 15, 7, 255, 255));
+    s.set(C.SENSOR_CONFIG_ACTIVE, Uint8Array.of(15, 15, 7, 3, 255));
     s.set(C.SENSOR_ALIGNMENT, Uint8Array.of(0, 0, 0, 1));
+    s.set(C.GPS_CONFIG, Uint8Array.of(1, 1, 1, 1, 1, 1)); // UBLOX, EGNOS, auto config, auto baud, home point once, Galileo
     s.set(C.ACC_TRIM, new Wr().s16(0).s16(0).done());
     s.set(C.BOARD_ALIGNMENT_CONFIG, new Wr().s16(0).s16(0).s16(0).done());
     s.set(C.BEEPER_CONFIG, new Wr().u32(0).u8(1).u32(0).done());
@@ -115,7 +117,7 @@ export class DemoBf {
     return new Wr()
       .u16(125) // cycle time us (8 kHz)
       .u16(0) // i2c errors
-      .u16(0b100011) // ACC, BARO, GYRO
+      .u16(0b101111) // ACC, BARO, MAG, GPS, GYRO
       .u32(m.modeFlags) // active flight modes (first 32 boxes)
       .u8(m.pidProfile) // PID profile
       .u16(14 + Math.round(Math.sin(t) * 2)) // CPU load
@@ -127,6 +129,63 @@ export class DemoBf {
       .u8(0) // config state
       .u16(41) // MCU temperature
       .done();
+  }
+
+  /** Simulated flight: the quad hovers in a park and circles slowly (about 18 m east-west, 12 m north-south) around its home point. */
+  private fly(t: number): { east: number; north: number; courseDeg: number; speedCms: number } {
+    const w = 0.15;
+    const east = 18 * Math.sin(w * t);
+    const north = 12 * Math.cos(w * t);
+    const ve = 18 * w * Math.cos(w * t);
+    const vn = -12 * w * Math.sin(w * t);
+    return { east, north, courseDeg: (((Math.atan2(ve, vn) * 180) / Math.PI) + 360) % 360, speedCms: Math.round(Math.hypot(ve, vn) * 100) };
+  }
+
+  private rawGps(t: number): Uint8Array {
+    const f = this.fly(t);
+    const lat0 = 52.215;
+    const lon0 = 21.035;
+    const lat = lat0 + f.north / 111320;
+    const lon = lon0 + f.east / (111320 * Math.cos((lat0 * Math.PI) / 180));
+    const sats = this.sats(t).filter((c) => (c[2] & 8) !== 0).length;
+    return new Wr().u8(2).u8(sats).u32(Math.round(lat * 1e7) >>> 0).u32(Math.round(lon * 1e7) >>> 0).u16(112).u16(f.speedCms).u16(Math.round(f.courseDeg * 10)).u16(Math.round(97 + Math.sin(t * 0.3) * 6)).done();
+  }
+
+  private compGps(t: number): Uint8Array {
+    const f = this.fly(t);
+    const dist = Math.hypot(f.east, f.north);
+    const toHome = ((Math.atan2(-f.east, -f.north) * 180) / Math.PI + 360) % 360;
+    return new Wr().u16(Math.round(dist)).u16(Math.round(toHome)).u8(1).done();
+  }
+
+  /** [gnss id, sat id, quality (low 3 bits) | used flag (8), C/N0 dB-Hz] for a mixed GPS/SBAS/Galileo/Glonass/BeiDou sky: 12 used, the rest searching or unusable. */
+  private sats(t: number): Array<[number, number, number, number]> {
+    const wob = (i: number, base: number) => Math.max(0, Math.round(base + Math.sin(t * 0.7 + i * 1.9) * 3));
+    const rows: Array<[number, number, number, number]> = [];
+    const add = (gnss: number, svid: number, q: number, used: boolean, cno: number) => rows.push([gnss, svid, q | (used ? 8 : 0), wob(rows.length, cno)]);
+    add(0, 1, 3, false, 18);
+    for (const [id, cno] of [[2, 38], [10, 42], [15, 36], [18, 40], [23, 45], [26, 39]] as const) add(0, id, 5, true, cno);
+    add(1, 123, 3, false, 24);
+    add(1, 136, 5, true, 34);
+    add(2, 1, 1, false, 0);
+    add(2, 15, 5, true, 37);
+    add(6, 2, 4, false, 22);
+    for (const [id, cno] of [[3, 35], [4, 33]] as const) add(6, id, 5, true, cno);
+    add(6, 9, 4, false, 25);
+    add(6, 10, 1, false, 0);
+    add(6, 16, 5, true, 31);
+    add(3, 6, 5, true, 30);
+    add(3, 12, 5, true, 32);
+    add(2, 24, 5, true, 41);
+    add(6, 18, 4, false, 26);
+    return rows;
+  }
+
+  private svInfo(t: number): Uint8Array {
+    const rows = this.sats(t);
+    const w = new Wr().u8(rows.length);
+    for (const [g, id, q, c] of rows) w.u8(g).u8(id).u8(q).u8(c);
+    return w.done();
   }
 
   /** Returns the demo reply for commands it owns, or undefined to let DemoLink handle (or reject) the command. */
@@ -223,6 +282,21 @@ export class DemoBf {
         return new Wr().u8(10).u16(0).u16(0).done();
       case C.ATTITUDE:
         return new Wr().s16(Math.round(Math.sin(t * 0.9) * 120 + 6)).s16(Math.round(Math.cos(t * 0.7) * 90 - 4)).s16(Math.round((t * 12) % 360)).done();
+      case C.SET_SENSOR_CONFIG: {
+        const cur = this.store.get(C.SENSOR_CONFIG);
+        if (cur) cur.set(p.subarray(0, 3), 0);
+        return new Uint8Array(0);
+      }
+      case C.RAW_GPS:
+        return this.rawGps(t);
+      case C.COMP_GPS:
+        return this.compGps(t);
+      case C.GPS_SV_INFO:
+        return this.svInfo(t);
+      case C.COMPASS_CONFIG:
+        return new Wr().s16(68).done(); // +6.8 deg declination
+      case C.ALTITUDE:
+        return new Wr().u32(Math.round(Math.sin(t * 0.4) * 35) >>> 0).s16(Math.round(Math.cos(t * 0.4) * 14)).done();
       case C.SET_ARMING_DISABLED:
         this.armDisabled = (p[0] ?? 0) === 1;
         return new Uint8Array(0);

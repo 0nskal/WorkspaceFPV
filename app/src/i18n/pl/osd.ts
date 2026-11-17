@@ -4,6 +4,9 @@ import type { enBfOsd } from '../en/osd';
 export const plBfOsd: typeof enBfOsd = {
   tab: 'OSD',
   title: 'Układ OSD',
+  previewHead: 'Podgląd',
+  videoHead: 'Ustawienia wideo',
+  alarmsHead: 'Alarmy',
   head: 'ELEMENTY OSD',
   emptyTag: 'WORKSPACEFPV · OSD',
   emptyTitle: 'Wyświetlacz OSD',

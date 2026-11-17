@@ -1,4 +1,4 @@
-/** Configuration tab: mixer/motor direction, board alignment, accelerometer trim, PID loop, features, beeper, arming, personalization. */
+/** Configuration tab: mixer/motor direction, PID loop, features, beeper, arming, personalization. */
 import { C, TEXT, API } from '../bf/codes';
 import * as D from '../bf/decode';
 import { mountFormTab, type Draft, type Group, type TabSpec } from '../bf/form';
@@ -10,7 +10,7 @@ import { protocolName } from '../fc/state';
 import { intro } from '../ui/tip';
 
 /** Features shown here (receiver features belong to the Receiver tab). Order = display order. */
-const FEATURES: Array<keyof typeof D.FEATURE> = ['MOTOR_STOP', 'AIRMODE', 'ANTI_GRAVITY', 'TELEMETRY', 'ESC_SENSOR', 'LED_STRIP', 'OSD', 'SOFTSERIAL', 'GPS', 'RANGEFINDER', 'THREE_D', 'TRANSPONDER', 'CHANNEL_FORWARDING', 'RSSI_ADC', 'INFLIGHT_ACC_CAL', 'DASHBOARD'];
+const FEATURES: Array<keyof typeof D.FEATURE> = ['MOTOR_STOP', 'AIRMODE', 'ANTI_GRAVITY', 'TELEMETRY', 'ESC_SENSOR', 'LED_STRIP', 'OSD', 'SOFTSERIAL', 'RANGEFINDER', 'THREE_D', 'TRANSPONDER', 'CHANNEL_FORWARDING', 'RSSI_ADC', 'INFLIGHT_ACC_CAL', 'DASHBOARD'];
 
 const K = (k: string) => `bfConfig.${k}` as Key;
 
@@ -19,15 +19,6 @@ function toDraft(bf: BfData): Draft {
   if (bf.mixer) {
     d.mixer = bf.mixer.mixer;
     d.reversed = bf.mixer.reversed;
-  }
-  if (bf.boardAlign) {
-    d.boardRoll = bf.boardAlign.roll;
-    d.boardPitch = bf.boardAlign.pitch;
-    d.boardYaw = bf.boardAlign.yaw;
-  }
-  if (bf.accTrim) {
-    d.trimRoll = bf.accTrim.roll;
-    d.trimPitch = bf.accTrim.pitch;
   }
   if (bf.advanced) d.pidDenom = bf.advanced.pidProcessDenom;
   if (bf.features !== null) for (const f of FEATURES) d[`f.${f}`] = D.hasFeature(bf.features, D.FEATURE[f]);
@@ -53,23 +44,6 @@ function groups(bf: BfData, draft: Draft): Group[] {
         ...(bf.advanced ? [{ key: 'protocol', type: 'info' as const, label: t(K('protocol')), tip: t(K('protocolTip')), text: protocolName(bf.advanced.motorProtocol) }] : []),
       ],
     });
-  }
-  if (bf.boardAlign || bf.accTrim) {
-    const f = [];
-    if (bf.boardAlign) {
-      f.push(
-        { key: 'boardRoll', type: 'number' as const, label: t(K('boardRoll')), tip: t(K('boardTip')), unit: '°', min: -180, max: 360 },
-        { key: 'boardPitch', type: 'number' as const, label: t(K('boardPitch')), unit: '°', min: -180, max: 360 },
-        { key: 'boardYaw', type: 'number' as const, label: t(K('boardYaw')), unit: '°', min: -180, max: 360 },
-      );
-    }
-    if (bf.accTrim) {
-      f.push(
-        { key: 'trimRoll', type: 'number' as const, label: t(K('trimRoll')), tip: t(K('trimTip')), unit: '0.1°', min: -300, max: 300 },
-        { key: 'trimPitch', type: 'number' as const, label: t(K('trimPitch')), unit: '0.1°', min: -300, max: 300 },
-      );
-    }
-    g.push({ title: t(K('gAlign')), hint: t(K('gAlignHint')), fields: f });
   }
   if (bf.advanced) {
     const rate = bf.board?.gyroRateHz || 0;
@@ -131,10 +105,6 @@ function toWrites(draft: Draft, bf: BfData): MspWrite[] {
   const w: MspWrite[] = [];
   const only = (...ks: string[]) => sameKeys(draft, base, (k) => ks.includes(k));
   if (bf.mixer && !only('mixer', 'reversed')) w.push({ code: C.SET_MIXER_CONFIG, label: 'SET_MIXER_CONFIG', payload: D.encodeMixer({ mixer: Number(draft.mixer), reversed: !!draft.reversed }, bf.raw.get('mixer')) });
-  if (bf.boardAlign && !only('boardRoll', 'boardPitch', 'boardYaw')) {
-    w.push({ code: C.SET_BOARD_ALIGNMENT_CONFIG, label: 'SET_BOARD_ALIGNMENT_CONFIG', payload: D.encodeBoardAlignment({ roll: Number(draft.boardRoll), pitch: Number(draft.boardPitch), yaw: Number(draft.boardYaw) }, bf.raw.get('boardAlign')) });
-  }
-  if (bf.accTrim && !only('trimRoll', 'trimPitch')) w.push({ code: C.SET_ACC_TRIM, label: 'SET_ACC_TRIM', payload: D.encodeAccTrim({ roll: Number(draft.trimRoll), pitch: Number(draft.trimPitch) }) });
   if (bf.advanced && !only('pidDenom')) w.push({ code: C.SET_ADVANCED_CONFIG, label: 'SET_ADVANCED_CONFIG', payload: D.encodeAdvanced({ pidProcessDenom: Number(draft.pidDenom) }, bf.raw.get('advanced')) });
   if (bf.features !== null && !sameKeys(draft, base, (k) => k.startsWith('f.'))) {
     let mask = bf.features;
@@ -160,7 +130,7 @@ function toWrites(draft: Draft, bf: BfData): MspWrite[] {
 const spec: TabSpec = {
   id: 'config',
   title: '',
-  areas: ['mixer', 'alignment', 'advanced', 'features', 'beeper', 'arming', 'names', 'sensors'],
+  areas: ['mixer', 'advanced', 'features', 'beeper', 'arming', 'names'],
   ready: (bf) => !!(bf.mixer || bf.features !== null || bf.arming || bf.advanced),
   toDraft,
   groups,
@@ -173,11 +143,6 @@ const ROWS: RowRule[] = [
   { key: 'mixer', tip: 'tips.config.mixer' },
   { key: 'reversed', tip: 'tips.config.reversed' },
   { key: 'protocol', tip: 'tips.config.protocol' },
-  { key: 'boardRoll', tip: 'tips.config.boardTilt' },
-  { key: 'boardPitch', tip: 'tips.config.boardTilt' },
-  { key: 'boardYaw', tip: 'tips.config.boardYaw' },
-  { key: 'trimRoll', tip: 'tips.config.trim', expert: true },
-  { key: 'trimPitch', tip: 'tips.config.trim', expert: true },
   { key: 'gyroRate', tip: 'tips.config.gyroRate', expert: true },
   { key: 'pidDenom', tip: 'tips.config.pidLoop', expert: true },
   { key: 'f.MOTOR_STOP', tip: 'tips.config.motorStop' },
@@ -188,7 +153,6 @@ const ROWS: RowRule[] = [
   { key: 'f.LED_STRIP', tip: 'tips.config.ledStrip' },
   { key: 'f.OSD', tip: 'tips.config.osd' },
   { key: 'f.SOFTSERIAL', tip: 'tips.config.softserial', expert: true },
-  { key: 'f.GPS', tip: 'tips.config.gps' },
   { key: 'f.RANGEFINDER', tip: 'tips.config.rangefinder', expert: true },
   { key: 'f.THREE_D', tip: 'tips.config.threeD', expert: true },
   { key: 'f.TRANSPONDER', tip: 'tips.config.transponder', expert: true },

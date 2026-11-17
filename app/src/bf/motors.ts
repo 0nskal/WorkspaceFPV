@@ -14,6 +14,13 @@ export const MSPM = {
   MOTOR_TELEMETRY: 139,
   ESC_SENSOR_DATA: 134,
   MOTOR: 104,
+  FEATURE_CONFIG: 36,
+  SET_FEATURE_CONFIG: 37,
+  /** MSP_3D: deadband3d_low, deadband3d_high, neutral3d (u16 each). */
+  MOTOR_3D_CONFIG: 124,
+  SET_MOTOR_3D_CONFIG: 217,
+  PID_ADVANCED: 94,
+  SET_PID_ADVANCED: 95,
   EEPROM_WRITE: 250,
   REBOOT: 68,
 } as const;
@@ -151,6 +158,49 @@ export interface MixerConfig {
 export const decodeMixerConfig = (p: Uint8Array): MixerConfig => ({ mixer: p[0] ?? 3, reversed: (p[1] ?? 0) === 1 });
 export const encodeMixerConfig = (m: MixerConfig): Uint8Array => Uint8Array.from([m.mixer, m.reversed ? 1 : 0]);
 
+/* ---------------- MSP_3D (124) / MSP_SET_3D (217) ---------------- */
+export interface Motor3dConfig {
+  /** deadband3d_low: top of the reverse range (1000..1499). */
+  low: number;
+  /** deadband3d_high: bottom of the forward range (1501..2000). */
+  high: number;
+  /** neutral3d: motor stop point (1400..1600). */
+  neutral: number;
+}
+/** Betaflight defaults (deadband3d_low 1406, deadband3d_high 1514, neutral3d 1460). */
+export const MOTOR_3D_DEFAULTS: Motor3dConfig = { low: 1406, high: 1514, neutral: 1460 };
+
+export function decodeMotor3d(p: Uint8Array): Motor3dConfig | null {
+  if (p.length < 6) return null;
+  const dv = dvOf(p);
+  return { low: dv.getUint16(0, true), high: dv.getUint16(2, true), neutral: dv.getUint16(4, true) };
+}
+
+export function encodeMotor3d(c: Motor3dConfig): Uint8Array {
+  const o = new Uint8Array(6);
+  const dv = dvOf(o);
+  dv.setUint16(0, Math.round(c.low), true);
+  dv.setUint16(2, Math.round(c.high), true);
+  dv.setUint16(4, Math.round(c.neutral), true);
+  return o;
+}
+
+/** Ranges as in the Betaflight CLI (deadband3d_low 1000-1500, deadband3d_high 1500-2000, neutral3d 1000-2000) plus low < neutral < high. */
+export function validateMotor3d(c: Motor3dConfig): boolean {
+  const int = (n: number) => Number.isInteger(n);
+  return int(c.low) && int(c.high) && int(c.neutral) && c.low >= 1000 && c.low <= 1500 && c.high >= 1500 && c.high <= 2000 && c.neutral >= 1000 && c.neutral <= 2000 && c.low < c.neutral && c.neutral < c.high;
+}
+
+/* ---------------- feature bits used on the Motors tab ---------------- */
+/** Betaflight `config/feature.h` bit numbers (same as bf/decode.ts FEATURE). */
+export const MOTOR_FEATURE = { MOTOR_STOP: 4, THREE_D: 12, AIRMODE: 22, ESC_SENSOR: 27 } as const;
+export const featureOn = (mask: number, bit: number): boolean => ((mask >>> bit) & 1) === 1;
+export const setFeature = (mask: number, bit: number, on: boolean): number => (on ? (mask | (1 << bit)) >>> 0 : (mask & ~(1 << bit)) >>> 0);
+
+/* ---------------- motor test values ---------------- */
+/** Motor test slider percent (0..100) to the MSP_SET_MOTOR value (1000..2000), like the Betaflight sliders. */
+export const pctToMotor = (pct: number): number => 1000 + Math.round(Math.max(0, Math.min(100, pct)) * 10);
+
 /* ---------------- MSP_MOTOR_TELEMETRY (139) ---------------- */
 export interface MotorTel {
   /** Real RPM (the FC already applies the pole count). */
@@ -217,12 +267,13 @@ export interface MotorEdit {
   protocol: number;
   bidir: boolean;
 }
-export type MotorIssue = 'idle' | 'poles' | 'bidirProtocol';
-export function validateMotorEdit(e: MotorEdit): MotorIssue[] {
+export type MotorIssue = 'idle' | 'poles' | 'bidirProtocol' | 'dynIdle';
+export function validateMotorEdit(e: MotorEdit & { dynIdle?: number }): MotorIssue[] {
   const bad: MotorIssue[] = [];
   if (!(e.idlePercent >= 0 && e.idlePercent <= 20)) bad.push('idle');
   if (!(Number.isInteger(e.poles) && e.poles >= 4 && e.poles <= 64)) bad.push('poles');
   if (e.bidir && !supportsBidir(e.protocol)) bad.push('bidirProtocol');
+  if (e.dynIdle !== undefined && !(Number.isInteger(e.dynIdle) && e.dynIdle >= 0 && e.dynIdle <= 200)) bad.push('dynIdle');
   return bad;
 }
 

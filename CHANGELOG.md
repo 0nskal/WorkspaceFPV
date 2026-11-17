@@ -2,6 +2,10 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 0.8.0 – 2026-11-17
+
+- **CHIRP analysis in PID Autotune (Expert).** Reads the sweep that Betaflight 2026 adds in CHIRP mode and shows how the drone follows every frequency: Bode charts (tracking, sensitivity, phase, coherence), bandwidth, phase and gain margin, a step response computed from the sweep and a rating per axis. Hints are for review only and are never applied automatically. A setup guide and a button for `debug_mode = CHIRP` are included. CHIRP flights in a multi-flight log are kept out of the normal step analysis. The sample log has a synthetic CHIRP flight.
+
 ## 0.7.0 – 2026-11-17
 
 - **One PID Autotune tab.** The separate tuning wizard is now part of PID Autotune and works in both modes, with lightbulb tips that say what to do and what Autotune does.
@@ -77,6 +81,10 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.8.0 – 2026-11-17
+
+- **Analiza CHIRP w Autotune PID (Ekspert).** Czyta przemiatanie, które Betaflight 2026 dodaje w trybie CHIRP, i pokazuje, jak dron nadąża na każdej częstotliwości: wykresy Bodego (śledzenie, czułość, faza, koherencja), pasmo, zapas fazy i wzmocnienia, odpowiedź skokową policzoną z przemiatania i ocenę każdej osi. Wskazówki są tylko do przejrzenia i nigdy nie są wprowadzane automatycznie. W środku instrukcja lotu i przycisk dla `debug_mode = CHIRP`. Loty CHIRP w logu z wieloma lotami są pomijane w zwykłej analizie odpowiedzi skokowej. Przykładowy log ma syntetyczny lot CHIRP.
 
 ## 0.7.0 – 2026-11-17
 

@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('workspacefpv', {
   platform: process.platform,
   /** Tells the main process which language the UI uses (for native dialogs). */
   setLanguage: (lang: string): void => ipcRenderer.send('app:set-language', lang),
+  /** PNG (base64) of a part of the window, for the AI screen-fragment feature. */
+  capture: (rect: { x: number; y: number; width: number; height: number }): Promise<string | null> => ipcRenderer.invoke('app:capture', rect),
   /** Local AI providers (Claude Code CLI, Ollama), run in the main process. */
   ai: {
     detectClaude: (force?: boolean): Promise<unknown> => ipcRenderer.invoke('ai:claude-detect', !!force),

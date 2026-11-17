@@ -1,0 +1,42 @@
+import type { enMode, enSnip, enTipsUi } from '../en/ui-modes';
+
+export const plMode: typeof enMode = {
+  label: 'Interfejs',
+  basic: 'Podstawowy',
+  expert: 'Ekspert',
+  basicTitle: 'Podstawowy: mniej zakładek, każde ustawienie wytłumaczone',
+  expertTitle: 'Ekspert: wszystkie funkcje Betaflighta',
+  chooseTitle: 'Ile wiesz o FPV?',
+  chooseLead: 'Zmienisz to w każdej chwili przełącznikiem Podstawowy / Ekspert na górnym pasku.',
+  basicCard: 'Dopiero zaczynam',
+  basicCardText: 'Tylko zakładki potrzebne, żeby dron poleciał. Przy każdym ustawieniu jest żarówka: najedź na nią, a powie, co to robi i co ustawić. AI odpowiada prostym językiem.',
+  expertCard: 'Znam Betaflighta',
+  expertCardText: 'Wszystkie zakładki i opcje, jak Betaflight Configurator w trybie eksperta: porty, failsafe, blackbox, filtry, CLI. Podpowiedzi zostają, ale nie przeszkadzają.',
+  toBasic: 'Tryb podstawowy. Zakładki eksperckie są ukryte.',
+  toExpert: 'Tryb ekspert. Widać wszystkie zakładki.',
+  expertOnly: 'Ta zakładka jest tylko w trybie ekspert.',
+  expertOnlyAction: 'Przełącz na Ekspert',
+  tipDiag: 'Diagnoza',
+  tipParts: 'Części',
+  tipBattery: 'Akumulator',
+  tipReceiver: 'Odbiornik',
+  tipEsc: 'ESC',
+};
+
+export const plTipsUi: typeof enTipsUi = {
+  aria: 'Podpowiedź',
+  setting: 'Żarówki z podpowiedziami w trybie ekspert',
+  settingHint: 'W trybie podstawowym podpowiedzi są zawsze włączone.',
+};
+
+export const plSnip: typeof enSnip = {
+  button: 'Wskaż fragment aplikacji',
+  hint: 'Zaznacz prostokątem to, o co chcesz zapytać. Esc anuluje.',
+  attached: 'Fragment ekranu: {screen}, elementów: {n}',
+  detach: 'Usuń fragment',
+  question: 'Wytłumacz, co zaznaczyłem, i powiedz, co mam tu zrobić.',
+  show: 'Pokaż',
+  gone: 'Tego elementu nie ma już na ekranie.',
+  noImage: 'Bez obrazka: ten dostawca dostaje zaznaczone teksty i wartości.',
+  tooSmall: 'Zaznacz większy obszar.',
+};

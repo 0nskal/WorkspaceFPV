@@ -20,6 +20,12 @@ import { enBfBlackbox } from './en/blackbox';
 import { enBfCli } from './en/cli';
 import { enBfOsd } from './en/osd';
 import { enAiProviders } from './en/ai-providers';
+import { enMode, enSnip, enTipsUi } from './en/ui-modes';
+import { enTipsCore } from './en/tips-core';
+import { enTipsFc } from './en/tips-fc';
+import { enTipsRx } from './en/tips-rx';
+import { enTipsMotors } from './en/tips-motors';
+import { enTipsTuning } from './en/tips-tuning';
 export const en = {
   lang: {
     en: 'English',
@@ -460,6 +466,10 @@ export const en = {
   bfCli: enBfCli,
   bfOsd: enBfOsd,
   aiProviders: enAiProviders,
+  mode: enMode,
+  snip: enSnip,
+  tipsUi: enTipsUi,
+  tips: { ...enTipsCore, ...enTipsFc, ...enTipsRx, ...enTipsMotors, ...enTipsTuning },
 };
 
 export type Dict = typeof en;

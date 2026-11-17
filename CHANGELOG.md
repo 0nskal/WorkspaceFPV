@@ -2,6 +2,13 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## Unreleased
+
+- **Basic and Expert mode.** On first start the app asks how much you know about FPV; switch any time in the top bar or in Settings. Basic shows only the tabs needed to get a quad flying (Workshop, Setup, Configuration, Power, Receiver, Modes, Motors, OSD, PID Tuning, ELRS), hides advanced fields and explains each tab at the top. Expert shows everything: Ports, Failsafe, Blackbox, Autotune, CLI and all advanced settings.
+- **Lightbulb tips.** A small bulb next to settings lights up on hover and explains in plain words what the setting does and what to set. Always on in Basic mode, optional in Expert mode.
+- **Point the AI at a part of the app.** The scissors button in the assistant lets you drag a box around any part of the window. The AI gets the texts and values inside it (and, in the desktop app with the Anthropic API or Gemini, a picture) and answers with **Show** buttons that scroll to the exact field and highlight it. In Basic mode it explains step by step in plain words.
+- Smoother interface: the tab underline slides to the active tab, screens and dialogs fade in, buttons react to presses. Everything respects the system "reduce motion" setting.
+
 ## 0.4.1 – 2026-11-17
 
 - **Fix: connecting to some boards** (e.g. GEPRC F722 Mark 5) ended with "MSP timeout (command 1)". The app now raises DTR/RTS after opening the port, like Betaflight Configurator.
@@ -38,6 +45,13 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## Nowości (jeszcze bez wydania)
+
+- **Tryb podstawowy i ekspert.** Przy pierwszym uruchomieniu appka pyta, ile wiesz o FPV; zmienisz to w każdej chwili na górnym pasku albo w Ustawieniach. Podstawowy pokazuje tylko zakładki potrzebne, żeby dron poleciał (Warsztat, Setup, Konfiguracja, Zasilanie, Odbiornik, Tryby, Silniki, OSD, Strojenie PID, ELRS), chowa zaawansowane pola i u góry każdej zakładki tłumaczy, do czego służy. Ekspert pokazuje wszystko: porty, failsafe, blackbox, autotune, CLI i wszystkie zaawansowane ustawienia.
+- **Żarówki z podpowiedziami.** Mała żarówka obok ustawienia zapala się po najechaniu i prostymi słowami tłumaczy, co robi to ustawienie i co wpisać. W trybie podstawowym zawsze włączone, w ekspercie do wyłączenia.
+- **Wskaż AI fragment aplikacji.** Przyciskiem z nożyczkami w asystencie zaznaczasz prostokątem dowolny fragment okna. AI dostaje teksty i wartości z tego miejsca (a w appce na Windows z API Anthropic albo Gemini także obrazek) i odpowiada przyciskami **Pokaż**, które przewijają do konkretnego pola i je podświetlają. W trybie podstawowym tłumaczy krok po kroku.
+- Płynniejszy interfejs: podkreślenie zakładki przesuwa się do aktywnej, ekrany i okna płynnie się pojawiają, przyciski reagują na kliknięcie. Wszystko respektuje systemowe ustawienie ograniczenia animacji.
 
 ## 0.4.1 – 2026-11-17
 

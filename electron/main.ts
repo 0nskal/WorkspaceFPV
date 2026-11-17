@@ -152,6 +152,15 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     lang = app.getLocale().toLowerCase().startsWith('pl') ? 'pl' : 'en';
+    // A screenshot of the part of the window the user selected for the AI (only ever the app's own window).
+    ipcMain.handle('app:capture', async (e, r: unknown) => {
+      const ok = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 20000;
+      const rect = r as { x: unknown; y: unknown; width: unknown; height: unknown } | null;
+      if (!rect || !ok(rect.x) || !ok(rect.y) || !ok(rect.width) || !ok(rect.height)) return null;
+      const img = await e.sender.capturePage({ x: Math.round(rect.x as number), y: Math.round(rect.y as number), width: Math.max(1, Math.round(rect.width as number)), height: Math.max(1, Math.round(rect.height as number)) });
+      const { width } = img.getSize();
+      return (width > 1400 ? img.resize({ width: 1400 }) : img).toPNG().toString('base64');
+    });
     ipcMain.on('app:set-language', (_e, l: unknown) => {
       if (l === 'en' || l === 'pl') lang = l;
     });

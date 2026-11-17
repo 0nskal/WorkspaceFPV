@@ -5,6 +5,7 @@
  */
 import type { AppContext } from '../context';
 import { t, fmtNum } from '../i18n';
+import { tip } from '../ui/tip';
 import { MSPM, decodeEscSensor, decodeMotorTelemetry, telemetryActive, type MotorTel } from '../bf/motors';
 
 
@@ -46,7 +47,7 @@ export function mountMotorTelemetry(host: HTMLElement, ctx: AppContext, onData: 
     let hint = '';
     if (!connected) hint = t('bfMotors.telNeedFc');
     else if (seenAny && !active) hint = cfg && !cfg.bidir && !cfg.useEscSensor ? t('bfMotors.telOffHint') : t('bfMotors.telZeroHint');
-    host.innerHTML = `<div class="bf-motors-tel-h mono"><span>${t('bfMotors.telHead')}</span><span class="esc-key">${legacy ? 'MSP_ESC_SENSOR_DATA' : 'MSP_MOTOR_TELEMETRY'}</span></div><div class="bf-motors-cards">${cards}</div>${hint ? `<p class="bf-motors-hint mono">${hint}</p>` : ''}`;
+    host.innerHTML = `<div class="bf-motors-tel-h mono"><span>${t('bfMotors.telHead')} ${tip('tips.motors.telemetry')}</span><span class="esc-key" data-level="expert">${legacy ? 'MSP_ESC_SENSOR_DATA' : 'MSP_MOTOR_TELEMETRY'}</span></div><div class="bf-motors-cards">${cards}</div><p class="bf-motors-hint mono">${t('bfMotors.rpm')} ${tip('tips.motors.rpm')} · ${t('bfMotors.lost')} ${tip('tips.motors.lost')} · °C ${tip('tips.motors.temp')}</p>${hint ? `<p class="bf-motors-hint mono">${hint}</p>` : ''}`;
   }
 
   async function tick(): Promise<void> {

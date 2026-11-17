@@ -2,17 +2,29 @@ import type { ScreenMount } from '../context';
 import { aiSettingsHtml, bindAiSettings } from './ai-settings';
 import { LANGS, fmtNum, getLang, setLang, t, type Lang } from '../i18n';
 import { escapeHtml } from '../ui/dom';
+import { applyModeAttrs, currentMode } from '../ui/mode';
+import { tip } from '../ui/tip';
 import { icon } from '../ui/icons';
 import { APP_VERSION, updatesApi, type UpdateStatus } from '../updates';
 
 export const mount: ScreenMount = (el, ctx) => {
   const s = ctx.settings.get();
   const upd = updatesApi();
+  const mode = currentMode(ctx.settings);
   const connected = () => ctx.state.get().conn === 'connected';
 
   el.innerHTML = `
     <div class="page">
       <h1>${t('settings.title')}</h1>
+
+      <section class="card">
+        <div class="ch">${t('mode.label')} ${tip('tips.settings.interface')}</div>
+        <div class="prov-list" role="radiogroup" aria-label="${escapeHtml(t('mode.label'))}">
+          ${(['basic', 'expert'] as const).map((m) => `<label class="upd-chk"><input type="radio" name="uiMode" value="${m}" ${mode === m ? 'checked' : ''} /><span>${t(m === 'basic' ? 'mode.basic' : 'mode.expert')} <small class="about">${t(m === 'basic' ? 'mode.basicTitle' : 'mode.expertTitle')}</small></span></label>`).join('')}
+        </div>
+        <label class="upd-chk"><input type="checkbox" name="expertTips" ${s.expertTips ? 'checked' : ''} /><span>${t('tipsUi.setting')}</span></label>
+        <small>${t('tipsUi.settingHint')}</small>
+      </section>
 
       <section class="card">
         <div class="ch">${t('settings.appTitle')}</div>
@@ -26,9 +38,9 @@ ${aiSettingsHtml(ctx)}
 
       <section class="card">
         <div class="ch">${t('bfInfo.settings.head')}</div>
-        <label class="upd-chk"><input type="checkbox" name="autoEscInfo" ${s.autoEscInfo ? 'checked' : ''} /><span>${t('bfInfo.settings.autoEsc')}</span></label>
+        <label class="upd-chk"><input type="checkbox" name="autoEscInfo" ${s.autoEscInfo ? 'checked' : ''} /><span>${t('bfInfo.settings.autoEsc')} ${tip('tips.settings.autoEscInfo')}</span></label>
         <p class="about">${t('bfInfo.settings.autoEscNote')}</p>
-        <label class="upd-chk"><input type="checkbox" name="autoElrsInfo" ${s.autoElrsInfo ? 'checked' : ''} /><span>${t('bfInfo.settings.autoElrs')}</span></label>
+        <label class="upd-chk"><input type="checkbox" name="autoElrsInfo" ${s.autoElrsInfo ? 'checked' : ''} /><span>${t('bfInfo.settings.autoElrs')} ${tip('tips.settings.autoElrsInfo')}</span></label>
         <p class="about">${t('bfInfo.settings.autoElrsNote')}</p>
       </section>
 
@@ -40,12 +52,12 @@ ${aiSettingsHtml(ctx)}
           <button class="btn s" type="button" data-act="fetch" ${connected() ? '' : 'disabled'}>${t('settings.fetch')}</button>
         </div>
         <small>${t('settings.dataNote')}</small>
-        <label class="upd-chk"><input type="checkbox" name="armDisable" ${s.armingDisable ? 'checked' : ''} /><span>${t('bfCore.armDisableSetting')}</span></label>
+        <label class="upd-chk"><input type="checkbox" name="armDisable" ${s.armingDisable ? 'checked' : ''} /><span>${t('bfCore.armDisableSetting')} ${tip('tips.settings.armDisable')}</span></label>
         <small>${t('bfCore.armDisableNote')}</small>
       </section>
 
       <section class="card" id="upd">
-        <div class="ch">${t('settings.updHead')}</div>
+        <div class="ch">${t('settings.updHead')} ${tip('tips.settings.updates')}</div>
         <p class="upd-ver">${t('settings.updVersion')} <b class="mono" data-upd="ver">${escapeHtml(APP_VERSION)}</b></p>
         ${
           upd
@@ -133,6 +145,19 @@ ${aiSettingsHtml(ctx)}
     });
   }
 
+  el.querySelectorAll<HTMLInputElement>('input[name="uiMode"]').forEach((r) =>
+    r.addEventListener('change', () => {
+      if (!r.checked) return;
+      // the top-bar switch runs the app's own setMode (saves uiMode, rebuilds tabs, re-mounts this screen)
+      const sw = document.querySelector<HTMLElement>(`.mode-sw [data-mode="${r.value}"]`);
+      if (sw) sw.click();
+      else ctx.settings.set({ uiMode: r.value as 'basic' | 'expert' });
+    }),
+  );
+  el.querySelector<HTMLInputElement>('input[name="expertTips"]')?.addEventListener('change', (e) => {
+    ctx.settings.set({ expertTips: (e.target as HTMLInputElement).checked });
+    applyModeAttrs(ctx.settings);
+  });
   el.querySelector<HTMLInputElement>('input[name="armDisable"]')?.addEventListener('change', (e) => {
     ctx.settings.set({ armingDisable: (e.target as HTMLInputElement).checked });
   });

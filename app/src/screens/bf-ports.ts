@@ -6,6 +6,7 @@ import type { BfData, MspWrite } from '../bf/store';
 import type { ScreenMount } from '../context';
 import { t, type Key } from '../i18n';
 import { escapeHtml } from '../ui/dom';
+import { intro, tip } from '../ui/tip';
 
 const K = (k: string) => `bfPorts.${k}` as Key;
 const F = D.SERIAL_FN;
@@ -85,7 +86,7 @@ function groups(bf: BfData, draft: Draft): Group[] {
       hint: t(K('gPortsHint')),
       wide: true,
       fields: all,
-      render: (r, b) => `<table class="bf-ports"><thead><tr><th>${escapeHtml(t(K('colPort')))}</th><th>${escapeHtml(t(K('colMsp')))}</th><th>${escapeHtml(t(K('colRx')))}</th><th>${escapeHtml(t(K('colTelem')))}</th><th>${escapeHtml(t(K('colSensor')))}</th><th>${escapeHtml(t(K('colPeriph')))}</th></tr></thead><tbody>${rows.map((row) => row(r, b)).join('')}</tbody></table>${hint ? `<p class="bf-note">${escapeHtml(hint)}</p>` : ''}${telemOff ? `<p class="bf-note">${escapeHtml(telemOff)}</p>` : ''}`,
+      render: (r, b) => `<table class="bf-ports"><thead><tr><th>${escapeHtml(t(K('colPort')))} ${tip('tips.ports.uart')}</th><th>${escapeHtml(t(K('colMsp')))} ${tip('tips.ports.msp')}</th><th>${escapeHtml(t(K('colRx')))} ${tip('tips.ports.rx')}</th><th>${escapeHtml(t(K('colTelem')))} ${tip('tips.ports.telem')}</th><th>${escapeHtml(t(K('colSensor')))} ${tip('tips.ports.sensor')}</th><th>${escapeHtml(t(K('colPeriph')))} ${tip('tips.ports.periph')}</th></tr></thead><tbody>${rows.map((row) => row(r, b)).join('')}</tbody></table>${hint ? `<p class="bf-note">${escapeHtml(hint)}</p>` : ''}${telemOff ? `<p class="bf-note">${escapeHtml(telemOff)}</p>` : ''}`,
     },
   ];
 }
@@ -126,6 +127,7 @@ const spec: TabSpec = {
   toDraft,
   groups,
   toWrites,
+  top: () => intro('tips.ports.intro'),
   needsReboot: () => true,
   dynamic: (k) => /\.(msp|telem|sensor|periph|rx)$/.test(k),
   validate: (d, bf) => {

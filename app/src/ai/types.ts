@@ -7,7 +7,15 @@ export const PROVIDER_IDS: ProviderId[] = ['claude-code', 'gemini', 'ollama', 'a
 export interface ChatTurn {
   role: 'user' | 'assistant';
   text: string;
+  /** Screenshot of a fragment the user pointed at (base64 PNG). Only the Anthropic API and Gemini receive it. */
+  image?: { mime: 'image/png'; data: string };
 }
+
+/** Providers that read images; the others get the fragment as text only. */
+export const IMAGE_PROVIDERS: ProviderId[] = ['anthropic', 'gemini'];
+
+/** Text-only turns (for the CLI and Ollama, and for anything sent over IPC). */
+export const textTurns = (m: ChatTurn[]): ChatTurn[] => m.map((x) => ({ role: x.role, text: x.text }));
 
 /** System prompt split in two: stable instructions and the drone context (Anthropic caches the context block). */
 export interface AiSystem {
@@ -45,6 +53,8 @@ export interface AiConfig {
   geminiModel: string;
   ollamaUrl: string;
   ollamaModel: string;
+  /** Interface mode: 'basic' makes the assistant explain in plain words. */
+  uiMode?: 'basic' | 'expert';
 }
 
 /** Error whose message is already user-facing (translated). */

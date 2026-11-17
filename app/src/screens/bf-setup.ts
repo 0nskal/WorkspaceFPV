@@ -9,6 +9,7 @@ import { armingDesc } from '../fc/diagnose';
 import { boardDisplayName } from '../fc/board';
 import { fmtNum, t, type Key } from '../i18n';
 import { escapeHtml } from '../ui/dom';
+import { intro, tip, type TipKey } from '../ui/tip';
 import { modelSvg, updateModel } from './bf-setup-model';
 
 const K = (k: string) => `bfSetup.${k}` as Key;
@@ -20,7 +21,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let busy = false;
   let poll: ReturnType<typeof setInterval> | null = null;
 
-  const row = (k: string, v: string) => `<div class="bf-su-kv"><span>${escapeHtml(k)}</span><b class="mono">${escapeHtml(v)}</b></div>`;
+  const row = (k: string, v: string, tk?: TipKey, expert = false) => `<div class="bf-su-kv"${expert ? ' data-level="expert"' : ''}><span>${escapeHtml(k)}${tk ? ` ${tip(tk)}` : ''}</span><b class="mono">${escapeHtml(v)}</b></div>`;
 
   function info(): string {
     const s = ctx.state.get();
@@ -30,22 +31,22 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const pid = bf.advanced && rate ? `${fmtNum(rate / bf.advanced.gyroSyncDenom / bf.advanced.pidProcessDenom / 1000, 2)} kHz` : '—';
     const st = bf.status;
     const rows = [
-      row(t(K('firmware')), `${bf.variant === 'BTFL' ? 'Betaflight' : bf.variant} ${bf.version}`),
-      row(t(K('api')), `1.${bf.api}`),
-      row(t(K('board')), `${boardDisplayName(s.info)} (${b?.boardId ?? '—'})`),
-      row(t(K('target')), b?.targetName || '—'),
+      row(t(K('firmware')), `${bf.variant === 'BTFL' ? 'Betaflight' : bf.variant} ${bf.version}`, 'tips.setup.firmware'),
+      row(t(K('api')), `1.${bf.api}`, 'tips.setup.api', true),
+      row(t(K('board')), `${boardDisplayName(s.info)} (${b?.boardId ?? '—'})`, 'tips.setup.board'),
+      row(t(K('target')), b?.targetName || '—', undefined, true),
       row(t(K('manufacturer')), b?.manufacturer || '—'),
-      ...(bf.mcuName ? [row(t(K('mcu')), bf.mcuName)] : []),
-      row(t(K('build')), bf.build ? `${bf.build.date} ${bf.build.time} (${bf.build.hash})` : '—'),
-      row(t(K('gyroRate')), rate ? `${fmtNum(rate / 1000, rate % 1000 ? 2 : 0)} kHz` : '—'),
-      row(t(K('pidLoop')), pid),
-      row(t(K('cfgState')), b ? t(K(`cfg${Math.min(2, b.configState)}`)) : '—'),
-      row(t(K('uid')), bf.uid || '—'),
+      ...(bf.mcuName ? [row(t(K('mcu')), bf.mcuName, undefined, true)] : []),
+      row(t(K('build')), bf.build ? `${bf.build.date} ${bf.build.time} (${bf.build.hash})` : '—', undefined, true),
+      row(t(K('gyroRate')), rate ? `${fmtNum(rate / 1000, rate % 1000 ? 2 : 0)} kHz` : '—', 'tips.setup.gyroRate', true),
+      row(t(K('pidLoop')), pid, 'tips.setup.pidLoop', true),
+      row(t(K('cfgState')), b ? t(K(`cfg${Math.min(2, b.configState)}`)) : '—', 'tips.setup.cfgState', true),
+      row(t(K('uid')), bf.uid || '—', undefined, true),
       row(t(K('craft')), bf.craftName || '—'),
-      row(t(K('cpu')), st ? `${st.cpuLoad}%` : '—'),
-      row(t(K('cycle')), st ? `${st.cycleTimeUs} µs` : '—'),
-      row(t(K('i2c')), st ? String(st.i2cErrors) : '—'),
-      ...(st?.cpuTempC ? [row(t(K('temp')), `${st.cpuTempC} °C`)] : []),
+      row(t(K('cpu')), st ? `${st.cpuLoad}%` : '—', 'tips.setup.cpu', true),
+      row(t(K('cycle')), st ? `${st.cycleTimeUs} µs` : '—', 'tips.setup.cycle', true),
+      row(t(K('i2c')), st ? String(st.i2cErrors) : '—', 'tips.setup.i2c', true),
+      ...(st?.cpuTempC ? [row(t(K('temp')), `${st.cpuTempC} °C`, undefined, true)] : []),
     ];
     return rows.join('');
   }
@@ -95,29 +96,29 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const caps = bf.board?.capabilities ?? 0;
     const magOn = (((bf.status?.sensors ?? 0) >> 2) & 1) === 1;
     const needsAcc = ((bf.board?.problems ?? 0) & 1) === 1 || ((bf.status?.armingFlags ?? 0) & (1 << 23)) !== 0;
-    const btn = (act: string, label: string, text: string, cls = 'ghost', dis = false) => `<div class="bf-su-act"><button class="btn ${cls}" data-su="${act}" ${dis ? 'disabled' : ''}>${escapeHtml(label)}</button><small>${escapeHtml(text)}</small></div>`;
+    const btn = (act: string, label: string, text: string, cls = 'ghost', dis = false, tk?: TipKey, expert = false) => `<div class="bf-su-act"${expert ? ' data-level="expert"' : ''}><button class="btn ${cls}" data-su="${act}" ${dis ? 'disabled' : ''}>${escapeHtml(label)}</button><small>${escapeHtml(text)}${tk ? ` ${tip(tk)}` : ''}</small></div>`;
     el.innerHTML = `<div class="bf-tab" data-tab="setup">
       <header class="bf-head"><h2>${escapeHtml(t(K('title')))}</h2><button class="btn ghost bf-ask" data-su="ask">${escapeHtml(t('bfCore.askAi'))}</button></header>
-      <div class="bf-body"><div class="bf-grid bf-su-grid">
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gAttitude')))}</span><small>${escapeHtml(t(K('modelNote')))}</small></header>
+      <div class="bf-body">${intro('tips.setup.intro')}<div class="bf-grid bf-su-grid">
+        <section class="bf-panel"><header><span>${escapeHtml(t(K('gAttitude')))}</span><small>${escapeHtml(t(K('modelNote')))} ${tip('tips.setup.attitude')}</small></header>
           <div class="bf-su-attitude">${modelSvg()}
             <div class="bf-su-angles"><div><small>${escapeHtml(t(K('roll')))}</small><b class="mono" data-att="roll">0.0°</b></div><div><small>${escapeHtml(t(K('pitch')))}</small><b class="mono" data-att="pitch">0.0°</b></div><div><small>${escapeHtml(t(K('heading')))}</small><b class="mono" data-att="heading">0°</b></div></div>
           </div></section>
         <section class="bf-panel"><header><span>${escapeHtml(t(K('gInfo')))}</span></header><div class="bf-su-info" data-part="info">${info()}</div></section>
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gSensors')))}</span></header><div class="bf-su-sensors" data-part="sensors">${sensors()}</div></section>
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gArming')))}</span></header><div class="bf-su-arming" data-part="arming">${arming()}</div></section>
+        <section class="bf-panel"><header><span>${escapeHtml(t(K('gSensors')))} ${tip('tips.setup.sensors')}</span></header><div class="bf-su-sensors" data-part="sensors">${sensors()}</div></section>
+        <section class="bf-panel"><header><span>${escapeHtml(t(K('gArming')))} ${tip('tips.setup.arming')}</span></header><div class="bf-su-arming" data-part="arming">${arming()}</div></section>
         <section class="bf-panel"><header><span>${escapeHtml(t(K('gCal')))}</span></header><div class="bf-su-actions">
           ${needsAcc ? `<p class="bf-note">${escapeHtml(t(K('accNeeds')))}</p>` : ''}
-          ${btn('acc', t(K('accBtn')), t(K('accText')), needsAcc ? 'light' : 'ghost')}
-          ${btn('mag', t(K('magBtn')), magOn ? t(K('magText')) : t(K('magNone')), 'ghost', !magOn)}
+          ${btn('acc', t(K('accBtn')), t(K('accText')), needsAcc ? 'light' : 'ghost', false, 'tips.setup.accCal')}
+          ${btn('mag', t(K('magBtn')), magOn ? t(K('magText')) : t(K('magNone')), 'ghost', !magOn, 'tips.setup.magCal')}
           <p class="bf-su-small" data-mag-msg></p>
         </div></section>
         <section class="bf-panel"><header><span>${escapeHtml(t(K('gSystem')))}</span></header><div class="bf-su-actions">
-          ${btn('reboot', t(K('rebootBtn')), t(K('rebootText')))}
-          ${btn('dfu', t(K('dfuBtn')), t(K('dfuText')))}
-          ${caps & CAP.FLASH_BOOTLOADER ? btn('flashboot', t(K('flashBootBtn')), t(K('flashBootText'))) : ''}
-          ${btn('msc', t(K('mscBtn')), t(K('mscText')))}
-          ${btn('reset', t(K('resetBtn')), t(K('resetText')), 'ghost danger')}
+          ${btn('reboot', t(K('rebootBtn')), t(K('rebootText')), 'ghost', false, 'tips.setup.reboot')}
+          ${btn('dfu', t(K('dfuBtn')), t(K('dfuText')), 'ghost', false, 'tips.setup.dfu', true)}
+          ${caps & CAP.FLASH_BOOTLOADER ? btn('flashboot', t(K('flashBootBtn')), t(K('flashBootText')), 'ghost', false, 'tips.setup.flashBoot', true) : ''}
+          ${btn('msc', t(K('mscBtn')), t(K('mscText')), 'ghost', false, 'tips.setup.msc', true)}
+          ${btn('reset', t(K('resetBtn')), t(K('resetText')), 'ghost danger', false, 'tips.setup.reset')}
         </div></section>
       </div></div></div>`;
     startPoll();
@@ -235,7 +236,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     else if (act === 'msc') void reboot('msc');
     else if (act === 'reset') void resetAll();
     else if (act === 'ask') {
-      const lines = [info().replace(/<div class="bf-su-kv"><span>(.*?)<\/span><b class="mono">(.*?)<\/b><\/div>/g, '- $1: $2\n').replace(/&amp;/g, '&')];
+      const lines = [info().replace(/<div class="bf-su-kv"[^>]*><span>(.*?)<\/span><b class="mono">(.*?)<\/b><\/div>/g, (_m, k: string, v: string) => '- ' + k.replace(/<[^>]*>/g, '').trim() + ': ' + v + '\n').replace(/&amp;/g, '&')];
       ctx.askAi(`${t('bfCore.askPrompt', { tab: t(K('title')) })}\n${lines.join('')}`);
     }
   });

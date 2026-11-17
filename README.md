@@ -35,6 +35,8 @@
 
 ## Features
 
+- **Basic and Expert mode.** Basic is for people new to FPV: only the tabs needed to get a quad flying, a short note on what each tab is for, and a lightbulb next to every setting that explains it in plain words when you hover over it. Expert shows every tab and option, like Betaflight Configurator in Expert Mode. Switch in the top bar.
+- **Point the AI at a part of the app.** The scissors button in the assistant lets you drag a box around any part of the window; the AI answers about exactly that and adds **Show** buttons that jump to the field it means. See [docs/TIPS.md](docs/TIPS.md).
 - **Diagnosis in a minute.** Reads the whole configuration over MSP when you connect and checks it against rules: ESC protocol, bidirectional DShot, voltage per cell, arming disable flags. The "What I checked" list shows every rule.
 - **AI assistant.** Completes the diagnosis and proposes Betaflight CLI commands. The configuration tabs have an "Ask AI about this tab" button. You choose the provider in **Settings → AI assistant**, and you do not need to pay for the Anthropic API:
   - **Claude Code (local, desktop app only):** uses the Claude Code you already have installed and logged in. No key in the app; it counts toward your plan's usage limits. Runs with no tools in an empty temporary folder.
@@ -179,6 +181,8 @@ WorkspaceFPV is a hobby project made to make our work in the FPV hobby easier, a
 
 ## Funkcje
 
+- **Tryb podstawowy i ekspert.** Podstawowy jest dla osób, które zaczynają z FPV: tylko zakładki potrzebne, żeby dron poleciał, krótka notka, do czego służy każda zakładka, i żarówka przy każdym ustawieniu, która po najechaniu tłumaczy je prostymi słowami. Ekspert pokazuje wszystkie zakładki i opcje, jak Betaflight Configurator w trybie eksperta. Przełącznik jest na górnym pasku.
+- **Wskaż AI fragment aplikacji.** Przyciskiem z nożyczkami w asystencie zaznaczasz prostokątem dowolny fragment okna; AI odpowiada dokładnie o nim i dodaje przyciski **Pokaż**, które przenoszą do pola, o które chodzi. Szczegóły: [docs/TIPS.md](docs/TIPS.md).
 - **Diagnoza w minutę.** Po połączeniu WorkspaceFPV czyta całą konfigurację przez MSP i sprawdza ją regułami: protokół ESC, bidirectional DShot, napięcie na celę, flagi blokady uzbrojenia. Lista „Co sprawdziłem” pokazuje każdą regułę.
 - **Asystent AI.** Dopowiada diagnozę i proponuje komendy CLI Betaflight. Zakładki konfiguracji mają przycisk „Zapytaj AI o tę kartę”. Dostawcę wybierasz w **Ustawienia → Asystent AI** i nie musisz płacić za Anthropic API:
   - **Claude Code (lokalnie, tylko aplikacja desktopowa):** korzysta z Claude Code, który masz zainstalowany i zalogowany. Bez klucza w aplikacji; liczy się do limitów Twojego planu. Działa bez narzędzi w pustym folderze tymczasowym.

@@ -24,7 +24,15 @@ export interface UpdatesApi {
 
 declare global {
   interface Window {
-    workspacefpv?: { isElectron?: boolean; platform?: string; updates?: UpdatesApi; ai?: DesktopAi; setLanguage?: (lang: string) => void };
+    workspacefpv?: {
+      isElectron?: boolean;
+      platform?: string;
+      updates?: UpdatesApi;
+      ai?: DesktopAi;
+      setLanguage?: (lang: string) => void;
+      /** PNG (base64) of a part of the window, in CSS pixels; used by the AI screen-fragment feature. */
+      capture?: (rect: { x: number; y: number; width: number; height: number }) => Promise<string | null>;
+    };
   }
   const __APP_VERSION__: string;
 }

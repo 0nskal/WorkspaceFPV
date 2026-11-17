@@ -2,7 +2,10 @@ import type { AppContext } from '../context';
 import { providerName } from '../ai/providers';
 import { partLabel, type Check } from '../fc/diagnose';
 import { t } from '../i18n';
+import { findScreen } from '../screens/registry';
 import { copyText, escapeHtml } from './dom';
+import { tip } from './tip';
+import { captureSnip, pointTo, refLabel, snipText, startSnip, type Snip } from './snip';
 import { icon } from './icons';
 
 /* ------------------------------------------------------------------ */
@@ -44,7 +47,11 @@ export function parseBlocks(src: string): Block[] {
 function inline(s: string): string {
   return escapeHtml(s)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[\[(s\d+-\d+)\]\]/g, (_m, ref: string) => {
+      const label = refLabel(ref);
+      return `<button type="button" class="ptr" data-act="point" data-ref="${ref}" title="${escapeHtml(t('snip.show'))}">${icon('target', 13)}<span>${escapeHtml(label ? `${t('snip.show')}: ${label}` : t('snip.show'))}</span></button>`;
+    });
 }
 
 function renderText(text: string): string {
@@ -94,7 +101,7 @@ function cliBlockHtml(code: string, closed: boolean, caveat?: string): string {
   const cmds = cliLines(code);
   const data = escapeHtml(JSON.stringify(cmds));
   const buttons = closed
-    ? `<div class="btns"><button class="btn p" data-act="apply" data-cmds="${data}">${icon('check', 15)}${t('drawer.apply')}</button><button class="btn s" data-act="copy" data-cmds="${data}">${icon('copy', 15)}${t('drawer.copy')}</button></div>`
+    ? `<div class="btns"><button class="btn p" data-act="apply" data-cmds="${data}">${icon('check', 15)}${t('drawer.apply')}</button><button class="btn s" data-act="copy" data-cmds="${data}">${icon('copy', 15)}${t('drawer.copy')}</button>${tip('tips.drawer.apply', t('drawer.apply'))}</div>`
     : '';
   return `<div class="code">${highlightCli(code)}</div>${caveat ? `<div class="caveat">${escapeHtml(caveat)}</div>` : ''}${buttons}`;
 }
@@ -149,9 +156,11 @@ export function createDrawer(ctx: AppContext): Drawer {
         <button data-nav="esc">${icon('chip')}${t('drawer.escProtocol')}</button>
         <button data-nav="autotune">${icon('sliders')}${t('drawer.autotune')}</button>
       </div>
+      <div class="snip-line" data-only="basic">${icon('scissors', 13)}<span>${t('snip.button')}</span>${tip('tips.drawer.snip', t('snip.button'))}</div>
       <div class="attach" hidden></div>
       <form class="in">
         <button type="button" class="clip" title="${t('drawer.attachTitle')}" aria-label="${t('drawer.attachAria')}">${icon('paperclip', 18)}</button>
+        <button type="button" class="snipb" title="${t('snip.button')}" aria-label="${t('snip.button')}">${icon('scissors', 18)}</button>
         <input type="text" name="q" placeholder="${t('drawer.placeholder')}" autocomplete="off" aria-label="${t('drawer.inputAria')}" />
         <button type="submit" class="send" aria-label="${t('drawer.sendAria')}">${icon('arrowUp', 18)}</button>
         <input type="file" hidden accept=".txt,.csv,.log,.json,.md,.cli" />
@@ -167,11 +176,18 @@ export function createDrawer(ctx: AppContext): Drawer {
   const fileInput = $<HTMLInputElement>('input[type="file"]');
   const attachEl = $('.attach');
   let attachment: { name: string; text: string } | null = null;
+  let snip: Snip | null = null;
   let showDetails = false;
 
   function renderAttach() {
-    attachEl.hidden = !attachment;
-    attachEl.innerHTML = attachment ? `${icon('paperclip', 13)}<span>${escapeHtml(attachment.name)}</span><button type="button" data-act="detach" aria-label="${t('drawer.detachAria')}">${icon('x', 13)}</button>` : '';
+    attachEl.hidden = !attachment && !snip;
+    const file = attachment ? `<div class="att">${icon('paperclip', 13)}<span>${escapeHtml(attachment.name)}</span><button type="button" data-act="detach" aria-label="${t('drawer.detachAria')}">${icon('x', 13)}</button></div>` : '';
+    const frag = snip
+      ? `<div class="att snip-att">${snip.image ? `<img src="data:image/png;base64,${snip.image.data}" alt="" />` : icon('scissors', 13)}<span>${escapeHtml(t('snip.attached', { screen: snip.screen, n: snip.items.length }))}${
+          !snip.image || !ctx.ai.supportsImages() ? `<small>${escapeHtml(t('snip.noImage'))}</small>` : ''
+        }</span><button type="button" data-act="unsnip" aria-label="${t('snip.detach')}">${icon('x', 13)}</button></div>`
+      : '';
+    attachEl.innerHTML = file + frag;
   }
 
   function renderRulesCard(): string {
@@ -196,7 +212,10 @@ export function createDrawer(ctx: AppContext): Drawer {
     const parts: string[] = [renderRulesCard()];
     const hist = ctx.ai.history;
     hist.forEach((m, i) => {
-      if (m.role === 'user') parts.push(`<div class="user">${escapeHtml(m.text)}</div>`);
+      if (m.role === 'user')
+        parts.push(
+          `<div class="user">${m.snip ? `<div class="u-snip">${m.image ? `<img src="data:image/png;base64,${m.image.data}" alt="" />` : icon('scissors', 13)}<span>${escapeHtml(m.snip)}</span></div>` : ''}${escapeHtml(m.display ?? m.text)}</div>`,
+        );
       else {
         const streaming = ctx.ai.busy && i === hist.length - 1;
         const inner = m.text ? renderMessageBody(m.text, streaming) : '';
@@ -277,10 +296,27 @@ export function createDrawer(ctx: AppContext): Drawer {
     } else if (act === 'detach') {
       attachment = null;
       renderAttach();
+    } else if (act === 'unsnip') {
+      snip = null;
+      renderAttach();
+    } else if (act === 'point') {
+      void pointTo(btn.dataset.ref ?? '', (r) => ctx.navigate(r), () => ctx.route()).then((ok) => {
+        if (!ok) ctx.toast(t('snip.gone'), 'info');
+      });
     }
   });
 
   $('.clip').addEventListener('click', () => fileInput.click());
+  $('.snipb').addEventListener('click', () => {
+    void startSnip().then(async (box) => {
+      if (!box) return;
+      const route = ctx.route();
+      const def = findScreen(route);
+      snip = await captureSnip(box, route, def ? t(def.titleKey) : route);
+      renderAttach();
+      input.focus();
+    });
+  });
   fileInput.addEventListener('change', () => {
     const f = fileInput.files?.[0];
     fileInput.value = '';
@@ -298,13 +334,17 @@ export function createDrawer(ctx: AppContext): Drawer {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const q = input.value.trim();
-    if (!q && !attachment) return;
-    let text = q || t('drawer.analyseFile');
+    if (!q && !attachment && !snip) return;
+    const shown = q || (snip ? t('snip.question') : t('drawer.analyseFile'));
+    let text = shown;
     if (attachment) text += `\n\n${t('drawer.attachedFile', { name: attachment.name })}\n\`\`\`\n${attachment.text}\n\`\`\``;
+    const frag = snip;
+    if (frag) text += `\n\n${snipText(frag, ctx.settings.get().uiMode || 'basic')}`;
     input.value = '';
     attachment = null;
+    snip = null;
     renderAttach();
-    void ctx.ai.ask(text);
+    void ctx.ai.ask(text, frag ? { display: shown, image: frag.image, snip: t('snip.attached', { screen: frag.screen, n: frag.items.length }) } : { display: shown });
   });
 
   const offs = [ctx.ai.subscribe(renderAll), ctx.state.subscribe(renderAll), ctx.settings.subscribe(renderAll)];

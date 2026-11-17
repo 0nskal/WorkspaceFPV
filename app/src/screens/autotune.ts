@@ -6,6 +6,7 @@ import { takePendingLog } from '../bf/log-handoff';
 import { copyText, escapeHtml } from '../ui/dom';
 import { fmtNum, t, tn, type Key } from '../i18n';
 import { icon } from '../ui/icons';
+import { intro, tip } from '../ui/tip';
 import { spectrumChart, stepChart } from './autotune-charts';
 import { publishSuggestion } from '../bf/autotune-link';
 
@@ -52,7 +53,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     return `
       <div class="at-empty ${dragging ? 'drag' : ''}" data-drop>
         ${film}
-        <h1>${t('at.dropTitle')}</h1>
+        ${intro('tips.autotune.intro')}
+        <h1>${t('at.dropTitle')} ${tip('tips.autotune.drop')}</h1>
         <p>${t('at.dropLead')}</p>
         <div class="at-btns">
           <button class="btn light" data-act="pick">${icon('download', 16)}${t('at.pick')}</button>
@@ -115,36 +117,37 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const ovsClass = (v: number | null) => (v !== null && v > 10 ? 'hot' : '');
 
     return `
+      ${intro('tips.autotune.intro')}
       <div class="at-head">
         <div class="at-file"><span class="at-sq"></span><span class="mono">${escapeHtml(res.name || t('at.sampleName'))}</span><span class="mono dim">· ${mins}:${String(secs).padStart(2, '0')} ${t('at.unit.min')} · ${fmtNum(res.fs / 1000, 1)} kHz</span></div>
         <button class="at-link" data-act="reset">${icon('chart', 14)}${t('at.changeLog')}</button>
       </div>
       <section class="at-sec">
-        <div class="at-cap mono"><span>${t('at.stepCap')}</span></div>
+        <div class="at-cap mono"><span>${t('at.stepCap')} ${tip('tips.autotune.stepResponse')}</span></div>
         <div class="at-row">
           <div class="at-plot">${stepChart(res)}</div>
           <div class="at-legend">
-            <div class="at-k"><div class="l mono">${t('at.overshoot', { axis: 'ROLL' })}</div><div class="v ${ovsClass(roll.overshoot)}">${num(roll.overshoot)}%<i class="sw roll"></i></div></div>
+            <div class="at-k"><div class="l mono">${t('at.overshoot', { axis: 'ROLL' })} ${tip('tips.autotune.overshoot')}</div><div class="v ${ovsClass(roll.overshoot)}">${num(roll.overshoot)}%<i class="sw roll"></i></div></div>
             <div class="at-k"><div class="l mono">${t('at.overshoot', { axis: 'PITCH' })}</div><div class="v">${num(pitch.overshoot)}%<i class="sw pitch"></i></div></div>
             <div class="at-k"><div class="l mono">${t('at.overshoot', { axis: 'YAW' })}</div><div class="v">${num(yaw.overshoot)}%<i class="sw yaw"></i></div></div>
-            <div class="at-k"><div class="l mono">${t('at.riseSettle')}</div><div class="v sm">${num(roll.rise)} / ${roll.settle === null ? '&gt;500' : num(roll.settle)} ms</div></div>
+            <div class="at-k"><div class="l mono">${t('at.riseSettle')} ${tip('tips.autotune.riseSettle')}</div><div class="v sm">${num(roll.rise)} / ${roll.settle === null ? '&gt;500' : num(roll.settle)} ms</div></div>
           </div>
         </div>
       </section>
       <section class="at-sec">
-        <div class="at-cap mono"><span>${t('at.spectrumCap', { max: res.spectrum.maxHz })}</span></div>
+        <div class="at-cap mono"><span>${t('at.spectrumCap', { max: res.spectrum.maxHz })} ${tip('tips.autotune.spectrum')}</span></div>
         <div class="at-row">
           <div class="at-plot">${spectrumChart(res)}</div>
           <div class="at-legend">
-            <div class="at-k"><div class="l mono">${t('at.motorPeak')}</div><div class="v ${motor && rec.motorNoiseHigh ? 'hot' : ''}">${motor ? motor.hz.toFixed(0) + ' Hz' : '—'}</div></div>
+            <div class="at-k"><div class="l mono">${t('at.motorPeak')} ${tip('tips.autotune.motorPeak')}</div><div class="v ${motor && rec.motorNoiseHigh ? 'hot' : ''}">${motor ? motor.hz.toFixed(0) + ' Hz' : '—'}</div></div>
             <div class="at-k"><div class="l mono">${t('at.framePeak')}</div><div class="v">${frame ? frame.hz.toFixed(0) + ' Hz' : '—'}</div></div>
-            <div class="at-k"><div class="l mono">BIDIR DSHOT · RPM FILTER</div><div class="v sm">${ctx.state.get().config ? (ctx.state.get().config!.bidir ? t('common.on') : t('common.off')) : demo || cache!.sample ? t('at.bidirDemo') : t('common.noData')}</div></div>
+            <div class="at-k"><div class="l mono">BIDIR DSHOT · RPM FILTER ${tip('tips.autotune.bidir')}</div><div class="v sm">${ctx.state.get().config ? (ctx.state.get().config!.bidir ? t('common.on') : t('common.off')) : demo || cache!.sample ? t('at.bidirDemo') : t('common.noData')}</div></div>
           </div>
         </div>
       </section>
       <section class="at-sec at-bottom">
         <div class="at-tbl-wrap">
-          <div class="at-cap mono"><span>${t('at.currentSuggested')}${demo ? t('at.pidFromDemo') : ''}</span><span>${tn('at.changes', changes)}</span></div>
+          <div class="at-cap mono"><span>${t('at.currentSuggested')}${demo ? t('at.pidFromDemo') : ''} ${tip('tips.autotune.table')}</span><span>${tn('at.changes', changes)}</span></div>
           <table class="at-tbl">
             <thead><tr><th scope="col">${t('at.axis')}</th><th scope="col">P</th><th scope="col">I</th><th scope="col">D</th><th scope="col" title="${t('at.ffTitle')}">FF</th></tr></thead>
             <tbody>${rec.axes
@@ -159,7 +162,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           <div class="at-cap mono"><span>${t('at.cliCmds')}</span><span>${rec.commands.length}</span></div>
           <div class="at-cmd mono">${cmdHtml}</div>
           <div class="at-btns">
-            <button class="btn light" data-act="apply" ${canApply ? '' : 'disabled'} title="${canApply ? '' : connected ? t('at.applyNoChanges') : t('at.applyNeedFc')}">${icon('arrowUp', 16)}${t('at.apply')}</button>
+            <button class="btn light" data-act="apply" ${canApply ? '' : 'disabled'} title="${canApply ? '' : connected ? t('at.applyNoChanges') : t('at.applyNeedFc')}">${icon('arrowUp', 16)}${t('at.apply')}</button>${tip('tips.autotune.apply')}
             <button class="btn ghost" data-act="ask">${icon('chip', 16)}${t('at.askAi')}</button>
             <button class="btn ghost" data-act="copy" ${rec.commands.length ? '' : 'disabled'}>${icon('copy', 16)}${t('at.copy')}</button>
           </div>

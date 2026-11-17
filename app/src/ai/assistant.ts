@@ -1,7 +1,7 @@
 import { t } from '../i18n';
 import { systemPrompt } from './prompts';
 import { createProviders, effectiveProvider, looksConfigured, providerName } from './providers';
-import type { AiConfig, AiProvider, ProviderId } from './types';
+import { IMAGE_PROVIDERS, type AiConfig, type AiProvider, type ProviderId } from './types';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -10,6 +10,18 @@ export interface ChatMessage {
   note?: boolean;
   /** Which provider produced this answer (shown in the drawer). */
   provider?: ProviderId;
+  /** What the chat shows instead of `text` (e.g. the question without the attached fragment). */
+  display?: string;
+  /** Screenshot attached to this question. */
+  image?: { mime: 'image/png'; data: string };
+  /** Short caption of the attached screen fragment. */
+  snip?: string;
+}
+
+export interface AskExtra {
+  display?: string;
+  image?: { mime: 'image/png'; data: string };
+  snip?: string;
 }
 
 export type AssistantConfig = AiConfig;
@@ -59,6 +71,11 @@ export class Assistant {
     return this.providers[id];
   }
 
+  /** Whether the provider in effect reads images (screen fragments get a picture). */
+  supportsImages(): boolean {
+    return IMAGE_PROVIDERS.includes(this.providerId());
+  }
+
   /** Cheap synchronous check whether the selected provider looks set up (drawer hint). */
   ready(): boolean {
     return looksConfigured(this.getConfig());
@@ -90,10 +107,10 @@ export class Assistant {
     }
   }
 
-  async ask(question: string): Promise<void> {
+  async ask(question: string, extra: AskExtra = {}): Promise<void> {
     const q = question.trim();
     if (!q || this.busy) return;
-    this.history.push({ role: 'user', text: q });
+    this.history.push({ role: 'user', text: q, ...extra });
     const id = this.providerId();
     const provider = this.providers[id];
     if (!this.ready()) {
@@ -111,11 +128,14 @@ export class Assistant {
 
     try {
       // Real conversation turns only (no notes/errors), without the empty reply in progress.
-      const messages = this.history.filter((m) => !m.note && m !== reply && m.text.trim()).map((m) => ({ role: m.role, text: m.text }));
+      const withImages = IMAGE_PROVIDERS.includes(id);
+      const messages = this.history
+        .filter((m) => !m.note && m !== reply && m.text.trim())
+        .map((m) => ({ role: m.role, text: m.text, ...(withImages && m.image ? { image: m.image } : {}) }));
       let pending = false;
       const res = await provider.stream(
         messages,
-        { prompt: systemPrompt(this.getConfig().lang), context: this.getContext() },
+        { prompt: systemPrompt(this.getConfig().lang, this.getConfig().uiMode), context: this.getContext() },
         (delta) => {
           this.thinking = false;
           reply.text += delta;

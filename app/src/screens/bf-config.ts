@@ -2,10 +2,12 @@
 import { C, TEXT, API } from '../bf/codes';
 import * as D from '../bf/decode';
 import { mountFormTab, type Draft, type Group, type TabSpec } from '../bf/form';
+import { decorateForm, type PanelRule, type RowRule } from '../bf/form-decor';
 import type { BfData, MspWrite } from '../bf/store';
 import type { ScreenMount } from '../context';
 import { t, type Key } from '../i18n';
 import { protocolName } from '../fc/state';
+import { intro } from '../ui/tip';
 
 /** Features shown here (receiver features belong to the Receiver tab). Order = display order. */
 const FEATURES: Array<keyof typeof D.FEATURE> = ['MOTOR_STOP', 'AIRMODE', 'ANTI_GRAVITY', 'TELEMETRY', 'ESC_SENSOR', 'LED_STRIP', 'OSD', 'SOFTSERIAL', 'GPS', 'RANGEFINDER', 'THREE_D', 'TRANSPONDER', 'CHANNEL_FORWARDING', 'RSSI_ADC', 'INFLIGHT_ACC_CAL', 'DASHBOARD'];
@@ -166,4 +168,57 @@ const spec: TabSpec = {
   needsReboot: (changed) => changed.some((k) => k === 'mixer' || k === 'reversed' || k === 'pidDenom' || k.startsWith('f.')),
 };
 
-export const mount: ScreenMount = (el, ctx) => mountFormTab(el, ctx, { ...spec, title: t(K('title')) });
+/** Tips and Basic/Expert visibility per row (form.ts has no hook for them, so form-decor adds them after each render). */
+const ROWS: RowRule[] = [
+  { key: 'mixer', tip: 'tips.config.mixer' },
+  { key: 'reversed', tip: 'tips.config.reversed' },
+  { key: 'protocol', tip: 'tips.config.protocol' },
+  { key: 'boardRoll', tip: 'tips.config.boardTilt' },
+  { key: 'boardPitch', tip: 'tips.config.boardTilt' },
+  { key: 'boardYaw', tip: 'tips.config.boardYaw' },
+  { key: 'trimRoll', tip: 'tips.config.trim', expert: true },
+  { key: 'trimPitch', tip: 'tips.config.trim', expert: true },
+  { key: 'gyroRate', tip: 'tips.config.gyroRate', expert: true },
+  { key: 'pidDenom', tip: 'tips.config.pidLoop', expert: true },
+  { key: 'f.MOTOR_STOP', tip: 'tips.config.motorStop' },
+  { key: 'f.AIRMODE', tip: 'tips.config.airmode' },
+  { key: 'f.ANTI_GRAVITY', tip: 'tips.config.antiGravity' },
+  { key: 'f.TELEMETRY', tip: 'tips.config.telemetry' },
+  { key: 'f.ESC_SENSOR', tip: 'tips.config.escSensor' },
+  { key: 'f.LED_STRIP', tip: 'tips.config.ledStrip' },
+  { key: 'f.OSD', tip: 'tips.config.osd' },
+  { key: 'f.SOFTSERIAL', tip: 'tips.config.softserial', expert: true },
+  { key: 'f.GPS', tip: 'tips.config.gps' },
+  { key: 'f.RANGEFINDER', tip: 'tips.config.rangefinder', expert: true },
+  { key: 'f.THREE_D', tip: 'tips.config.threeD', expert: true },
+  { key: 'f.TRANSPONDER', tip: 'tips.config.transponder', expert: true },
+  { key: 'f.CHANNEL_FORWARDING', tip: 'tips.config.channelForwarding', expert: true },
+  { key: 'f.RSSI_ADC', tip: 'tips.config.rssiAdc', expert: true },
+  { key: 'f.INFLIGHT_ACC_CAL', tip: 'tips.config.inflightAccCal', expert: true },
+  { key: 'f.DASHBOARD', tip: 'tips.config.dashboard', expert: true },
+  { key: 'b.GYRO_CALIBRATED', tip: 'tips.config.beepGyro', expert: true },
+  { key: 'b.RX_LOST', tip: 'tips.config.beepRxLost' },
+  { key: 'b.RX_LOST_LANDING', tip: 'tips.config.beepRxLostLanding', expert: true },
+  { key: 'b.DISARMING', tip: 'tips.config.beepDisarming' },
+  { key: 'b.ARMING', tip: 'tips.config.beepArming' },
+  { key: 'b.BAT_CRIT_LOW', tip: 'tips.config.beepBatCrit' },
+  { key: 'b.BAT_LOW', tip: 'tips.config.beepBatLow' },
+  { key: 'b.DISARM_REPEAT', tip: 'tips.config.beepDisarmRepeat' },
+  { key: 'b.SYSTEM_INIT', tip: 'tips.config.beepSystemInit', expert: true },
+  { key: /^b\./, expert: true },
+  { key: 'autoDisarm', tip: 'tips.config.autoDisarm', expert: true },
+  { key: 'smallAngle', tip: 'tips.config.smallAngle' },
+  { key: 'gyroCal', tip: 'tips.config.gyroCal', expert: true },
+  { key: 'craft', tip: 'tips.config.craft' },
+  { key: 'pilot', tip: 'tips.config.pilot' },
+];
+
+export const mount: ScreenMount = (el, ctx) => {
+  const off = mountFormTab(el, ctx, { ...spec, title: t(K('title')), top: () => intro('tips.config.intro') });
+  const panels: PanelRule[] = [{ title: t(K('gLoop')), expert: true }];
+  const stop = decorateForm(el, ROWS, panels);
+  return () => {
+    stop();
+    off();
+  };
+};

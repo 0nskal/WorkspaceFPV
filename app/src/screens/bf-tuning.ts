@@ -12,6 +12,7 @@ import type { StatusEx } from '../bf/decode';
 import type { Values } from '../bf/fieldtable';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
+import { intro, tip, type TipKey } from '../ui/tip';
 import { t, type Key } from '../i18n';
 import { barHtml, bindForm, disconnectedHtml, errMsg, errorHtml, fieldHtml, Form, noticeHtml, sectionHtml, updateBar, type FieldSpec } from './bf-tuning-ui';
 import { filterChart, maxRatesOf, ratesChart, ratesTypeOf, throttleChart } from './bf-tuning-charts';
@@ -64,7 +65,22 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const v = t(key);
     return v === key ? undefined : v;
   };
-  const s = (g: string, k: string, label: string, min: number, max: number, extra: Partial<FieldSpec> = {}): FieldSpec => ({ g, k, label, min, max, tip: tipFor(k), ...extra });
+  /** Lightbulb tip per field key (axis digit stripped). */
+  const TIP_OF: Record<string, string> = {
+    tpaMode: 'tpa', tpaRate: 'tpa', tpaBreakpoint: 'tpaBreakpoint', itermRelax: 'itermRelax', itermRelaxType: 'itermRelax', itermRelaxCutoff: 'itermRelaxCutoff',
+    antiGravityGain: 'antiGravity', dMaxGain: 'dynDamping', dMaxAdvance: 'dynDamping', throttleBoost: 'throttleBoost', vbatSagCompensation: 'vbatSag', thrustLinearization: 'thrustLin',
+    ratesType: 'ratesType', throttleMid: 'thrMid', throttleExpo: 'thrExpo',
+    gyroLpf1Hz: 'gyroLpf1', gyroLpf1DynMin: 'dynLpf', gyroLpf1DynMax: 'dynLpf', gyroLpf2Hz: 'gyroLpf2',
+    dtermLpf1Hz: 'dtermLpf', dtermLpf1DynMin: 'dynLpf', dtermLpf1DynMax: 'dynLpf', dtermLpf2Hz: 'dtermLpf',
+    dynNotchCount: 'dynNotch', dynNotchQ: 'dynNotch', dynNotchMin: 'dynNotch', dynNotchMax: 'dynNotch', rpmHarmonics: 'rpmFilter', rpmMinHz: 'rpmMin',
+  };
+  const tipKeyOf = (k: string): TipKey | undefined => {
+    const v = TIP_OF[k];
+    return v ? (`tips.tuning.${v}` as TipKey) : undefined;
+  };
+  const s = (g: string, k: string, label: string, min: number, max: number, extra: Partial<FieldSpec> = {}): FieldSpec => ({ g, k, label, min, max, tip: tipFor(k), tipKey: tipKeyOf(k), ...extra });
+  const RATE_TIP: Record<string, string> = { rcRate: 'rcRate', rate: 'rcRate', center: 'rateCenter', superRate: 'superRate', acroPlus: 'superRate', maxRate: 'maxRate', expo: 'expo', rcCurve: 'expo' };
+  const rateTip = (key: string): TipKey => `tips.tuning.${RATE_TIP[key] ?? 'expo'}` as TipKey;
 
   function pidSpecs(): FieldSpec[] {
     const out: FieldSpec[] = [];
@@ -108,9 +124,9 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const out: FieldSpec[] = [s('rc', 'ratesType', t('bfTuning.rates.type'), 0, RATES_TYPES.length - 1, { options: RATES_TYPES.map((k, v) => ({ v, label: t(dKey(`rates.types.${k}`)) })) })];
     for (let a = 0; a < 3; a++) {
       out.push(
-        s('rc', `rcRate${a}`, t(dKey(`rates.f.${ui.rc.key}`)), 0, 255, { scale: ui.rc.scale, unit: ui.rc.unit, slider: true, tip: t(dKey(`rates.tip.${ui.rc.key}`)) }),
-        s('rc', `superRate${a}`, t(dKey(`rates.f.${ui.sr.key}`)), 0, ui.sr.max, { scale: ui.sr.scale, unit: ui.sr.unit, slider: true, tip: t(dKey(`rates.tip.${ui.sr.key}`)) }),
-        s('rc', `rcExpo${a}`, t(dKey(`rates.f.${ui.ex}`)), 0, 100, { scale: 0.01, slider: true, tip: t(dKey(`rates.tip.${ui.ex}`)) }),
+        s('rc', `rcRate${a}`, t(dKey(`rates.f.${ui.rc.key}`)), 0, 255, { scale: ui.rc.scale, unit: ui.rc.unit, slider: true, tip: t(dKey(`rates.tip.${ui.rc.key}`)), tipKey: rateTip(ui.rc.key) }),
+        s('rc', `superRate${a}`, t(dKey(`rates.f.${ui.sr.key}`)), 0, ui.sr.max, { scale: ui.sr.scale, unit: ui.sr.unit, slider: true, tip: t(dKey(`rates.tip.${ui.sr.key}`)), tipKey: rateTip(ui.sr.key) }),
+        s('rc', `rcExpo${a}`, t(dKey(`rates.f.${ui.ex}`)), 0, 100, { scale: 0.01, slider: true, tip: t(dKey(`rates.tip.${ui.ex}`)), tipKey: rateTip(ui.ex) }),
         s('rc', `rateLimit${a}`, t('bfTuning.rates.limit'), 200, 1998, { unit: '°/s' }),
       );
     }
@@ -262,15 +278,15 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const seg = (kind: 'pid' | 'rate', n: number, cur: number) =>
       Array.from({ length: n }, (_, i) => `<button class="bf-tuning-seg${i === cur ? ' on' : ''}" data-act="profile" data-kind="${kind}" data-i="${i}" aria-pressed="${i === cur}">${i + 1}</button>`).join('');
     return `<div class="bf-tuning-profiles">
-      <span class="bf-tuning-pl mono">${t('bfTuning.common.pidProfile')}</span><span class="bf-tuning-segs">${seg('pid', st.pidProfileCount, st.pidProfile)}</span>
-      <span class="bf-tuning-pl mono">${t('bfTuning.common.rateProfile')}</span><span class="bf-tuning-segs">${seg('rate', st.rateProfileCount ?? 4, st.rateProfile)}</span>
+      <span class="bf-tuning-pl mono">${t('bfTuning.common.pidProfile')} ${tip('tips.tuning.profilePid')}</span><span class="bf-tuning-segs">${seg('pid', st.pidProfileCount, st.pidProfile)}</span>
+      <span class="bf-tuning-pl mono">${t('bfTuning.common.rateProfile')} ${tip('tips.tuning.profileRate')}</span><span class="bf-tuning-segs">${seg('rate', st.rateProfileCount ?? 4, st.rateProfile)}</span>
       <span class="bf-tuning-pnote dim">${t('bfTuning.common.profileNote')}</span>
     </div>`;
   }
 
   function subnav(): string {
     return `<div class="bf-tuning-subnav" role="tablist">${(['pid', 'rates', 'filters'] as Sub[])
-      .map((k) => `<button role="tab" class="${k === sub ? 'on' : ''}" aria-selected="${k === sub}" data-act="sub" data-sub="${k}">${t(dKey(`sub.${k}`))}</button>`)
+      .map((k) => `<button role="tab" class="${k === sub ? 'on' : ''}"${k === 'filters' ? ' data-level="expert"' : ''} aria-selected="${k === sub}" data-act="sub" data-sub="${k}">${t(dKey(`sub.${k}`))}</button>`)
       .join('')}</div>`;
   }
 
@@ -296,13 +312,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const rows = [0, 1, 2]
       .map((a) => `<tr><th scope="row">${AXIS_NAME[PID_AXES[a]!]}</th><td>${f('pid', `p${a}`)}</td><td>${f('pid', `i${a}`)}</td><td>${f('pid', `d${a}`)}</td><td>${f('adv', `dMax${a}`)}</td><td>${f('adv', `ff${a}`)}</td></tr>`)
       .join('');
-    const grp = (title: string, keys: string[]) => sectionHtml(title, `<div class="bf-tuning-grid">${keys.map((k) => f('adv', k)).join('')}</div>`);
-    return `${autotuneBanner()}
-      ${sectionHtml(t('bfTuning.pid.tableCap'), `<table class="bf-tuning-tbl"><thead><tr><th scope="col">${t('bfTuning.pid.axis')}</th><th scope="col" title="${escapeHtml(t('bfTuning.tips.p'))}">P</th><th scope="col" title="${escapeHtml(t('bfTuning.tips.i'))}">I</th><th scope="col" title="${escapeHtml(t('bfTuning.tips.d'))}">D</th><th scope="col" title="${escapeHtml(t('bfTuning.tips.dMax'))}">D max</th><th scope="col" title="${escapeHtml(t('bfTuning.tips.ff'))}">F</th></tr></thead><tbody>${rows}</tbody></table>`)}
+    const grp = (title: string, keys: string[], tk?: TipKey) => sectionHtml(title, `<div class="bf-tuning-grid">${keys.map((k) => f('adv', k)).join('')}</div>`, '', { tip: tk, expert: true });
+    return `${intro('tips.tuning.intro')}${autotuneBanner()}
+      ${sectionHtml(t('bfTuning.pid.tableCap'), `<table class="bf-tuning-tbl"><thead><tr><th scope="col">${t('bfTuning.pid.axis')}</th><th scope="col">P ${tip('tips.tuning.p')}</th><th scope="col">I ${tip('tips.tuning.i')}</th><th scope="col">D ${tip('tips.tuning.d')}</th><th scope="col">D max ${tip('tips.tuning.dMax')}</th><th scope="col">F ${tip('tips.tuning.ff')}</th></tr></thead><tbody>${rows}</tbody></table>`, '', { tip: 'tips.tuning.pidTable' })}
       ${hasAdv ? `<div class="bf-tuning-cols">
-        ${grp(t('bfTuning.pid.gTpa'), ['tpaMode', 'tpaRate', 'tpaBreakpoint'])}
-        ${grp(t('bfTuning.pid.gIterm'), ['itermRelax', 'itermRelaxType', 'itermRelaxCutoff', 'antiGravityGain', 'itermRotation'])}
-        ${grp(t('bfTuning.pid.gDmax'), ['dMaxGain', 'dMaxAdvance'])}
+        ${grp(t('bfTuning.pid.gTpa'), ['tpaMode', 'tpaRate', 'tpaBreakpoint'], 'tips.tuning.tpa')}
+        ${grp(t('bfTuning.pid.gIterm'), ['itermRelax', 'itermRelaxType', 'itermRelaxCutoff', 'antiGravityGain', 'itermRotation'], 'tips.tuning.itermRelax')}
+        ${grp(t('bfTuning.pid.gDmax'), ['dMaxGain', 'dMaxAdvance'], 'tips.tuning.dynDamping')}
         ${grp(t('bfTuning.pid.gFf'), ['ffTransition', 'ffAveraging', 'ffSmoothFactor', 'ffBoost', 'ffMaxRateLimit', 'ffJitterFactor'])}
         ${grp(t('bfTuning.pid.gOther'), ['throttleBoost', 'thrustLinearization', 'vbatSagCompensation', 'motorOutputLimit', 'angleLimit', 'acroTrainerAngle', 'dynIdleMinRpm', 'useIntegratedYaw'])}
       </div>` : noticeHtml('warn', t('bfTuning.common.advUnsupported'))}`;
@@ -318,13 +334,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const f = (k: string) => fieldHtml(form, spec(sp, 'rc', k));
     const axisBlock = (a: 0 | 1 | 2) =>
       `<div class="bf-tuning-axis"><div class="bf-tuning-axh mono">${AXIS_NAME[PID_AXES[a]!]}</div>${f(`rcRate${a}`)}${f(`superRate${a}`)}${f(`rcExpo${a}`)}${f(`rateLimit${a}`)}</div>`;
-    return `<div class="bf-tuning-rates">
+    return `${intro('tips.tuning.intro')}<div class="bf-tuning-rates">
       <div class="bf-tuning-rcol">
         ${sectionHtml(t('bfTuning.rates.cap'), `<div class="bf-tuning-grid one">${f('ratesType')}</div><div class="bf-tuning-axes">${axisBlock(0)}${axisBlock(1)}${axisBlock(2)}</div>`)}
         ${sectionHtml(t('bfTuning.rates.thrCap'), `<div class="bf-tuning-grid">${f('throttleMid')}${f('throttleExpo')}${f('throttleHover')}${f('throttleLimitType')}${f('throttleLimitPercent')}</div>`)}
       </div>
       <div class="bf-tuning-rcol">
-        ${sectionHtml(t('bfTuning.rates.curveCap'), `<div class="bf-tuning-plot" data-chart="rates">${ratesChart(form.cur.rc ?? {}, form.orig.rc ?? {})}</div><div data-legend>${ratesLegend()}</div>`, t('bfTuning.rates.curveNote'))}
+        ${sectionHtml(t('bfTuning.rates.curveCap'), `<div class="bf-tuning-plot" data-chart="rates">${ratesChart(form.cur.rc ?? {}, form.orig.rc ?? {})}</div><div data-legend>${ratesLegend()}</div>`, t('bfTuning.rates.curveNote'), { tip: 'tips.tuning.ratesCurve' })}
         ${sectionHtml(t('bfTuning.rates.thrCurve'), `<div class="bf-tuning-plot narrow" data-chart="thr">${throttleChart(form.cur.rc ?? {}, form.orig.rc ?? {}, api())}</div>`)}
       </div>
     </div>`;
@@ -340,10 +356,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const grid = (keys: string[]) => `<div class="bf-tuning-grid two">${keys.map(f).join('')}</div>`;
     return `<div class="bf-tuning-rates">
       <div class="bf-tuning-rcol">
-        ${sectionHtml(t('bfTuning.filters.gyro'), grid(['gyroLpf1Hz', 'gyroLpf1Type', 'gyroLpf1DynMin', 'gyroLpf1DynMax', 'gyroLpf2Hz', 'gyroLpf2Type']))}
-        ${sectionHtml(t('bfTuning.filters.dterm'), grid(['dtermLpf1Hz', 'dtermLpf1Type', 'dtermLpf1DynMin', 'dtermLpf1DynMax', 'dtermLpf2Hz', 'dtermLpf2Type', 'yawLpfHz', 'dynLpfCurveExpo']))}
-        ${sectionHtml(t('bfTuning.filters.dynNotch'), grid(['dynNotchCount', 'dynNotchQ', 'dynNotchMin', 'dynNotchMax']))}
-        ${sectionHtml(t('bfTuning.filters.rpm'), `${rpmWarn}${grid(['rpmHarmonics', 'rpmMinHz'])}`)}
+        ${sectionHtml(t('bfTuning.filters.gyro'), grid(['gyroLpf1Hz', 'gyroLpf1Type', 'gyroLpf1DynMin', 'gyroLpf1DynMax', 'gyroLpf2Hz', 'gyroLpf2Type']), '', { tip: 'tips.tuning.filtersIntro' })}
+        ${sectionHtml(t('bfTuning.filters.dterm'), grid(['dtermLpf1Hz', 'dtermLpf1Type', 'dtermLpf1DynMin', 'dtermLpf1DynMax', 'dtermLpf2Hz', 'dtermLpf2Type', 'yawLpfHz', 'dynLpfCurveExpo']), '', { tip: 'tips.tuning.dtermLpf' })}
+        ${sectionHtml(t('bfTuning.filters.dynNotch'), grid(['dynNotchCount', 'dynNotchQ', 'dynNotchMin', 'dynNotchMax']), '', { tip: 'tips.tuning.dynNotch' })}
+        ${sectionHtml(t('bfTuning.filters.rpm'), `${rpmWarn}${grid(['rpmHarmonics', 'rpmMinHz'])}`, '', { tip: 'tips.tuning.rpmFilter' })}
         <details class="bf-tuning-more"><summary>${t('bfTuning.filters.legacy')}</summary>${grid(['gyroNotch1Hz', 'gyroNotch1Cutoff', 'gyroNotch2Hz', 'gyroNotch2Cutoff', 'dtermNotchHz', 'dtermNotchCutoff'])}</details>
       </div>
       <div class="bf-tuning-rcol bf-tuning-sticky">
@@ -369,6 +385,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       root.innerHTML = errorHtml(error);
       return;
     }
+    if (sub === 'filters' && document.documentElement.dataset.mode === 'basic') sub = lastSub = 'pid';
     const body = sub === 'pid' ? pidView() : sub === 'rates' ? ratesView() : filtersView();
     root.innerHTML = `<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfTuning.tab')}</div>${profileBar()}</div>${subnav()}<div class="bf-tuning-body">${body}</div>${barHtml()}`;
     root.scrollTop = top;
@@ -457,11 +474,21 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     }
   });
 
+  // Basic mode has no Filters tab: leave it when the mode is switched while this tab is open
+  const modeObs = new MutationObserver(() => {
+    if (sub === 'filters' && document.documentElement.dataset.mode === 'basic') {
+      sub = lastSub = 'pid';
+      render();
+    }
+  });
+  modeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] });
+
   void load();
   render();
 
   return () => {
     disposed = true;
+    modeObs.disconnect();
     off();
     unbind();
     root.remove();

@@ -14,11 +14,13 @@ import { hasWebSerial } from './serial/port';
 import type { CliEntry, FcLink } from './serial/types';
 import { SettingsStore, loadBackup, saveBackup } from './settings';
 import { getLang, onLanguageChange, t } from './i18n';
-import { DEFAULT_SCREEN, SCREENS, findScreen } from './screens/registry';
+import { DEFAULT_SCREEN, SCREENS, findScreen, screenVisible } from './screens/registry';
 import { downloadText, escapeHtml, stamp } from './ui/dom';
 import { createDrawer, type Drawer } from './ui/drawer';
 import { icon, logo } from './ui/icons';
 import { confirmDialog, toast } from './ui/modal';
+import { applyModeAttrs, chooseModeDialog, currentMode, modeSwitchHtml } from './ui/mode';
+import { initTips } from './ui/tip';
 import { updatesApi } from './updates';
 const parseRoute = (): Route => {
   const h = location.hash.replace(/^#\/?/, '');
@@ -69,7 +71,7 @@ export function createApp(root: HTMLElement): AppContext {
   const ai = new Assistant(
     () => {
       const s = settings.get();
-      return { provider: s.aiProvider, lang: getLang(), anthropicKey: s.apiKey, anthropicModel: s.model, claudeCodeModel: s.claudeCodeModel, geminiKey: s.geminiKey, geminiModel: s.geminiModel, ollamaUrl: s.ollamaUrl, ollamaModel: s.ollamaModel };
+      return { provider: s.aiProvider, lang: getLang(), uiMode: s.uiMode || 'basic', anthropicKey: s.apiKey, anthropicModel: s.model, claudeCodeModel: s.claudeCodeModel, geminiKey: s.geminiKey, geminiModel: s.geminiModel, ollamaUrl: s.ollamaUrl, ollamaModel: s.ollamaModel };
     },
     () => buildContext(store.get(), store.get().conn === 'connected' ? diagnose(store.get(), bf.get()) : null, bf.get()),
   );
@@ -269,13 +271,14 @@ export function createApp(root: HTMLElement): AppContext {
   /** Second bar: every tab in registry order, a thin divider between groups (overview | FC setup | tuning | tools). */
   function navHtml(): string {
     let prev = '';
-    return SCREENS.filter((sc) => sc.nav !== false)
+    const mode = currentMode(settings);
+    return SCREENS.filter((sc) => sc.nav !== false && screenVisible(sc, mode))
       .map((sc) => {
         const sep = prev && sc.group !== prev ? '<span class="nav-sep" aria-hidden="true"></span>' : '';
         prev = sc.group;
         return `${sep}<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${t(sc.titleKey)}</a>`;
       })
-      .join('');
+      .join('') + '<span class="nav-ind" aria-hidden="true"></span>';
   }
 
   /** (Re)builds the whole shell: top bar, tab bar from the screen registry, empty screen area. Called on start and on language change. */
@@ -290,6 +293,7 @@ export function createApp(root: HTMLElement): AppContext {
       <div class="tel">
         <svg class="gyro" width="98" height="22" viewBox="0 0 98 22" aria-hidden="true"><polyline fill="none" stroke="#CFE6F2" stroke-width="1.1" points=""/></svg>
         <span class="rssi">RSSI <b>—</b></span>
+        ${modeSwitchHtml(currentMode(settings))}
         <button class="ib" data-act="settings" title="${t('shell.settings')}" aria-label="${t('shell.settings')}">${icon('settings', 17)}</button>
         <button class="ib" data-act="drawer" title="${t('shell.drawerToggle')}" aria-label="${t('shell.assistantAria')}">${icon('panel', 17)}</button>
       </div>
@@ -371,9 +375,33 @@ export function createApp(root: HTMLElement): AppContext {
     screenEl.innerHTML = '';
     screenEl.dataset.route = current;
     const def = findScreen(current) ?? findScreen(DEFAULT_SCREEN);
-    if (def) unmount = def.mount(screenEl, ctx);
+    if (def && !screenVisible(def, currentMode(settings))) {
+      // Expert-only tab opened in Basic mode (old link, AI pointer): say so instead of hiding it silently.
+      screenEl.innerHTML = `<div class="expert-only"><p>${t('mode.expertOnly')}</p><button class="btn p" data-act="to-expert">${t('mode.expertOnlyAction')}</button></div>`;
+    } else if (def) unmount = def.mount(screenEl, ctx);
     navEl.querySelectorAll<HTMLElement>('a').forEach((a) => a.classList.toggle('on', a.dataset.route === current));
+    moveIndicator();
     syncLayout();
+    enterScreen();
+  }
+
+  const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** Slides the tab underline to the active tab (transform only; the first placement does not animate). */
+  function moveIndicator(): void {
+    const ind = navEl.querySelector<HTMLElement>('.nav-ind');
+    if (!ind) return;
+    const a = navEl.querySelector<HTMLElement>('a.on');
+    ind.hidden = !a;
+    if (!a) return;
+    ind.style.transform = `translateX(${a.offsetLeft}px) scaleX(${a.offsetWidth})`;
+    if (!ind.classList.contains('ready')) requestAnimationFrame(() => ind.classList.add('ready'));
+  }
+
+  /** New tab content fades up 4px (WAAPI: runs on the compositor while the screen is still rendering). */
+  function enterScreen(): void {
+    if (reduceMotion()) return;
+    screenEl.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   }
 
   function renderBar(): void {
@@ -407,9 +435,30 @@ export function createApp(root: HTMLElement): AppContext {
     gyroLine.setAttribute('points', gyro.map((g, i) => `${(i * 2.2).toFixed(1)},${(20.5 - Math.min(19, (g / max) * 19)).toFixed(1)}`).join(' '));
   }
 
+  /** Switches Basic/Expert: rebuilds the tab bar in place; an expert-only screen gets the "switch to Expert" note. */
+  function setMode(m: 'basic' | 'expert'): void {
+    if (currentMode(settings) === m && settings.get().uiMode) return;
+    settings.set({ uiMode: m });
+    navEl.innerHTML = navHtml();
+    const sw = root.querySelector<HTMLElement>('.mode-sw');
+    if (sw) {
+      sw.dataset.on = m;
+      sw.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
+    }
+    renderBar();
+    mountScreen();
+    toast(t(m === 'basic' ? 'mode.toBasic' : 'mode.toExpert'), 'info');
+  }
+
   root.addEventListener('click', (e) => {
+    const modeBtn = (e.target as HTMLElement).closest<HTMLElement>('.mode-sw [data-mode]')?.dataset.mode;
+    if (modeBtn === 'basic' || modeBtn === 'expert') {
+      setMode(modeBtn);
+      return;
+    }
     const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'settings') ctx.navigate('ustawienia');
+    else if (act === 'to-expert') setMode('expert');
     else if (act === 'drawer') {
       drawerOpen = !drawerOpen;
       syncLayout();
@@ -444,10 +493,18 @@ export function createApp(root: HTMLElement): AppContext {
     window.workspacefpv?.setLanguage?.(lang);
   });
 
+  // ?mode=basic|expert (screenshots, links from the docs) sets the interface mode without asking.
+  const qMode = new URLSearchParams(location.search).get('mode');
+  if (qMode === 'basic' || qMode === 'expert') settings.set({ uiMode: qMode });
+  applyModeAttrs(settings);
+  settings.subscribe(() => applyModeAttrs(settings));
+  initTips();
+
   buildShell();
   renderBar();
   mountScreen();
   window.workspacefpv?.setLanguage?.(getLang());
+  if (!settings.get().uiMode) void chooseModeDialog().then((m) => setMode(m));
 
   // ?demo=1 enters demo mode right away (for screenshots)
   if (new URLSearchParams(location.search).get('demo') === '1') void connectDemo();

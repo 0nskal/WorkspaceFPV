@@ -6,6 +6,8 @@ import type { BfData, MspWrite } from '../bf/store';
 import type { ScreenMount } from '../context';
 import { t, type Key } from '../i18n';
 import { escapeHtml } from '../ui/dom';
+import { intro, tip } from '../ui/tip';
+import { decorateForm, type RowRule } from '../bf/form-decor';
 
 const K = (k: string) => `bfFailsafe.${k}` as Key;
 const s10 = (v: number) => Math.round(v) / 10;
@@ -32,7 +34,8 @@ function channelName(i: number): string {
   return i < 4 ? t(K(['roll', 'pitch', 'yaw', 'thr'][i] as string)) : t(K('aux'), { n: i - 3 });
 }
 
-const flowHtml = () => `<section class="bf-panel wide bf-fs-flow">
+const flowHtml = () => `${intro('tips.failsafe.intro')}<section class="bf-panel wide bf-fs-flow">
+  <header><span>${escapeHtml(t(K('tab')))} ${tip('tips.failsafe.flow')}</span></header>
   <div class="bf-fs-steps">
     ${[1, 2, 3].map((n) => `<div class="bf-fs-step"><i class="mono">${n}</i><b>${t(K(`flow${n}`))}</b><small>${t(K(`flow${n}Text`))}</small></div>`).join('<span class="bf-fs-arrow" aria-hidden="true">→</span>')}
   </div>
@@ -68,7 +71,7 @@ function groups(bf: BfData, draft: Draft): Group[] {
       wide: true,
       fields,
       render: (dr, base) => {
-        const rows: string[] = [`<div class="bf-fs-ch head mono"><span>${escapeHtml(t(K('channel')))}</span><span>${escapeHtml(t(K('mode')))}</span><span>${escapeHtml(t(K('value')))}</span></div>`];
+        const rows: string[] = [`<div class="bf-fs-ch head mono"><span>${escapeHtml(t(K('channel')))}</span><span>${escapeHtml(t(K('mode')))} ${tip('tips.failsafe.chMode')}</span><span>${escapeHtml(t(K('value')))} ${tip('tips.failsafe.chValue')}</span></div>`];
         for (let i = 0; i < n; i++) {
           rows.push(`<div class="bf-fs-ch"><span class="bf-fs-chn mono">${i + 1} · ${escapeHtml(channelName(i))}</span>${bareHtml(fields[i * 2]!, dr, base)}${bareHtml(fields[i * 2 + 1]!, dr, base)}</div>`);
         }
@@ -112,4 +115,20 @@ const spec: TabSpec = {
   top: () => flowHtml(),
 };
 
-export const mount: ScreenMount = (el, ctx) => mountFormTab(el, ctx, { ...spec, title: t(K('title')) });
+const ROWS: RowRule[] = [
+  { key: 'delay', tip: 'tips.failsafe.delay' },
+  { key: 'procedure', tip: 'tips.failsafe.procedure' },
+  { key: 'offDelay', tip: 'tips.failsafe.offDelay' },
+  { key: 'throttle', tip: 'tips.failsafe.throttle' },
+  { key: 'throttleLow', tip: 'tips.failsafe.throttleLow' },
+  { key: 'switchMode', tip: 'tips.failsafe.switchMode' },
+];
+
+export const mount: ScreenMount = (el, ctx) => {
+  const off = mountFormTab(el, ctx, { ...spec, title: t(K('title')) });
+  const stop = decorateForm(el, ROWS);
+  return () => {
+    stop();
+    off();
+  };
+};

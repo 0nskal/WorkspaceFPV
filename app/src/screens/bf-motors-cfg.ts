@@ -24,6 +24,7 @@ import { AREA, rawOf, STEP } from '../bf/steps';
 import type { MspWrite } from '../bf/store';
 import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
+import { tip } from '../ui/tip';
 
 export interface MotorCfgHandle {
   destroy(): void;
@@ -143,27 +144,28 @@ export function mountMotorConfig(host: HTMLElement, ctx: AppContext, opts: { onR
     const idleBad = bad.includes('idle');
     const polesBad = bad.includes('poles');
     host.innerHTML = `
-      <header><span class="mono">${t('bfMotors.head')}</span><span class="mono esc-key">MSP · API 1.${apiMinor()}</span></header>
+      <header><span class="mono">${t('bfMotors.head')}</span><span class="mono esc-key" data-level="expert">MSP · API 1.${apiMinor()}</span></header>
+      <div class="bf-motors-protohead"><span class="mono">${t('esc.protoAria')}</span> ${tip('tips.motors.protocol')}</div>
       <div class="esc-seg bf-motors-seg" role="radiogroup" aria-label="${t('esc.protoAria')}">${seg}</div>
       <div class="esc-bidir${fieldCls(edit.bidir !== b.bidir)}">
-        <div><b>${t('esc.bidirTitle')}</b><small class="mono" title="${escapeHtml(t('bfMotors.bidirTip'))}">dshot_bidir</small></div>
+        <div><b>${t('esc.bidirTitle')}</b> ${tip('tips.motors.bidir')}<small class="mono" data-level="expert" title="${escapeHtml(t('bfMotors.bidirTip'))}">dshot_bidir</small></div>
         <button type="button" class="esc-sw${edit.bidir ? ' on' : ''}" role="switch" aria-checked="${edit.bidir}" data-act="bidir" ${dshot ? '' : 'disabled'} aria-label="${t('esc.bidirAria')}"><span class="esc-sw-t mono">${edit.bidir ? 'ON' : 'OFF'}</span><i></i></button>
       </div>
       ${dshot ? '' : `<p class="esc-note esc-bidir-note mono">${t('esc.bidirDshotOnly')}</p>`}
       <div class="bf-motors-grid">
         <label class="bf-motors-f${fieldCls(num(edit.idle) !== num(b.idle))}${idleBad ? ' bad' : ''}" title="${escapeHtml(t('bfMotors.idleTip'))}">
-          <span>${t('bfMotors.idle')}</span>
+          <span>${t('bfMotors.idle')} ${tip('tips.motors.idle')}</span>
           <span class="bf-motors-in"><input type="number" inputmode="decimal" min="0" max="20" step="0.25" value="${escapeHtml(edit.idle)}" data-f="idle" aria-label="${t('bfMotors.idle')}"><em class="mono">%</em></span>
           <small class="mono">dshot_idle_value</small>
         </label>
         <label class="bf-motors-f${fieldCls(num(edit.poles) !== num(b.poles))}${polesBad ? ' bad' : ''}" title="${escapeHtml(t('bfMotors.polesTip'))}">
-          <span>${t('bfMotors.poles')}</span>
+          <span>${t('bfMotors.poles')} ${tip('tips.motors.poles')}</span>
           <span class="bf-motors-in"><input type="number" inputmode="numeric" min="4" max="64" step="2" value="${escapeHtml(edit.poles)}" data-f="poles" aria-label="${t('bfMotors.poles')}"><em class="mono">pcs</em></span>
           <small class="mono">motor_poles</small>
         </label>
       </div>
       <div class="esc-bidir${fieldCls(edit.reversed !== b.reversed)}">
-        <div><b>${t('bfMotors.direction')}</b><small class="mono" title="${escapeHtml(t('bfMotors.directionTip'))}">yaw_motors_reversed</small></div>
+        <div><b>${t('bfMotors.direction')}</b> ${tip('tips.motors.direction')}<small class="mono" data-level="expert" title="${escapeHtml(t('bfMotors.directionTip'))}">yaw_motors_reversed</small></div>
         <span class="esc-tog" role="group" aria-label="${t('bfMotors.direction')}"><button type="button" data-act="dir-in" class="${edit.reversed ? '' : 'on'}" aria-pressed="${!edit.reversed}">${t('bfMotors.propsIn')}</button><button type="button" data-act="dir-out" class="${edit.reversed ? 'on' : ''}" aria-pressed="${edit.reversed}">${t('bfMotors.propsOut')}</button></span>
       </div>
       <p class="esc-note mono">${t('esc.bidirNote')}</p>

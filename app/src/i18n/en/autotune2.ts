@@ -138,4 +138,16 @@ export const enAutotune2 = {
     dterm: 'No D-term (axisD) in the log: D-term noise is not checked.',
     rate: 'Logging rate is low. Use at least 1 kHz (2 kHz is better).',
   },
+  chirp: {
+    ok: '{axis}: clean loop. Phase margin {pm}°, sensitivity peak {s} dB, bandwidth {bw} Hz. Nothing to change.',
+    sensHigh: '{axis}: sensitivity peak {s} dB at {sHz} Hz. Disturbances near that frequency get amplified (bounce-back, mid-throttle wobble). Usually too much D for the filter delay, or too much delay: try a little less D, or less gyro / D-term filtering if the noise allows it.',
+    sensLow: '{axis}: sensitivity peak {s} dB at {sHz} Hz. A low-frequency hump points to too much P against too little D, or an I-term that winds up: try a little less P (or a little more D).',
+    lowPm: '{axis}: phase margin only {pm}° at {fc} Hz crossover. Below 45° the quad rings after moves, below 30° it is close to oscillating. Lower P or the master multiplier a little, or cut filter delay.',
+    tPeak: '{axis}: tracking peak {t} dB at {tHz} Hz. The quad overshoots fast moves around that frequency. A little more D or a little less P/FF smooths it.',
+    room: '{axis}: lots of margin (phase {pm}°, sensitivity {s} dB). There is room for a slightly sharper tune: try +5-10 % P (PI slider) and fly CHIRP again.',
+    lowCoh: '{axis}: coherence only {coh} %. The data is noisy or the sweep was too small, so the numbers for this axis are rough. Fly again in calm air, keep the sticks still, or raise chirp_amplitude_{axis}.',
+    incomplete: '{axis}: the sweep stopped at {hz} Hz after {s} s. Keep the CHIRP switch on until the sweep ends (chirp_time_seconds), otherwise the high frequencies are missing.',
+    missingAxes: 'No sweep for: {axes}. Each new flick of the CHIRP switch tests the next axis (roll, pitch, yaw).',
+    ffOn: 'Feedforward was on during the test. Tracking is still right, but sensitivity and margins are only approximate. For the cleanest measurement fly CHIRP with stick response (feedforward) at 0.',
+  },
 };

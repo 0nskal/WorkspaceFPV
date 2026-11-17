@@ -13,6 +13,7 @@
  */
 import { advice, type Advice } from './advice';
 import { analyze } from './analyze';
+import { analyzeChirp, hasChirpDebug, type ChirpResult } from './chirp';
 import { filterDelay, recommendFilters, dtermNoiseDb, DTERM_NOISY_DB, type FilterDelay, type FilterRecommendation } from './filters';
 import { analyzeNoise, type NoiseAnalysis } from './noise';
 import { recommendPids, type PidRecommendation } from './pidrec';
@@ -49,6 +50,8 @@ export interface SessionSummary {
   usable: boolean;
   firmware: string | null;
   craft: string | null;
+  /** The session holds CHIRP sweeps (debug_mode = CHIRP). */
+  chirp: boolean;
 }
 
 export interface LogNeeds {
@@ -84,6 +87,10 @@ export interface AutotuneResult {
   seriesCurves: SeriesCurve[];
   procedure: ProcedureStep[];
   nextStep: ProcedureId | null;
+  /** CHIRP frequency-response analysis of the analysed session, or of the first session with chirp data. */
+  chirp: ChirpResult | null;
+  /** Index of the session the CHIRP analysis comes from. */
+  chirpSession: number | null;
   /** Wall time of the run [ms]. */
   ms: number;
 }
@@ -135,11 +142,14 @@ export function autotune(input: LogData | LogData[], opts: AutotuneOptions = {},
     usable: l.rows >= MIN_ROWS,
     firmware: l.settings?.firmwareRevision ?? null,
     craft: l.settings?.craft ?? null,
+    chirp: hasChirpDebug(l),
   }));
+  // a chirp flight has no stick steps: pick a normal flight for the step / noise analysis when there is one
+  const normal = sessions.some((s) => s.usable && !s.chirp);
   let idx = opts.session ?? -1;
   if (!(idx >= 0 && idx < logs.length && sessions[idx]!.usable)) {
     idx = -1;
-    for (const s of sessions) if (s.usable && (idx < 0 || s.duration > sessions[idx]!.duration)) idx = s.index;
+    for (const s of sessions) if (s.usable && !(normal && s.chirp) && (idx < 0 || s.duration > sessions[idx]!.duration)) idx = s.index;
   }
   if (idx < 0) throw Object.assign(new Error('at.err.tooShort'), { code: 'short', key: 'at.err.tooShort', params: { n: Math.max(0, ...logs.map((l) => l.rows)) } });
   const log = logs[idx]!;
@@ -164,7 +174,7 @@ export function autotune(input: LogData | LogData[], opts: AutotuneOptions = {},
 
   let series: SeriesResult | null = null;
   const seriesCurves: SeriesCurve[] = [];
-  const usable = sessions.filter((s) => s.usable);
+  const usable = sessions.filter((s) => s.usable && !s.chirp);
   if (usable.length >= 2 && opts.series !== false) {
     const items = usable.map((s, k) => {
       const l = logs[s.index]!;
@@ -179,6 +189,8 @@ export function autotune(input: LogData | LogData[], opts: AutotuneOptions = {},
     const dDb = dtermNoiseDb(noise.dterm);
     series = compareSeries(items, { ...(opts.hotMotors ? { hotMotors: true } : {}), dtermNoisy: dDb !== null && dDb > DTERM_NOISY_DB });
   }
+  const chirpSession = sessions[idx]!.chirp ? idx : (sessions.find((s) => s.chirp)?.index ?? null);
+  const chirp = chirpSession === null ? null : analyzeChirp(logs[chirpSession]!);
   prog(1);
   return {
     version: AUTOTUNE_VERSION,
@@ -198,6 +210,8 @@ export function autotune(input: LogData | LogData[], opts: AutotuneOptions = {},
     seriesCurves,
     procedure: PROCEDURE,
     nextStep: series ? nextProcedureStep(series.param) : null,
+    chirp,
+    chirpSession: chirp ? chirpSession : null,
     ms: Date.now() - t0,
   };
 }

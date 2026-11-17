@@ -84,6 +84,20 @@ export const plTipsTuning: typeof enTipsTuning = {
     msc: "Restartuje kontroler jako pendrive USB, żeby skopiować logi z karty SD albo flasha na płytkach, które to wspierają. Betaflight w tym trybie nie działa. Odłącz i podłącz USB, żeby wrócić do normalnej pracy.",
   },
   autotune: {
+    chirp:
+      "**CHIRP** to test systemu wbudowany w Betaflight 2026: kontroler buja jedną osią sinusoidą od 0,2 Hz do kilkuset Hz, a Ty tylko wisisz. Pobudzenie jest znane i obejmuje wszystkie częstotliwości, więc wynik jest dużo dokładniejszy niż odpowiedź skokowa ze zwykłego lotu. Tabela ocenia każdą oś: **dobrze** to czułość poniżej 6 dB i zapas fazy powyżej 45°.",
+    chirpSetup:
+      "Potrzebujesz firmware'u zbudowanego z CHIRP, przełącznika dla trybu CHIRP i debug_mode = CHIRP. Leć przy spokojnym powietrzu w Acro, zawiśnij, nie ruszaj drążkami. Każde włączenie przełącznika testuje następną oś (roll → pitch → yaw). Aplikacja zmienia tylko debug mode; nigdy nie steruje dronem.",
+    chirpBode:
+      "**Śledzenie T** (biała linia): 0 dB oznacza, że dron dokładnie nadąża za setpointem na tej częstotliwości; miejsce, gdzie spada poniżej **-3 dB** (zielona linia), to pasmo, czyli miara ostrości strojenia. **Czułość S** (czerwona przerywana): jak bardzo wzmacniane są zakłócenia (propwash, wiatr, ugięcia ramy). Powyżej **+6 dB** (bursztynowa linia) to sygnał ostrzegawczy. Wyblakłe fragmenty mają niską koherencję.",
+    chirpMargins:
+      "**Zapas fazy** odczytuje się tam, gdzie pętla otwarta L przecina 0 dB (bursztynowy znacznik): jak daleko faza jest od -180°. Powyżej 45° jest spokojnie, 30-45° trochę dzwoni, poniżej 30° blisko oscylacji. Opóźnienie filtrów zjada fazę, więc mocniejsze filtrowanie zmniejsza zapas.",
+    chirpCoh:
+      "Koherencja 0-1 mówi, jaką część gyro tłumaczy setpoint. Powyżej 0,8 pomiar jest wiarygodny. Niska koherencja przy wysokich częstotliwościach jest normalna (wygrywa szum); niska w środku pasma oznacza wiatr, ruchy drążkami albo za małą amplitudę chirp.",
+    chirpStep:
+      "Odpowiedź skokowa policzona z przemiatania (odwrotna transformata Fouriera T), 1,0 = cel. Odpowiada temu, co widać w zakładce Odpowiedź skokowa, ale nie wymaga szarpnięć drążkami, więc jest czysta nawet dla yaw.",
+    chirpAdvice:
+      "Wskazówki z charakterystyki częstotliwościowej. Pokazują kierunek (mniej D, mniej P, mniejsze opóźnienie filtrów, miejsce na więcej P), ale niczego nie wprowadzają: liczby z CHIRP są dokładne, automatyczne reguły na nich już nie. Zmień trochę jeden suwak, poleć CHIRP jeszcze raz i porównaj krzywe.",
     intro:
       "**Jak działa Autotune:** robisz jeden krótki lot testowy, a dron go nagrywa. Aplikacja czyta to nagranie, sprawdza, jak czysto dron podąża za drążkami, jak bardzo drga i jak radzi sobie ze ścięciem gazu, a potem wybiera jedną małą, bezpieczną zmianę. Klikasz Zastosuj, lecisz jeszcze raz i widzisz, czy jest lepiej. Jedno kliknięcie Cofnij przywraca stare ustawienia.",
     bDrone:

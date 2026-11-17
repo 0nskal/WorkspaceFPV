@@ -5,6 +5,7 @@
  */
 import type { Advice, Severity } from '../analysis/advice';
 import type { AutotuneResult } from '../analysis/autotune';
+import { chirpSetupCli, COH_MIN, S_MAX_FAIR_DB, type ChirpAxis } from '../analysis/chirp';
 import type { NoiseSignal, Spectrogram } from '../analysis/noise';
 import type { AxisSteps, CurveMetrics, StepBucket } from '../analysis/step2';
 import { fmtNum, t } from '../i18n';
@@ -12,10 +13,10 @@ import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { tip, type TipKey } from '../ui/tip';
 import { AREAS, applyUnits, selectedCommands, verdicts, type ApplyUnit } from '../wizard/verdict';
-import { AMBER, BLUE, eventsChart, gauge, heatCanvas, heatGradient, heatRange, HOT, INK, SERIES_STYLE, spectrumChart, stepChart, type StepLine } from './autotune-charts';
+import { AMBER, BLUE, bodeChart, eventsChart, GREEN, gauge, heatCanvas, heatGradient, heatRange, HOT, INK, SERIES_STYLE, spectrumChart, stepChart, type StepLine } from './autotune-charts';
 import { btn, busyBlock, chip, dropBlock, k, qualityBlock, type ExpertTab, type ViewModel } from './autotune-flow';
 
-const TABS: ExpertTab[] = ['overview', 'step', 'noise', 'filters', 'propwash', 'pids', 'series', 'rounds'];
+const TABS: ExpertTab[] = ['overview', 'step', 'noise', 'filters', 'propwash', 'pids', 'series', 'chirp', 'rounds'];
 const AXES = ['roll', 'pitch', 'yaw'] as const;
 const AXIS_NAME = { roll: 'Roll', pitch: 'Pitch', yaw: 'Yaw' } as const;
 const SEV_RANK: Record<Severity, number> = { critical: 4, warn: 3, suggest: 2, info: 1, ok: 0 };
@@ -238,6 +239,88 @@ function propwashSection(vm: ViewModel, r: AutotuneResult, units: ApplyUnit[]): 
     <div class="pw-panel ax-mt">${cap(t('atFlow.expert.propwash.timeline'))}${eventsChart(p.eventTimes, r.analysis.duration, { aria: t('atFlow.expert.propwash.timelineAria', { n: p.events }) })}</div>`;
 }
 
+/* ---------------- CHIRP ---------------- */
+
+const RATING_CHIP = { good: 'ok', fair: 'warn', bad: 'hot' } as const;
+
+function chirpSetup(vm: ViewModel): string {
+  const cli = chirpSetupCli();
+  const steps = (['fw', 'mode', 'debug', 'fly', 'load'] as const).map((s) => `<li>${t(k(`atFlow.expert.chirp.how.${s}`))}</li>`).join('');
+  const block = !vm.facts.connected ? 'needFc' : vm.facts.armed ? 'armed' : null;
+  return `<div class="pw-panel">${cap(t('atFlow.expert.chirp.setupCap'), 'tips.autotune.chirpSetup')}
+      <p class="pw-hint">${t('atFlow.expert.chirp.what')}</p>
+      <ol class="ax-steps">${steps}</ol>
+      <div class="at-cmd mono">${cli.map((c) => `<div>${escapeHtml(c)}</div>`).join('')}</div>
+      <div class="ax-ctrl">${btn('chirp-setup', t('atFlow.expert.chirp.setupBtn'), 'ghost', { icon: 'arrowUp', disabled: !!block, title: block ? t(k(`atFlow.expert.block.${block}`)) : '' })}</div>
+    </div>`;
+}
+
+function chirpMetrics(axes: Array<ChirpAxis | null>): string {
+  const row = (ax: ChirpAxis) =>
+    `<tr><th scope="row">${AXIS_NAME[AXES[ax.axis]]}</th><td>${chip(RATING_CHIP[ax.rating], t(k(`atFlow.expert.chirp.rating.${ax.rating}`)))}</td><td>${num(ax.bandwidthHz, 0, ' Hz')}</td><td>${num(ax.crossoverHz, 0, ' Hz')}</td><td class="${ax.phaseMarginDeg !== null && ax.phaseMarginDeg < 45 ? 'bad' : ''}">${num(ax.phaseMarginDeg, 0, '°')}</td><td>${num(ax.gainMarginDb, 1, ' dB')}</td><td class="${ax.sMaxDb > S_MAX_FAIR_DB ? 'bad' : ''}">${num(ax.sMaxDb, 1, ' dB')} @ ${num(ax.sMaxHz, 0)} Hz</td><td>${num(ax.tPeakDb, 1, ' dB')} @ ${num(ax.tPeakHz, 0)} Hz</td><td class="${ax.coherence < COH_MIN ? 'bad' : ''}">${Math.round(ax.coherence * 100)}%</td><td>${num(ax.overshoot, 0, ' %')}</td><td>${num(ax.riseMs, 0, ' ms')}</td></tr>`;
+  const h = (['axis', 'rating', 'bw', 'fc', 'pm', 'gm', 'smax', 'tpeak', 'coh', 'os', 'rise'] as const).map((c) => `<th scope="col">${t(k(`atFlow.expert.chirp.col.${c}`))}</th>`).join('');
+  return `<div class="pw-scroll"><table class="ax-tbl"><thead><tr>${h}</tr></thead><tbody>${axes.filter((a): a is ChirpAxis => !!a).map(row).join('')}</tbody></table></div>`;
+}
+
+const legendOf = (items: Array<[string, string, string]>) =>
+  `<ul class="ax-legend">${items.map(([l, col, d]) => `<li><svg width="28" height="8" aria-hidden="true"><line x1="0" x2="28" y1="4" y2="4" stroke="${col}" stroke-width="2"${d ? ` stroke-dasharray="${d}"` : ''}/></svg>${escapeHtml(l)}</li>`).join('')}</ul>`;
+
+function chirpCharts(ax: ChirpAxis, axisName: (typeof AXES)[number]): string {
+  const fMin = Math.max(1, ax.bode[0]!.hz * 0.95);
+  const fMax = ax.bode[ax.bode.length - 1]!.hz * 1.05;
+  const weak = ax.bode.map((p) => p.coh < 0.6);
+  const marks = [
+    ...(ax.bandwidthHz ? [{ hz: ax.bandwidthHz, label: `BW ${Math.round(ax.bandwidthHz)} Hz`, color: GREEN }] : []),
+    ...(ax.crossoverHz ? [{ hz: ax.crossoverHz, label: `fc ${Math.round(ax.crossoverHz)}`, color: AMBER }] : []),
+  ];
+  const lo = Math.floor(Math.min(...ax.bode.map((p) => Math.min(p.tDb, p.sDb))) / 10) * 10;
+  const hi = Math.ceil(Math.max(...ax.bode.map((p) => Math.max(p.tDb, p.sDb))) / 5) * 5;
+  const mag = bodeChart(
+    [
+      { pts: ax.bode.map((p) => [p.hz, p.tDb] as [number, number]), color: INK, glow: true, weak },
+      { pts: ax.bode.map((p) => [p.hz, p.sDb] as [number, number]), color: HOT, dash: '6 3', weak },
+    ],
+    { aria: t('atFlow.expert.chirp.magAria', { axis: AXIS_NAME[axisName] }), noData: t('at.stepNoData'), unit: 'dB', fMin, fMax, yMin: Math.max(-40, Math.min(-30, lo)), yMax: Math.min(20, Math.max(10, hi)), guides: [{ v: S_MAX_FAIR_DB, label: '+6 dB' }, { v: -3, label: '-3 dB', color: GREEN }], marks },
+  );
+  const phLo = Math.max(-360, Math.floor(Math.min(...ax.bode.map((p) => Math.min(p.tDeg, p.lDeg))) / 90) * 90);
+  const phHi = Math.min(180, Math.ceil(Math.max(...ax.bode.map((p) => Math.max(p.tDeg, p.lDeg))) / 90) * 90);
+  const phase = bodeChart(
+    [
+      { pts: ax.bode.map((p) => [p.hz, p.tDeg] as [number, number]), color: INK, glow: true, weak },
+      { pts: ax.bode.map((p) => [p.hz, p.lDeg] as [number, number]), color: AMBER, dash: '2 3', weak },
+    ],
+    { aria: t('atFlow.expert.chirp.phaseAria', { axis: AXIS_NAME[axisName] }), noData: t('at.stepNoData'), unit: 'deg', fMin, fMax, yMin: Math.min(-180, phLo), yMax: Math.max(0, phHi), guides: [{ v: -180, label: '-180°', color: HOT }], marks: ax.crossoverHz ? [{ hz: ax.crossoverHz, label: `PM ${num(ax.phaseMarginDeg, 0, '°')}`, color: AMBER }] : [], h: 170 },
+  );
+  const coh = bodeChart([{ pts: ax.bode.map((p) => [p.hz, p.coh] as [number, number]), color: GREEN }], { aria: t('atFlow.expert.chirp.cohAria', { axis: AXIS_NAME[axisName] }), noData: t('at.stepNoData'), unit: 'coh', fMin, fMax, yMin: 0, yMax: 1, guides: [{ v: COH_MIN, label: '0.8', color: GREEN }], h: 120 });
+  return `<div class="pw-panel ax-mt">${cap(t('atFlow.expert.chirp.magCap', { axis: AXIS_NAME[axisName] }), 'tips.autotune.chirpBode')}<div class="at-plot">${mag}</div>${legendOf([[t('atFlow.expert.chirp.lgT'), INK, ''], [t('atFlow.expert.chirp.lgS'), HOT, '6 3']])}</div>
+    <div class="pw-panel ax-mt">${cap(t('atFlow.expert.chirp.phaseCap'), 'tips.autotune.chirpMargins')}<div class="at-plot">${phase}</div>${legendOf([[t('atFlow.expert.chirp.lgTph'), INK, ''], [t('atFlow.expert.chirp.lgL'), AMBER, '2 3']])}</div>
+    <div class="pw-panel ax-mt">${cap(t('atFlow.expert.chirp.cohCap'), 'tips.autotune.chirpCoh')}<div class="at-plot">${coh}</div></div>`;
+}
+
+function chirpSection(vm: ViewModel, r: AutotuneResult): string {
+  const c = r.chirp;
+  if (!c) return `<p class="pw-empty">${t('atFlow.expert.chirp.none')}</p>${chirpSetup(vm)}`;
+  const have = AXES.filter((_, i) => !!c.axes[i]);
+  const axisName = have.includes(vm.ui.chirpAxis) ? vm.ui.chirpAxis : (have[0] ?? 'roll');
+  const ax = c.axes[AXES.indexOf(axisName)] ?? null;
+  const axSeg = seg('chirp-axis', AXES.map((a, i) => [a, AXIS_NAME[a], !c.axes[i]] as [string, string, boolean]), axisName, t('atFlow.expert.step.axis'));
+  const session = r.chirpSession !== null && r.sessions.length > 1 ? t('atFlow.expert.chirp.fromSession', { n: r.chirpSession + 1 }) : '';
+  const runs = `<p class="pw-hint mono">${c.runs.map((x) => `${AXIS_NAME[AXES[x.axis]]} ${fmtNum(x.seconds, 1)} s · ${fmtNum(x.fFrom, 1)}-${fmtNum(x.fTo, 0)} Hz${x.complete ? '' : ' ⚠'}`).join(' · ')}</p>`;
+  const charts = ax ? chirpCharts(ax, axisName) : `<p class="pw-empty">${t('atFlow.expert.chirp.axisNoData')}</p>`;
+  const stepLines: StepLine[] = [
+    { y: c.axes[2]?.step ?? null, color: INK, dash: '6 4', width: 1.4 },
+    { y: c.axes[1]?.step ?? null, color: INK, glow: true },
+    { y: c.axes[0]?.step ?? null, color: HOT, glow: true, width: 2.1, dim: true },
+  ];
+  const step = `<div class="pw-panel ax-mt">${cap(t('atFlow.expert.chirp.stepCap'), 'tips.autotune.chirpStep')}<div class="at-plot">${stepChart(stepLines, { aria: t('atFlow.expert.chirp.stepAria'), noData: t('at.stepNoData') })}</div>${legendOf([['Roll', HOT, ''], ['Pitch', INK, ''], ['Yaw', INK, '6 4']])}</div>`;
+  return `<div class="pw-panel">${cap(t('atFlow.expert.chirp.cap'), 'tips.autotune.chirp', escapeHtml(session))}
+      <div class="ax-ctrl">${axSeg}</div>${runs}${chirpMetrics(c.axes)}
+      ${c.ffOn ? `<p class="pw-hint">${t('atFlow.expert.chirp.ffNote')}</p>` : ''}</div>
+    ${charts}${step}
+    <div class="pw-panel ax-mt">${cap(t('atFlow.expert.chirp.adviceCap'), 'tips.autotune.chirpAdvice')}<p class="pw-hint">${t('atFlow.expert.chirp.reviewOnly')}</p>${adviceList(c.advice, [], vm, t('atFlow.expert.none'))}</div>
+    <details class="ax-mt ax-cli"><summary class="mono">${t('atFlow.expert.chirp.setupAgain')}</summary>${chirpSetup(vm)}</details>`;
+}
+
 /* ---------------- PIDs ---------------- */
 
 function pidsSection(vm: ViewModel, r: AutotuneResult, units: ApplyUnit[]): string {
@@ -360,7 +443,7 @@ export function expertWorkspace(vm: ViewModel): string {
   const sessions =
     r.sessions.length > 1
       ? `<label class="ax-sess"><span class="mono">${t('atFlow.expert.session')} ${tip('tips.autotune.session')}</span><select data-session>${r.sessions
-          .map((s) => `<option value="${s.index}" ${s.index === r.session ? 'selected' : ''} ${s.usable ? '' : 'disabled'}>#${s.index + 1} · ${fmtNum(s.duration, 0)} s${s.usable ? '' : ` · ${t('atFlow.expert.unusable')}`}</option>`)
+          .map((s) => `<option value="${s.index}" ${s.index === r.session ? 'selected' : ''} ${s.usable ? '' : 'disabled'}>#${s.index + 1} · ${fmtNum(s.duration, 0)} s${s.chirp ? ' · CHIRP' : ''}${s.usable ? '' : ` · ${t('atFlow.expert.unusable')}`}</option>`)
           .join('')}</select></label>`
       : '';
   const q = r.quality;
@@ -376,7 +459,7 @@ export function expertWorkspace(vm: ViewModel): string {
   const tabs = TABS.filter((x) => x !== 'rounds' || vm.rounds.length > 0);
   const nav = `<div class="ax-nav" role="tablist">${tabs
     .map((x) => {
-      const badge = x === 'series' && r.series?.sessions.length ? ` <small>${r.series.sessions.length}</small>` : x === 'rounds' ? ` <small>${vm.rounds.length}</small>` : '';
+      const badge = x === 'series' && r.series?.sessions.length ? ` <small>${r.series.sessions.length}</small>` : x === 'chirp' && r.chirp ? ` <small>${r.chirp.axes.filter(Boolean).length}</small>` : x === 'rounds' ? ` <small>${vm.rounds.length}</small>` : '';
       return `<button type="button" role="tab" aria-selected="${x === vm.ui.tab}" class="${x === vm.ui.tab ? 'on' : ''}" data-act="tab" data-arg="${x}">${t(k(`atFlow.expert.tabs.${x}`))}${badge}</button>`;
     })
     .join('')}</div>`;
@@ -396,7 +479,9 @@ export function expertWorkspace(vm: ViewModel): string {
                 ? pidsSection(vm, r, units)
                 : tab === 'series'
                   ? seriesSection(vm, r, units)
-                  : roundsSection(vm);
+                  : tab === 'chirp'
+                    ? chirpSection(vm, r)
+                    : roundsSection(vm);
   const apply = `<div class="ax-apply">
       <span class="mono">${t('atFlow.expert.selected', { n: units.filter((u) => vm.ui.selected.has(u.id)).length, c: cmds.length })}</span>
       ${btn('expert-apply', t('atFlow.expert.apply'), 'light', { icon: 'arrowUp', disabled: !!block, title: block ? t(k(`atFlow.expert.block.${block}`)) : '' })}

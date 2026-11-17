@@ -340,7 +340,7 @@ const SETTINGS: Array<[string, string, string]> = [
   ['blackbox_sample_rate', '1/2', 'Allowed values: 1/1, 1/2, 1/4, 1/8, 1/16'],
   ['craft_name', '5" Freestyle', ''],
   ['d_max_gain', '37', 'Allowed range: 0 - 100'],
-  ['debug_mode', 'NONE', 'Allowed values: NONE, CYCLETIME, BATTERY, GYRO_FILTERED, GYRO_SCALED, DSHOT_RPM_TELEMETRY, RPM_FILTER'],
+  ['debug_mode', 'NONE', 'Allowed values: NONE, CYCLETIME, BATTERY, GYRO_FILTERED, GYRO_SCALED, DSHOT_RPM_TELEMETRY, RPM_FILTER, CHIRP'],
   ['dshot_bidir', 'OFF', 'Allowed values: OFF, ON'],
   ['dshot_idle_value', '550', 'Allowed range: 0 - 2000'],
   ['dyn_idle_min_rpm', '0', 'Allowed range: 0 - 200'],

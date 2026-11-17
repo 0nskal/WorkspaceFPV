@@ -83,6 +83,20 @@ export const enTipsTuning = {
     msc: "Restarts the flight controller as a USB drive, so you can copy logs from the SD card or flash on boards that support it. Betaflight does not run in this mode. Replug the USB cable to go back to normal.",
   },
   autotune: {
+    chirp:
+      "**CHIRP** is a system test built into Betaflight 2026: the FC wobbles one axis with a sweep from 0.2 Hz up to a few hundred Hz while you hover. Because the input is known and covers every frequency, the result is much more precise than step responses from normal flying. The table rates each axis: **good** means sensitivity under 6 dB and phase margin over 45°.",
+    chirpSetup:
+      "You need firmware built with CHIRP, a switch for CHIRP mode and debug_mode = CHIRP. Fly in calm air in Acro, hover, keep the sticks still. Each switch flick tests the next axis (roll → pitch → yaw). The app only changes the debug mode; it never flies the drone.",
+    chirpBode:
+      "**Tracking T** (white): 0 dB means the drone follows the setpoint exactly at that frequency; where it drops below **-3 dB** (green line) is the bandwidth, a measure of how sharp the tune is. **Sensitivity S** (red dashed): how much disturbances (propwash, wind, frame flex) are amplified. Over **+6 dB** (amber line) is a warning sign. Faded parts of the lines have low coherence.",
+    chirpMargins:
+      "**Phase margin** is read where the open loop L crosses 0 dB (amber mark): how far the phase is from -180°. Over 45° is calm, 30-45° rings a little, under 30° is close to oscillation. Filter delay eats phase, so heavier filtering lowers the margin.",
+    chirpCoh:
+      "Coherence 0-1 says how much of the gyro is explained by the setpoint. Over 0.8 the measurement is reliable. Low coherence at high frequencies is normal (noise wins); low at mid frequencies means wind, stick input or a too small chirp amplitude.",
+    chirpStep:
+      "The step response computed from the sweep (inverse Fourier transform of T), 1.0 = the target. It matches what you see on the Step response tab but needs no stick snaps, so it is clean even for yaw.",
+    chirpAdvice:
+      "Hints from the frequency response. They point to the direction (less D, less P, less filter delay, room for more P) but never apply anything: CHIRP numbers are precise, automatic rules on them are not. Change one slider a little, fly CHIRP again and compare the curves.",
     intro:
       "**How Autotune works:** you fly one short test flight while the drone records it. The app reads that recording, checks how cleanly the drone follows your sticks, how much it vibrates and how it handles throttle drops, then picks one small, safe change. You press Apply, fly again and see if it got better. One click on Undo brings your old settings back.",
     bDrone:

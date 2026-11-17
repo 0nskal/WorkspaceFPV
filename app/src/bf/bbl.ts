@@ -2,12 +2,14 @@
  * Native decoder for Betaflight Blackbox logs (.bbl / .bfl, "Data version 2").
  * Written from the public format description (Blackbox Internals): ASCII "H name:value" header lines, then binary
  * frames I (intra), P (inter), S (slow), G/H (GPS) and E (event). The field layout is declared in the header, so
- * the decoder is table-driven: encodings + predictors per field. Only gyroADC, setpoint (or rcCommand) and motor
- * columns are kept; the other frames are decoded just to stay in sync.
+ * the decoder is table-driven: encodings + predictors per field. Kept columns: gyroADC, setpoint (or rcCommand), motor,
+ * rcCommand[3], and for the auto-tune engine axisD, gyroUnfilt and debug[0..3] when logged; the other frames are
+ * decoded just to stay in sync. A file holds one log per arming: decodeSessions() returns all of them.
  * Pure TypeScript (no DOM), runs in a Web Worker and in Node.
  */
 import type { HeaderPid, LogData, PidTriple } from '../analysis/types';
 import { LogError } from '../analysis/parse';
+import { hasGyroScaledDebug, parseLogSettings, type LogSettings } from '../analysis/settings';
 
 export const BBL_MAGIC = 'H Product:Blackbox flight data recorder by Nicholas Sherlock';
 
@@ -314,6 +316,12 @@ export interface DecodedLog {
   rcFallback: boolean;
   /** rcCommand[3] (throttle, 1000..2000) when the log has it. */
   throttle: Float32Array | null;
+  /** axisD[0..2] (D-term output) when logged (yaw often missing: then two columns). */
+  axisD: Float32Array[] | null;
+  /** gyroUnfilt[0..2] when logged (newer firmware). */
+  gyroUnfilt: Float32Array[] | null;
+  /** debug[0..3] when logged. */
+  debug: Float32Array[] | null;
   /** Every "H key:value" header line of this log (PIDs, motor output range, ...). */
   info: Record<string, string>;
   /** Frames dropped while resynchronising after corrupt data. */
@@ -372,6 +380,19 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
   }
   const motor0 = mi[0] ?? -1;
   const ti = find(names, 'rcCommand[3]');
+  // optional columns for the auto-tune engine (kept only when the whole group is present)
+  const group = (prefix: string, count: number, minCount = count): number[] => {
+    const idx: number[] = [];
+    for (let k = 0; k < count; k++) {
+      const c = find(names, `${prefix}[${k}]`);
+      if (c < 0) break;
+      idx.push(c);
+    }
+    return idx.length >= minCount ? idx : [];
+  };
+  const di = group('axisD', 3, 2);
+  const ui = group('gyroUnfilt', 3);
+  const dbg = group('debug', 4, 3);
   const minThrottle = Number(h.info['minthrottle'] ?? 1000);
   const vbatRef = Number(h.info['vbatref'] ?? 0);
   const minMotor = Number((h.info['motorOutput'] ?? '0').split(',')[0]);
@@ -381,6 +402,9 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
   const sp = [new Grow(), new Grow(), new Grow()];
   const mo = mi.map(() => new Grow());
   const thr = ti >= 0 ? new Grow() : null;
+  const dCols = di.map(() => new Grow());
+  const uCols = ui.map(() => new Grow());
+  const gCols = dbg.map(() => new Grow());
 
   let prev: number[] | null = null;
   let prev2: number[] | null = null;
@@ -403,6 +427,9 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
     }
     for (let m = 0; m < mi.length; m++) mo[m]!.push(f[mi[m]!]!);
     thr?.push(f[ti]!);
+    for (let k = 0; k < di.length; k++) dCols[k]!.push(f[di[k]!]!);
+    for (let k = 0; k < ui.length; k++) uCols[k]!.push(f[ui[k]!]!);
+    for (let k = 0; k < dbg.length; k++) gCols[k]!.push(f[dbg[k]!]!);
   };
 
   const skipDef = (d: FieldDef | null): void => {
@@ -525,7 +552,20 @@ export function decodeLog(buf: Uint8Array, start: number, end: number, onProgres
     t[i] = t[i]! + off;
   }
   const cut = (g: Grow) => g.buf.subarray(0, g.n);
-  return { rows: time.n, time: t, gyro: gy.map(cut), setpoint: sp.map(cut), motor: mo.map(cut), rcFallback, throttle: thr ? cut(thr) : null, info: h.info, corrupt };
+  return {
+    rows: time.n,
+    time: t,
+    gyro: gy.map(cut),
+    setpoint: sp.map(cut),
+    motor: mo.map(cut),
+    rcFallback,
+    throttle: thr ? cut(thr) : null,
+    axisD: dCols.length ? dCols.map(cut) : null,
+    gyroUnfilt: uCols.length ? uCols.map(cut) : null,
+    debug: gCols.length ? gCols.map(cut) : null,
+    info: h.info,
+    corrupt,
+  };
 }
 
 /** Header-level summary without decoding frames (fast): firmware, craft, number of logs. */
@@ -566,6 +606,40 @@ export function looksLikeBbl(head: Uint8Array): boolean {
   return s === BBL_MAGIC;
 }
 
+/** Median sample rate [Hz] from the time column (robust to dropped frames); 0 when it cannot be measured. */
+function measureRate(time: Float64Array, n: number): number {
+  const dts: number[] = [];
+  const step = Math.max(1, Math.floor(n / 20000));
+  for (let i = step; i < n; i += step) {
+    const d = (time[i]! - time[i - step]!) / step;
+    if (d > 0) dts.push(d);
+  }
+  dts.sort((a, b) => a - b);
+  const dt = dts[dts.length >> 1] ?? 0;
+  return dt > 0 ? 1e6 / dt : 0;
+}
+
+/** Turns one decoded log into the analysis input (settings, optional columns, unfiltered gyro from GYRO_SCALED debug). */
+export function toLogData(d: DecodedLog): LogData {
+  const n = d.rows;
+  if (n < 1000) throw new LogError('short', 'at.err.tooShort', { n });
+  const fs = measureRate(d.time, n);
+  if (!(fs > 0)) throw new LogError('short', 'at.err.noRate');
+  const out: LogData = { fs, rows: n, duration: (d.time[n - 1]! - d.time[0]!) / 1e6, setpoint: d.setpoint, gyro: d.gyro, motor: d.motor, rcFallback: d.rcFallback };
+  if (d.throttle) out.throttle = d.throttle;
+  const range = motorRange(d.info);
+  if (range) out.motorRange = range;
+  const pid = headerPid(d.info);
+  if (pid) out.headerPid = pid;
+  const settings = parseLogSettings(d.info);
+  out.settings = settings;
+  if (d.axisD) out.axisD = d.axisD;
+  if (d.debug) out.debug = d.debug;
+  if (d.gyroUnfilt) out.gyroUnfilt = d.gyroUnfilt;
+  else if (d.debug && hasGyroScaledDebug(settings)) out.gyroUnfilt = d.debug.slice(0, 3);
+  return out;
+}
+
 /** Decodes a whole .bbl blob into the analysis input (longest log wins; flash dumps hold one log per arming). */
 export async function parseBbl(file: Blob, onProgress: (frac: number) => void): Promise<LogData> {
   const buf = new Uint8Array(await file.arrayBuffer());
@@ -583,23 +657,66 @@ export async function parseBbl(file: Blob, onProgress: (frac: number) => void): 
     }
   }
   if (!best) throw lastErr instanceof LogError ? lastErr : new LogError('short', 'at.err.tooShort', { n: 0 });
-  const n = best.rows;
-  if (n < 1000) throw new LogError('short', 'at.err.tooShort', { n });
-  const dts: number[] = [];
-  const step = Math.max(1, Math.floor(n / 20000));
-  for (let i = step; i < n; i += step) {
-    const d = (best.time[i]! - best.time[i - step]!) / step;
-    if (d > 0) dts.push(d);
-  }
-  dts.sort((a, b) => a - b);
-  const dt = dts[dts.length >> 1] ?? 0;
-  if (!(dt > 0)) throw new LogError('short', 'at.err.noRate');
+  const out = toLogData(best);
   onProgress(1);
-  const out: LogData = { fs: 1e6 / dt, rows: n, duration: (best.time[n - 1]! - best.time[0]!) / 1e6, setpoint: best.setpoint, gyro: best.gyro, motor: best.motor, rcFallback: best.rcFallback };
-  if (best.throttle) out.throttle = best.throttle;
-  const range = motorRange(best.info);
-  if (range) out.motorRange = range;
-  const pid = headerPid(best.info);
-  if (pid) out.headerPid = pid;
   return out;
+}
+
+/** One flight (one arming) inside a .bbl file. */
+export interface LogSession {
+  /** 0-based position in the file. */
+  index: number;
+  rows: number;
+  /** Seconds (0 when the session could not be decoded). */
+  duration: number;
+  /** Measured logging rate [Hz] (0 when unknown). */
+  fs: number;
+  settings: LogSettings | null;
+  /** Decoded data; null when the session is too short (< 1000 rows) or unreadable. */
+  log: LogData | null;
+  /** Why `log` is null: an i18n key (at.err.* / bfBlackbox.err.*). */
+  error?: { code: string; key: string; params?: Record<string, string | number> };
+}
+
+function errInfo(e: unknown): NonNullable<LogSession['error']> {
+  const le = e as { code?: string; key?: string; params?: Record<string, string | number> };
+  return { code: le.code ?? 'error', key: le.key ?? 'at.err.generic', ...(le.params ? { params: le.params } : {}) };
+}
+
+/** Decodes every session (flight) of a .bbl buffer. Short or broken sessions stay in the list with `log: null`. */
+export function decodeSessions(buf: Uint8Array, onProgress?: (frac: number) => void): LogSession[] {
+  const starts = splitLogs(buf);
+  const out: LogSession[] = [];
+  for (let i = 0; i < starts.length; i++) {
+    const end = i + 1 < starts.length ? starts[i + 1]! : buf.length;
+    let settings: LogSettings | null = null;
+    try {
+      settings = parseLogSettings(parseHeader(buf, starts[i]!, end).info);
+    } catch {
+      /* header unreadable */
+    }
+    try {
+      const d = decodeLog(buf, starts[i]!, end, onProgress ? (f) => onProgress((i + f) / starts.length) : undefined);
+      const fs = d.rows > 1 ? measureRate(d.time, d.rows) : 0;
+      const duration = d.rows > 1 ? (d.time[d.rows - 1]! - d.time[0]!) / 1e6 : 0;
+      try {
+        const log = toLogData(d);
+        out.push({ index: i, rows: d.rows, duration, fs, settings: log.settings ?? settings, log });
+      } catch (e) {
+        out.push({ index: i, rows: d.rows, duration, fs, settings, log: null, error: errInfo(e) });
+      }
+    } catch (e) {
+      out.push({ index: i, rows: 0, duration: 0, fs: 0, settings, log: null, error: errInfo(e) });
+    }
+  }
+  onProgress?.(1);
+  return out;
+}
+
+/** Every session (flight) of a .bbl blob; each `log` is ready for autotune(). */
+export async function parseBblSessions(file: Blob, onProgress: (frac: number) => void): Promise<LogSession[]> {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  onProgress(0.05);
+  if (!splitLogs(buf).length) throw new LogError('binary', 'at.err.noHeader');
+  return decodeSessions(buf, (f) => onProgress(0.05 + f * 0.95));
 }

@@ -1,4 +1,5 @@
 /** Wspolne typy analizy logu blackbox. */
+import type { LogSettings } from './settings';
 
 export interface LogData {
   /** Czestotliwosc probkowania [Hz]. */
@@ -19,6 +20,14 @@ export interface LogData {
   motorRange?: [min: number, max: number];
   /** PIDs the quad flew with, from the log header (rollPID/pitchPID/yawPID); absent for CSV. */
   headerPid?: HeaderPid;
+  /** Typed header settings (bbl header, or the key/value rows of a CSV export); absent when the log has no header. */
+  settings?: LogSettings;
+  /** Unfiltered gyro [deg/s] roll/pitch/yaw: gyroUnfilt[] columns, or debug[0..2] when debug_mode = GYRO_SCALED. */
+  gyroUnfilt?: Float32Array[];
+  /** D-term output (axisD[0..2]; yaw is often missing, then only roll/pitch). */
+  axisD?: Float32Array[];
+  /** debug[0..3] raw values, when logged. */
+  debug?: Float32Array[];
 }
 
 /** P/I/D per axis as written in a Blackbox log header. */

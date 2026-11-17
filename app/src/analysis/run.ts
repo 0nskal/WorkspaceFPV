@@ -1,4 +1,5 @@
-import { processSource, type Source, type WorkerMsg } from './run-core';
+import type { AutotuneOptions, AutotuneResult } from './autotune';
+import { processAutotune, processSource, type Source, type WorkerMsg, type WorkerReq } from './run-core';
 import type { AnalysisResult } from './types';
 
 /** Analysis error; `key` is an i18n key (at.err.*) that the screen translates. */
@@ -12,13 +13,13 @@ export class RunError extends Error {
   }
 }
 
-/** Uruchamia analize w Web Workerze; gdy worker nie startuje (np. file://), liczy w watku glownym. */
-export function runAnalysis(src: Source, onProgress: (frac: number) => void): Promise<AnalysisResult> {
+/** Runs one request in a Web Worker; when the worker does not start (e.g. file://) it computes on the main thread. */
+function runInWorker<T>(req: WorkerReq, pick: (m: WorkerMsg) => T | undefined, local: () => Promise<T>, onProgress: (frac: number) => void): Promise<T> {
   return new Promise((resolve, reject) => {
     let worker: Worker | null = null;
     let started = false;
     const fallback = () => {
-      processSource(src, onProgress).then(resolve, (err: unknown) => {
+      local().then(resolve, (err: unknown) => {
         const e = err as { code?: string; key?: string; params?: Record<string, string | number> };
         reject(new RunError(e.code ?? 'error', e.key ?? 'at.err.generic', e.params));
       });
@@ -32,11 +33,16 @@ export function runAnalysis(src: Source, onProgress: (frac: number) => void): Pr
     worker.onmessage = (e: MessageEvent<WorkerMsg>) => {
       started = true;
       const m = e.data;
-      if (m.type === 'progress') onProgress(m.frac);
+      if (m.type === 'progress') {
+        onProgress(m.frac);
+        return;
+      }
+      worker?.terminate();
+      if (m.type === 'error') reject(new RunError(m.code, m.key, m.params));
       else {
-        worker?.terminate();
-        if (m.type === 'done') resolve(m.result);
-        else reject(new RunError(m.code, m.key, m.params));
+        const v = pick(m);
+        if (v === undefined) reject(new RunError('error', 'at.err.worker'));
+        else resolve(v);
       }
     };
     worker.onerror = () => {
@@ -44,6 +50,16 @@ export function runAnalysis(src: Source, onProgress: (frac: number) => void): Pr
       if (started) reject(new RunError('error', 'at.err.worker'));
       else fallback();
     };
-    worker.postMessage(src);
+    worker.postMessage(req);
   });
+}
+
+/** Uruchamia analize w Web Workerze; gdy worker nie startuje (np. file://), liczy w watku glownym. */
+export function runAnalysis(src: Source, onProgress: (frac: number) => void): Promise<AnalysisResult> {
+  return runInWorker(src, (m) => (m.type === 'done' ? m.result : undefined), () => processSource(src, onProgress), onProgress);
+}
+
+/** Auto-tune engine (all sessions of the file, see analysis/autotune.ts) in the Web Worker, with progress. */
+export function runAutotune(src: Source, opts: AutotuneOptions, onProgress: (frac: number) => void): Promise<AutotuneResult> {
+  return runInWorker({ op: 'autotune', src, opts }, (m) => (m.type === 'autotune' ? m.result : undefined), () => processAutotune(src, opts, onProgress), onProgress);
 }

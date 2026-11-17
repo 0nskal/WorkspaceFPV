@@ -20,6 +20,7 @@ import { enBfBlackbox } from './en/blackbox';
 import { enBfCli } from './en/cli';
 import { enBfOsd } from './en/osd';
 import { enPidWizard } from './en/pid-wizard';
+import { enAutotune2 } from './en/autotune2';
 import { enAiProviders } from './en/ai-providers';
 import { enMode, enNav, enSnip, enTipsUi } from './en/ui-modes';
 import { enTipsCore } from './en/tips-core';
@@ -474,6 +475,7 @@ export const en = {
   bfCli: enBfCli,
   bfOsd: enBfOsd,
   pidWizard: enPidWizard,
+  autotune2: enAutotune2,
   aiProviders: enAiProviders,
   mode: enMode,
   nav: enNav,

@@ -1,4 +1,5 @@
 /** Strumieniowy parser CSV z blackbox_decode / Blackbox Explorer. Dziala w Web Workerze i w Node (Blob.stream()). */
+import { hasGyroScaledDebug, parseLogSettings } from './settings';
 import type { LogData } from './types';
 
 /** Parse error: `key` is an i18n key (at.err.*), translated by the UI thread (this code also runs in a Web Worker). */
@@ -63,6 +64,10 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
   const mo: Col[] = [];
   let thr: Col | null = null;
   let rcFallback = false;
+  // optional groups (auto-tune engine): D-term, unfiltered gyro, debug
+  const groups: Record<'axisD' | 'gyroUnfilt' | 'debug', Col[]> = { axisD: [], gyroUnfilt: [], debug: [] };
+  // header rows above the column names ("H key:value" or a two-cell "key","value" row of a Blackbox Explorer export)
+  const info: Record<string, string> = {};
   // [indeks kolumny, funkcja zapisu] posortowane rosnaco
   let want: { idx: number; push: (v: number) => void }[] = [];
   let lastProg = 0;
@@ -101,6 +106,25 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
       thr = c;
       w.push({ idx: ti, push: (v) => c.push(v) });
     }
+    const opt: [keyof typeof groups, string, number, number][] = [
+      ['axisD', 'axisd', 3, 2],
+      ['gyroUnfilt', 'gyrounfilt', 3, 3],
+      ['debug', 'debug', 4, 3],
+    ];
+    for (const [g, prefix, count, min] of opt) {
+      const idx: number[] = [];
+      for (let k = 0; k < count; k++) {
+        const c = find(`${prefix}[${k}]`);
+        if (c < 0) break;
+        idx.push(c);
+      }
+      if (idx.length < min) continue;
+      for (const c of idx) {
+        const col = new Col();
+        groups[g].push(col);
+        w.push({ idx: c, push: (v) => col.push(v) });
+      }
+    }
     if (missing.length) throw new LogError('columns', 'at.err.missingCols', { cols: missing.join(', ') });
     w.sort((a, b) => a.idx - b.idx);
     want = w;
@@ -133,6 +157,17 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
     }
   };
 
+  const headerRow = (line: string): void => {
+    const h = /^H ([^:]+):(.*)$/.exec(line);
+    if (h) {
+      info[h[1]!.trim()] = h[2]!.trim();
+      return;
+    }
+    // "key","value with, commas" or key,value
+    const kv = /^\s*"([^"]+)"\s*,\s*"?(.*?)"?\s*$/.exec(line) ?? /^\s*([^,"]+?)\s*,\s*(.*?)\s*$/.exec(line);
+    if (kv) info[kv[1]!.trim()] = kv[2]!;
+  };
+
   const processText = (text: string): void => {
     let pos = 0;
     while (pos < text.length) {
@@ -148,6 +183,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
       if (!headerDone) {
         if (++headerLines > 300) throw new LogError('binary', 'at.err.noHeader');
         if (line.includes(',') && setupHeader(line)) headerDone = true;
+        else headerRow(line);
         continue;
       }
       if (line.charCodeAt(0) === 0x48 && line.charCodeAt(1) === 0x20) continue; // linie "H ..." wewnatrz
@@ -182,7 +218,7 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
   if (!headerDone) throw new LogError('columns', 'at.err.noTimeCol');
 
   // wyrownanie dlugosci (wiersze z brakami): przycinamy do najkrotszej
-  const cols: { n: number }[] = [time, ...sp, ...gy, ...mo, ...(thr ? [thr] : [])];
+  const cols: { n: number }[] = [time, ...sp, ...gy, ...mo, ...(thr ? [thr] : []), ...groups.axisD, ...groups.gyroUnfilt, ...groups.debug];
   const n = Math.min(...cols.map((c) => c.n));
   if (n < 1000) throw new LogError('short', 'at.err.tooShort', { n });
   void timeIdx;
@@ -211,5 +247,15 @@ export async function parseCsv(file: Blob, onProgress: (frac: number) => void): 
   const out: LogData = { fs, rows: n, duration: (time.buf[n - 1]! - time.buf[0]!) / 1e6, setpoint: spOut, gyro: gy.map(cut), motor: mo.map(cut), rcFallback };
   const thrCol = thr as Col | null; // assigned inside setupHeader (TypeScript cannot see it)
   if (thrCol) out.throttle = cut(thrCol);
+  if (groups.axisD.length) out.axisD = groups.axisD.map(cut);
+  if (groups.debug.length) out.debug = groups.debug.map(cut);
+  if (Object.keys(info).length) {
+    const settings = parseLogSettings(info);
+    out.settings = settings;
+    if (settings.pid) out.headerPid = settings.pid;
+    if (settings.motorOutput) out.motorRange = settings.motorOutput;
+  }
+  if (groups.gyroUnfilt.length) out.gyroUnfilt = groups.gyroUnfilt.map(cut);
+  else if (out.debug && hasGyroScaledDebug(out.settings)) out.gyroUnfilt = out.debug.slice(0, 3);
   return out;
 }

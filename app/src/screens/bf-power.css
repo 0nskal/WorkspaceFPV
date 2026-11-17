@@ -1,0 +1,13 @@
+/* Power tab: live rows and the voltage calibration helper inside Betaflight-style panels. */
+[data-tab='power'] .v1-kv { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; margin: 0; padding: 4px 0 2px 8px; }
+[data-tab='power'] .v1-kv dd { margin: 0; text-align: right; font-size: 14px; }
+[data-tab='power'] .v1-kv dd.dim { color: var(--sub); }
+[data-tab='power'] .pw-live { display: flex; justify-content: space-between; align-items: baseline; margin: 8px 0 0 8px; padding: 10px 0 2px; border-top: 1px solid var(--v1-line-2); }
+[data-tab='power'] .pw-live b { font-size: 20px; font-weight: 500; color: var(--ink); }
+[data-tab='power'] .pw-cal { margin: 14px 0 0 8px; padding-top: 14px; border-top: 1px solid var(--v1-line-2); display: grid; gap: 10px; }
+[data-tab='power'] .pw-cal-h { font-size: 14px; display: block; }
+[data-tab='power'] .pw-cal-h .tip { display: inline-flex; vertical-align: middle; }
+[data-tab='power'] .pw-cal-h span { display: block; margin-top: 4px; font-size: 13px; color: var(--sub); line-height: 1.45; }
+[data-tab='power'] .pw-cal-r { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+[data-tab='power'] .pw-cal-r input { width: 92px; height: 32px; padding: 0 6px 0 10px; border: 1px solid var(--v1-field-line); background: var(--v1-field); color: var(--ink); font: 500 13.5px var(--mono); border-radius: 8px; }
+[data-tab='power'] .pw-cal-r label { font-size: 14px; color: var(--text); flex: 1; min-width: 120px; }

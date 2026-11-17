@@ -1,0 +1,120 @@
+/* CLI tab (1.0 layout): page title, terminal, input line, file buttons, command panel. */
+.bf-cli {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  color: var(--text);
+  scrollbar-width: thin;
+  scrollbar-color: #2a3b48 transparent;
+}
+.bf-cli .bf-cli-page {
+  max-width: none;
+  padding: 0;
+}
+.bf-cli .bf-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+}
+.bf-cli .bf-cli-sub {
+  font-size: 14px;
+  color: var(--sub);
+}
+.bf-cli .bf-body {
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1240px;
+}
+.bf-cli .bf-cli-warn {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0;
+}
+.bf-cli .bf-cli-warn svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--amber);
+}
+.bf-cli .bf-cli-term {
+  border: 1px solid var(--v1-line);
+  border-radius: 12px;
+  background: #060a0f;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.bf-cli .bf-cli-out {
+  height: min(52vh, 520px);
+  padding: 16px 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.bf-cli .bf-cli-out .c {
+  color: var(--amber);
+}
+.bf-cli .bf-cli-hint {
+  min-height: 0;
+  padding: 0 18px;
+  border-top: 0;
+  font-size: 12.5px;
+  color: var(--sub);
+}
+.bf-cli .bf-cli-hint:not(:empty) {
+  padding: 4px 18px;
+}
+.bf-cli .bf-cli-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--v1-line);
+  background: #0a121a;
+}
+.bf-cli .bf-cli-prompt {
+  color: var(--amber);
+  font-size: 15px;
+}
+.bf-cli .bf-cli-in {
+  flex: 1;
+  min-height: 0;
+  resize: vertical;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+}
+.bf-cli .bf-cli-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+}
+.bf-cli .bf-cli-bar .btn,
+.bf-cli .bf-cli-btns .btn,
+.bf-cli .bf-cli-line .btn {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+.bf-cli .bf-cli-panel {
+  margin-top: 14px;
+}
+.bf-cli .bf-cli-btns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 0 6px 8px;
+}
+.bf-cli .bf-cli-keys {
+  margin: 0;
+  font-size: 13px;
+  color: var(--sub);
+}

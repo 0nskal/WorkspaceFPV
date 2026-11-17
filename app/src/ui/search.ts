@@ -16,6 +16,8 @@ const TIP_ROUTE: Record<string, string> = {
   ports: 'ports',
   config: 'config',
   power: 'power',
+  sensors: 'sensors',
+  gps: 'gps',
   failsafe: 'failsafe',
   receiver: 'bf-receiver',
   modes: 'bf-modes',

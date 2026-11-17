@@ -11,6 +11,7 @@ import { fmtNum, t, type Key } from '../i18n';
 import { escapeHtml } from '../ui/dom';
 import { intro, tip, type TipKey } from '../ui/tip';
 import { modelSvg, updateModel } from './bf-setup-model';
+import './bf-setup.css';
 import { mountAttitudeModel, type AttitudeModel } from './bf-setup-3d';
 
 const K = (k: string) => `bfSetup.${k}` as Key;
@@ -22,34 +23,62 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let busy = false;
   let poll: ReturnType<typeof setInterval> | null = null;
 
-  const row = (k: string, v: string, tk?: TipKey, expert = false) => `<div class="bf-su-kv"${expert ? ' data-level="expert"' : ''}><span>${escapeHtml(k)}${tk ? ` ${tip(tk)}` : ''}</span><b class="mono">${escapeHtml(v)}</b></div>`;
+  interface Kv {
+    k: string;
+    v: string;
+    tk?: TipKey;
+    expert?: boolean;
+    cls?: 'ok' | 'warn' | 'bad';
+  }
+  const kvHtml = (rows: Kv[]) => `<dl class="v1-kv">${rows.map((r) => `<dt${r.expert ? ' data-level="expert"' : ''}>${escapeHtml(r.k)}${r.tk ? ` ${tip(r.tk)}` : ''}</dt><dd${r.expert ? ' data-level="expert"' : ''}${r.cls ? ` class="${r.cls}"` : ''}>${escapeHtml(r.v)}</dd>`).join('')}</dl>`;
 
-  function info(): string {
+  /** Live numbers panel (battery, current, RSSI, CPU...). */
+  function systemRows(): Kv[] {
+    const bf = ctx.bf.get();
+    const tel = ctx.state.get().telemetry;
+    const st = bf.status;
+    const usb = !tel || tel.vbat < 5;
+    const flags = st ? decodeArmFlags(st.armingFlags, bf.api, st.armingFlagCount).filter((f) => !BENIGN_ARM_FLAGS.has(f.name)) : [];
+    return [
+      { k: t(K('armFlags')), v: st ? (flags.length ? flags.map((f) => f.name).join(', ') : t(K('armNone'))) : '—', tk: 'tips.setup.arming', cls: st ? (flags.length ? 'bad' : 'ok') : undefined },
+      { k: t(K('vbat')), v: usb ? '—' : `${fmtNum(tel.vbat, 2)} V` },
+      { k: t(K('mahUsed')), v: tel ? `${Math.round(tel.mah)} mAh` : '—' },
+      { k: t(K('amps')), v: tel ? `${fmtNum(tel.amperage, 2)} A` : '—' },
+      { k: t(K('rssi')), v: tel && tel.rssi > 0 ? `${Math.round((tel.rssi / 1023) * 100)} %` : '—' },
+      { k: t(K('mcu')), v: bf.mcuName || '—', expert: true },
+      { k: t(K('cpu')), v: st ? `${st.cpuLoad}%` : '—', tk: 'tips.setup.cpu', expert: true, cls: st && st.cpuLoad > 75 ? 'warn' : undefined },
+      { k: t(K('cycle')), v: st ? `${st.cycleTimeUs} µs` : '—', tk: 'tips.setup.cycle', expert: true },
+      { k: t(K('i2c')), v: st ? String(st.i2cErrors) : '—', tk: 'tips.setup.i2c', expert: true, cls: st && st.i2cErrors > 0 ? 'warn' : undefined },
+      ...(st?.cpuTempC ? [{ k: t(K('temp')), v: `${st.cpuTempC} °C`, expert: true }] : []),
+    ];
+  }
+
+  function firmwareRows(): Kv[] {
     const s = ctx.state.get();
     const bf = ctx.bf.get();
     const b = bf.board;
     const rate = b?.gyroRateHz ?? 0;
     const pid = bf.advanced && rate ? `${fmtNum(rate / bf.advanced.gyroSyncDenom / bf.advanced.pidProcessDenom / 1000, 2)} kHz` : '—';
-    const st = bf.status;
-    const rows = [
-      row(t(K('firmware')), `${bf.variant === 'BTFL' ? 'Betaflight' : bf.variant} ${bf.version}`, 'tips.setup.firmware'),
-      row(t(K('api')), `1.${bf.api}`, 'tips.setup.api', true),
-      row(t(K('board')), `${boardDisplayName(s.info)} (${b?.boardId ?? '—'})`, 'tips.setup.board'),
-      row(t(K('target')), b?.targetName || '—', undefined, true),
-      row(t(K('manufacturer')), b?.manufacturer || '—'),
-      ...(bf.mcuName ? [row(t(K('mcu')), bf.mcuName, undefined, true)] : []),
-      row(t(K('build')), bf.build ? `${bf.build.date} ${bf.build.time} (${bf.build.hash})` : '—', undefined, true),
-      row(t(K('gyroRate')), rate ? `${fmtNum(rate / 1000, rate % 1000 ? 2 : 0)} kHz` : '—', 'tips.setup.gyroRate', true),
-      row(t(K('pidLoop')), pid, 'tips.setup.pidLoop', true),
-      row(t(K('cfgState')), b ? t(K(`cfg${Math.min(2, b.configState)}`)) : '—', 'tips.setup.cfgState', true),
-      row(t(K('uid')), bf.uid || '—', undefined, true),
-      row(t(K('craft')), bf.craftName || '—'),
-      row(t(K('cpu')), st ? `${st.cpuLoad}%` : '—', 'tips.setup.cpu', true),
-      row(t(K('cycle')), st ? `${st.cycleTimeUs} µs` : '—', 'tips.setup.cycle', true),
-      row(t(K('i2c')), st ? String(st.i2cErrors) : '—', 'tips.setup.i2c', true),
-      ...(st?.cpuTempC ? [row(t(K('temp')), `${st.cpuTempC} °C`, undefined, true)] : []),
+    return [
+      { k: t(K('board')), v: `${boardDisplayName(s.info)} (${b?.boardId ?? '—'})`, tk: 'tips.setup.board' },
+      { k: t(K('firmware')), v: `${bf.variant === 'BTFL' ? 'Betaflight' : bf.variant} ${bf.version}`, tk: 'tips.setup.firmware' },
+      { k: t(K('api')), v: `1.${bf.api}`, tk: 'tips.setup.api', expert: true },
+      { k: t(K('target')), v: b?.targetName || '—', expert: true },
+      { k: t(K('manufacturer')), v: b?.manufacturer || '—' },
+      { k: t(K('build')), v: bf.build ? `${bf.build.date} ${bf.build.time} (${bf.build.hash})` : '—', expert: true },
+      { k: t(K('gyroRate')), v: rate ? `${fmtNum(rate / 1000, rate % 1000 ? 2 : 0)} kHz` : '—', tk: 'tips.setup.gyroRate', expert: true },
+      { k: t(K('pidLoop')), v: pid, tk: 'tips.setup.pidLoop', expert: true },
+      { k: t(K('cfgState')), v: b ? t(K(`cfg${Math.min(2, b.configState)}`)) : '—', tk: 'tips.setup.cfgState', expert: true },
+      { k: t(K('uid')), v: bf.uid || '—', expert: true },
+      { k: t(K('craft')), v: bf.craftName || '—' },
     ];
-    return rows.join('');
+  }
+
+  function info(): string {
+    return kvHtml(firmwareRows());
+  }
+  function system(): string {
+    return kvHtml(systemRows());
   }
 
   function sensors(): string {
@@ -64,12 +93,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       ['range', 4, act?.rangefinder],
       ['gyro', 5, act?.gyro],
     ];
-    return list
+    return `<dl class="v1-kv">${list
       .map(([name, bit, hw]) => {
         const on = ((bits >> bit) & 1) === 1;
-        return `<div class="bf-su-sens ${on ? 'on' : ''}"><i></i><span>${escapeHtml(t(K(name)))}</span><b class="mono">${on ? t(K('found')) : t(K('missing'))}</b>${on && hw !== undefined && hw !== 255 ? `<small class="mono">${escapeHtml(t(K('hw'), { n: hw }))}</small>` : ''}</div>`;
+        const hwTxt = on && hw !== undefined && hw !== 255 ? ` (${t(K('hw'), { n: hw })})` : '';
+        return `<dt>${escapeHtml(t(K(name)))}</dt><dd class="${on ? 'ok' : 'dim'}">${escapeHtml(on ? t(K('found')) : t(K('missing')))}${escapeHtml(hwTxt)}</dd>`;
       })
-      .join('');
+      .join('')}</dl>`;
   }
 
   function arming(): string {
@@ -78,8 +108,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (!st) return '';
     const flags = decodeArmFlags(st.armingFlags, bf.api, st.armingFlagCount);
     const real = flags.filter((f) => !BENIGN_ARM_FLAGS.has(f.name));
-    const items = flags.map((f) => `<li class="${BENIGN_ARM_FLAGS.has(f.name) ? 'benign' : 'block'}"><b class="mono">${escapeHtml(f.name)}</b><span>${escapeHtml(armingDesc(f.name))}</span>${BENIGN_ARM_FLAGS.has(f.name) ? `<em>${escapeHtml(t(K('armNormal')))}</em>` : ''}</li>`).join('');
-    return `${real.length === 0 ? `<p class="bf-su-ok">${escapeHtml(t(K('armOk')))}</p>` : ''}${items ? `<ul class="bf-su-flags">${items}</ul>` : ''}${st.rebootRequired ? `<p class="bf-note">${escapeHtml(t(K('rebootReq')))}</p>` : ''}<p class="bf-su-small">${escapeHtml(t(K('armWorkspaceFPV')))}</p>`;
+    const items = flags.map((f) => `<li class="${BENIGN_ARM_FLAGS.has(f.name) ? 'benign' : 'block'}"><b class="mono">${escapeHtml(f.name)}</b><span>${escapeHtml(armingDesc(f.name))}${BENIGN_ARM_FLAGS.has(f.name) ? ` <em>(${escapeHtml(t(K('armNormal')))})</em>` : ''}</span></li>`).join('');
+    return `${real.length === 0 ? `<p class="su-ok">${escapeHtml(t(K('armOk')))}</p>` : ''}${items ? `<ul class="su-flags">${items}</ul>` : ''}${st.rebootRequired ? `<div class="v1-note">${escapeHtml(t(K('rebootReq')))}</div>` : ''}<p class="su-small">${escapeHtml(t(K('armWorkspaceFPV')))}</p>`;
   }
 
   /** 3D quad (three.js, loaded on demand); null while loading or when WebGL is missing (the SVG drawing stays). */
@@ -118,31 +148,35 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const caps = bf.board?.capabilities ?? 0;
     const magOn = (((bf.status?.sensors ?? 0) >> 2) & 1) === 1;
     const needsAcc = ((bf.board?.problems ?? 0) & 1) === 1 || ((bf.status?.armingFlags ?? 0) & (1 << 23)) !== 0;
-    const btn = (act: string, label: string, text: string, cls = 'ghost', dis = false, tk?: TipKey, expert = false) => `<div class="bf-su-act"${expert ? ' data-level="expert"' : ''}><button class="btn ${cls}" data-su="${act}" ${dis ? 'disabled' : ''}>${escapeHtml(label)}</button><small>${escapeHtml(text)}${tk ? ` ${tip(tk)}` : ''}</small></div>`;
-    el.innerHTML = `<div class="bf-tab" data-tab="setup">
+    const btn = (act: string, label: string, text: string, cls = 'ghost', dis = false, tk?: TipKey, expert = false) => `<div class="su-act"${expert ? ' data-level="expert"' : ''}><button class="btn ${cls}" data-su="${act}" ${dis ? 'disabled' : ''}>${escapeHtml(label)}</button><span>${escapeHtml(text)}${tk ? ` ${tip(tk)}` : ''}</span></div>`;
+    el.innerHTML = `<div class="bf-tab su" data-tab="setup">
       <header class="bf-head"><h2>${escapeHtml(t(K('title')))}</h2><button class="btn ghost bf-ask" data-su="ask">${escapeHtml(t('bfCore.askAi'))}</button></header>
-      <div class="bf-body">${intro('tips.setup.intro')}<div class="bf-grid bf-su-grid">
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gAttitude')))}</span><small>${escapeHtml(t(K('modelNote')))} ${tip('tips.setup.attitude')}</small></header>
+      <div class="bf-body">${intro('tips.setup.intro')}
+        <section class="bf-panel su-model"><header><span class="bf-legend">${escapeHtml(t(K('gAttitude')))} ${tip('tips.setup.attitude')}</span><small>${escapeHtml(t(K('modelNote')))}</small></header>
           <div class="bf-su-attitude">${modelSvg()}
-            <div class="bf-su-angles"><div><small>${escapeHtml(t(K('roll')))}</small><b class="mono" data-att="roll">0.0°</b></div><div><small>${escapeHtml(t(K('pitch')))}</small><b class="mono" data-att="pitch">0.0°</b></div><div><small>${escapeHtml(t(K('heading')))}</small><b class="mono" data-att="heading">0°</b></div></div>
+            <div class="su-angles"><div><small>${escapeHtml(t(K('yaw')))}</small><b class="mono" data-att="heading">0°</b></div><div><small>${escapeHtml(t(K('pitch')))}</small><b class="mono" data-att="pitch">0.0°</b></div><div><small>${escapeHtml(t(K('roll')))}</small><b class="mono" data-att="roll">0.0°</b></div></div>
+            <div class="su-inst" aria-hidden="true">
+              <svg viewBox="-50 -50 100 100" class="su-horizon"><defs><clipPath id="su-hclip"><circle r="46"/></clipPath></defs><g clip-path="url(#su-hclip)"><g data-horizon><rect x="-120" y="-160" width="240" height="160" fill="#1d3a52"/><rect x="-120" y="0" width="240" height="160" fill="#3a2a17"/><path d="M-120 0H120" stroke="#dceff8" stroke-width="1.5"/></g></g><circle r="46" fill="none" stroke="#5b7385" stroke-width="2"/><path d="M-22 0h14M8 0h14M0 -2v4" stroke="#e0a82e" stroke-width="2.4"/></svg>
+              <svg viewBox="-50 -50 100 100" class="su-compass"><circle r="46" fill="#0b141c" stroke="#5b7385" stroke-width="2"/><g data-compass><text y="-30" text-anchor="middle" font-size="12" fill="#ff4a2e" font-weight="700">N</text><text x="30" y="4" text-anchor="middle" font-size="10" fill="#8fa9b8">E</text><text y="38" text-anchor="middle" font-size="10" fill="#8fa9b8">S</text><text x="-30" y="4" text-anchor="middle" font-size="10" fill="#8fa9b8">W</text></g><path d="M0 -44l5 10h-10z" fill="#e0a82e"/></svg>
+            </div>
           </div></section>
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gInfo')))}</span></header><div class="bf-su-info" data-part="info">${info()}</div></section>
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gSensors')))} ${tip('tips.setup.sensors')}</span></header><div class="bf-su-sensors" data-part="sensors">${sensors()}</div></section>
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gArming')))} ${tip('tips.setup.arming')}</span></header><div class="bf-su-arming" data-part="arming">${arming()}</div></section>
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gCal')))}</span></header><div class="bf-su-actions">
-          ${needsAcc ? `<p class="bf-note">${escapeHtml(t(K('accNeeds')))}</p>` : ''}
-          ${btn('acc', t(K('accBtn')), t(K('accText')), needsAcc ? 'light' : 'ghost', false, 'tips.setup.accCal')}
-          ${btn('mag', t(K('magBtn')), magOn ? t(K('magText')) : t(K('magNone')), 'ghost', !magOn, 'tips.setup.magCal')}
-          <p class="bf-su-small" data-mag-msg></p>
-        </div></section>
-        <section class="bf-panel"><header><span>${escapeHtml(t(K('gSystem')))}</span></header><div class="bf-su-actions">
-          ${btn('reboot', t(K('rebootBtn')), t(K('rebootText')), 'ghost', false, 'tips.setup.reboot')}
-          ${btn('dfu', t(K('dfuBtn')), t(K('dfuText')), 'ghost', false, 'tips.setup.dfu', true)}
-          ${caps & CAP.FLASH_BOOTLOADER ? btn('flashboot', t(K('flashBootBtn')), t(K('flashBootText')), 'ghost', false, 'tips.setup.flashBoot', true) : ''}
-          ${btn('msc', t(K('mscBtn')), t(K('mscText')), 'ghost', false, 'tips.setup.msc', true)}
-          ${btn('reset', t(K('resetBtn')), t(K('resetText')), 'ghost danger', false, 'tips.setup.reset')}
-        </div></section>
-      </div></div></div>`;
+        <div class="v1-cols su-cols" data-su-cols>
+          <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gSystemInfo')))}</span></header><div data-part="system">${system()}</div></section>
+          <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gSensors')))} ${tip('tips.setup.sensors')}</span></header><div data-part="sensors">${sensors()}</div></section>
+          <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gInfo')))}</span></header><div data-part="info">${info()}</div>
+            <div class="su-btns">${btn('dfu', t(K('dfuBtn')), t(K('dfuText')), 'amber', false, 'tips.setup.dfu', true)}${btn('reset', t(K('resetBtn')), t(K('resetText')), 'danger', false, 'tips.setup.reset')}</div></section>
+          <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gCal')))}</span></header><div class="su-btns">
+            ${needsAcc ? `<div class="v1-warn">${escapeHtml(t(K('accNeeds')))}</div>` : ''}
+            ${btn('acc', t(K('accBtn')), t(K('accText')), needsAcc ? 'amber' : 'ghost', false, 'tips.setup.accCal')}
+            ${btn('mag', t(K('magBtn')), magOn ? t(K('magText')) : t(K('magNone')), 'ghost', !magOn, 'tips.setup.magCal')}
+            <p class="su-small" data-mag-msg></p>
+            ${btn('reboot', t(K('rebootBtn')), t(K('rebootText')), 'ghost', false, 'tips.setup.reboot')}
+            ${caps & CAP.FLASH_BOOTLOADER ? btn('flashboot', t(K('flashBootBtn')), t(K('flashBootText')), 'ghost', false, 'tips.setup.flashBoot', true) : ''}
+            ${btn('msc', t(K('mscBtn')), t(K('mscText')), 'ghost', false, 'tips.setup.msc', true)}
+          </div></section>
+        </div>
+        <section class="bf-panel su-arming"><header><span class="bf-legend">${escapeHtml(t(K('gArming')))} ${tip('tips.setup.arming')}</span></header><div data-part="arming">${arming()}</div></section>
+      </div></div>`;
     mount3d();
     startPoll();
   }
@@ -154,6 +188,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       if (e && e.innerHTML !== html) e.innerHTML = html;
     };
     set('info', info());
+    set('system', system());
     set('sensors', sensors());
     set('arming', arming());
   }
@@ -175,6 +210,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
             const e = el.querySelector<HTMLElement>(`[data-att="${k}"]`);
             if (e) e.textContent = v;
           };
+          const hz = el.querySelector<SVGGElement>('[data-horizon]');
+          if (hz) hz.setAttribute('transform', `rotate(${(-a.rollDeg).toFixed(1)}) translate(0 ${(a.pitchDeg * 0.6).toFixed(1)})`);
+          const cp = el.querySelector<SVGGElement>('[data-compass]');
+          if (cp) cp.setAttribute('transform', `rotate(${(-a.headingDeg).toFixed(1)})`);
           set('roll', `${fmtNum(a.rollDeg, 1)}°`);
           set('pitch', `${fmtNum(a.pitchDeg, 1)}°`);
           set('heading', `${Math.round(a.headingDeg)}°`);
@@ -260,7 +299,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     else if (act === 'msc') void reboot('msc');
     else if (act === 'reset') void resetAll();
     else if (act === 'ask') {
-      const lines = [info().replace(/<div class="bf-su-kv"[^>]*><span>(.*?)<\/span><b class="mono">(.*?)<\/b><\/div>/g, (_m, k: string, v: string) => '- ' + k.replace(/<[^>]*>/g, '').trim() + ': ' + v + '\n').replace(/&amp;/g, '&')];
+      const lines = [...systemRows(), ...firmwareRows()].map((r) => `- ${r.k}: ${r.v}
+`);
       ctx.askAi(`${t('bfCore.askPrompt', { tab: t(K('title')) })}\n${lines.join('')}`);
     }
   });
@@ -269,7 +309,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const onChange = () => {
     const s = ctx.state.get();
     const key = `${s.conn}|${ctx.bf.store.isReady()}|${ctx.bf.get().supported}|${ctx.bf.get().status?.sensors ?? ''}`;
-    if (key !== lastKey || !el.querySelector('.bf-su-grid')) {
+    if (key !== lastKey || !el.querySelector('[data-su-cols]')) {
       lastKey = key;
       if (!busy) render();
       return;
@@ -278,12 +318,16 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   };
   const offA = ctx.state.subscribe(onChange);
   const offB = ctx.bf.subscribe(onChange);
+  const offT = ctx.state.subscribeTelemetry(() => {
+    if (el.querySelector('[data-su-cols]')) refreshParts();
+  });
   onChange();
   if (ctx.state.get().conn === 'connected') void ctx.bf.refresh(['status', 'ident', 'sensors']);
 
   return () => {
     offA();
     offB();
+    offT();
     stopPoll();
     drop3d();
     if (magTimer) clearInterval(magTimer);

@@ -67,6 +67,20 @@ const u8 = (...n) => Uint8Array.from(n);
   eq('legacy ESC sensor', M.decodeEscSensor(u8(2, 40, 0x10, 0x27, 42, 0x20, 0x4e)).map((x) => [x.tempC, x.rpm]), [[40, 10000], [42, 20000]]);
   eq('validate ok', M.validateMotorEdit({ idlePercent: 5.5, poles: 14, protocol: 6, bidir: true }), []);
   eq('validate bad', M.validateMotorEdit({ idlePercent: 30, poles: 3, protocol: 1, bidir: true }), ['idle', 'poles', 'bidirProtocol']);
+  eq('validate dyn idle', M.validateMotorEdit({ idlePercent: 5, poles: 14, protocol: 6, bidir: false, dynIdle: 250 }), ['dynIdle']);
+  const d3 = M.encodeMotor3d({ low: 1406, high: 1514, neutral: 1460 });
+  eq('3D round trip', M.decodeMotor3d(d3), { low: 1406, high: 1514, neutral: 1460 });
+  check('3D short payload', M.decodeMotor3d(u8(1, 2)) === null);
+  check('3D validate', M.validateMotor3d(M.MOTOR_3D_DEFAULTS) && !M.validateMotor3d({ low: 1480, high: 1514, neutral: 1460 }));
+  check('feature bits', M.featureOn(M.setFeature(0, M.MOTOR_FEATURE.ESC_SENSOR, true), 27) && M.setFeature(0x10, 4, false) === 0);
+  eq('pct to motor value', [M.pctToMotor(0), M.pctToMotor(30), M.pctToMotor(150)], [1000, 1300, 2000]);
+  {
+    const cfg3 = { protocol: 6, bidir: false, pidDenom: 1, poles: 14 };
+    demoMsp(M.MSPM.SET_MOTOR_3D_CONFIG, M.encodeMotor3d({ low: 1400, high: 1520, neutral: 1450 }), cfg3, 0);
+    eq('demo 3D write/read', M.decodeMotor3d(demoMsp(M.MSPM.MOTOR_3D_CONFIG, undefined, cfg3, 0)), { low: 1400, high: 1520, neutral: 1450 });
+    const fm = new DataView(demoMsp(M.MSPM.FEATURE_CONFIG, undefined, cfg3, 0).buffer).getUint32(0, true);
+    check('demo features include ESC_SENSOR', M.featureOn(fm, 27));
+  }
   check('debug mode names (4.5 only)', M.debugModeName(6, 46) === 'GYRO_SCALED' && M.debugModeName(6, 44) === '#6');
 }
 

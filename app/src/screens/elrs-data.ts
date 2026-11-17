@@ -3,6 +3,7 @@
 import { t } from '../i18n';
 
 export const FLASHER_URL = 'https://expresslrs.github.io/web-flasher/';
+export const CONFIGURATOR_URL = 'https://github.com/ExpressLRS/ExpressLRS-Configurator/releases';
 
 const PROVIDERS = ['SPEKTRUM1024', 'SPEKTRUM2048', 'SBUS', 'SUMD', 'SUMH', 'XBUS_MODE_B', 'XBUS_MODE_B_RJ01', 'IBUS', 'JETIEXBUS', 'CRSF', 'SRXL', 'CUSTOM', 'FPORT', 'SRXL2', 'GHST'];
 

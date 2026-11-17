@@ -2,6 +2,9 @@
 export const enBfOsd = {
   tab: 'OSD',
   title: 'OSD layout',
+  previewHead: 'Preview',
+  videoHead: 'Video settings',
+  alarmsHead: 'Alarms',
   head: 'OSD ELEMENTS',
   emptyTag: 'WORKSPACEFPV · OSD',
   emptyTitle: 'On-screen display',

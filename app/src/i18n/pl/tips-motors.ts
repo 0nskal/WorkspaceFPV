@@ -26,6 +26,21 @@ export const plTipsMotors: typeof enTipsMotors = {
       'To blokada bezpieczeństwa: suwaki odblokowują się dopiero po potwierdzeniu, że na silnikach nie ma śmigieł. Nie zaznaczaj, jeśli to nieprawda.',
     unlock:
       'Normalnie suwaki kończą się na 30 % gazu, co w zupełności wystarcza, żeby zobaczyć kierunek obrotów. Zdjęcie limitu pozwala na 100 %. Rób to tylko bez śmigieł i z quadem przytrzymanym albo leżącym na stole.',
+    mixer:
+      'Układ ramy, dla którego Betaflight miksuje silniki. Zwykły quad z 4 silnikami to **QUAD X**. Zmieniaj tylko przy innych ramach (heksa, trikopter, skrzydło). Wymaga restartu.',
+    motorStop:
+      'Z MOTOR_STOP silniki stoją po uzbrojeniu przy zerowym gazie, zamiast kręcić się na biegu jałowym. Większość pilotów zostawia to wyłączone: kręcące się śmigła pokazują, że dron jest uzbrojony. Nie działa, gdy włączony jest AIRMODE. Wymaga restartu.',
+    escSensor:
+      'Czyta telemetrię (RPM, temperaturę, prąd) z osobnego przewodu telemetrii ESC podpiętego do UART, jak w ESC KISS i BLHeli_32. Przy dwukierunkowym DShot zwykle niepotrzebne. Wymaga restartu.',
+    dynIdle:
+      'Dynamiczny bieg jałowy trzyma silniki co najmniej na tych obrotach (w setkach obr/min) przy niskim gazie. Pomaga przy desyncach i daje kontrolę we flipach i nurkowaniach. Wymaga dwukierunkowego DShot. 0 wyłącza. Dla śmigieł 5" zwykle ok. **30 do 40** (3000 do 4000 obr/min).',
+    threeD:
+      'Tylko dla odwracalnych ESC (3D): silniki kręcą się w obie strony, więc dron może latać do góry nogami. W zwykłym quadzie musi być wyłączone, bo środek gazu staje się zatrzymaniem silników. Wymaga restartu i ESC ustawionych na 3D.',
+    d3: 'W trybie 3D zakres gazu jest podzielony: poniżej **martwej strefy dół** silniki kręcą się do tyłu, powyżej **martwej strefy góra** do przodu, a **punkt neutralny** to zatrzymanie pomiędzy. Domyślnie: 1406, 1514, 1460.',
+    liveGraph:
+      'Żyroskop (obrót w deg/s) albo akcelerometr (g) kontrolera na żywo, a pod spodem napięcie, prąd i zużyta pojemność. Przydaje się przy teście silników: silnik, który trzęsie ramą bardziej niż inne, widać jako większą falę. Dane idą ze zwykłej pętli telemetrii, tylko gdy ta zakładka jest otwarta.',
+    master:
+      'Rusza wszystkimi czterema silnikami naraz. Przydaje się do porównania RPM wszystkich silników przy tym samym gazie.',
     escInfo: {
       head: 'Odczytuje ustawienia zapisane w każdym ESC przez przewód sygnałowy. Tutaj tylko do odczytu. Silniki nie kręcą się podczas odczytu, ale i tak zdejmij śmigła. Wynik mówi, jaki masz firmware ESC i czy obsłuży bidirectional DShot.',
       firmware:

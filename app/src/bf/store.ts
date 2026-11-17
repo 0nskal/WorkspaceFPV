@@ -22,6 +22,7 @@ export type BfArea =
   | 'motor'
   | 'arming'
   | 'sensors'
+  | 'gps'
   | 'alignment'
   | 'beeper'
   | 'rx'
@@ -30,7 +31,7 @@ export type BfArea =
   | 'battery'
   | 'serial';
 
-export const ALL_AREAS: BfArea[] = ['ident', 'status', 'names', 'features', 'advanced', 'mixer', 'motor', 'arming', 'sensors', 'alignment', 'beeper', 'rx', 'failsafe', 'pid', 'battery', 'serial'];
+export const ALL_AREAS: BfArea[] = ['ident', 'status', 'names', 'features', 'advanced', 'mixer', 'motor', 'arming', 'sensors', 'gps', 'alignment', 'beeper', 'rx', 'failsafe', 'pid', 'battery', 'serial'];
 
 export interface BfData {
   /** MSP API minor (major is always 1); 0 before the first read. */
@@ -54,6 +55,7 @@ export interface BfData {
   arming: D.ArmingConfig | null;
   beeper: D.BeeperConfig | null;
   sensorConfig: D.SensorConfig | null;
+  gpsConfig: D.GpsConfig | null;
   sensorAlign: D.SensorAlignment | null;
   accTrim: D.AccTrim | null;
   boardAlign: D.Rpy | null;
@@ -93,6 +95,7 @@ export const emptyBfData = (): BfData => ({
   arming: null,
   beeper: null,
   sensorConfig: null,
+  gpsConfig: null,
   sensorAlign: null,
   accTrim: null,
   boardAlign: null,
@@ -195,6 +198,7 @@ const STEPS: BfStep[] = [
   { id: 'arming', area: 'arming', code: C.ARMING_CONFIG, apply: (d, p, api) => void (d.arming = D.decodeArming(p, api)) },
   { id: 'sensorCfg', area: 'sensors', code: C.SENSOR_CONFIG, apply: (d, p) => void (d.sensorConfig = D.decodeSensorConfig(p)) },
   { id: 'sensorAct', area: 'sensors', code: C.SENSOR_CONFIG_ACTIVE, minApi: API.BF45, apply: (d, p) => void (d.sensorActive = D.decodeSensorActive(p)) },
+  { id: 'gpsCfg', area: 'gps', code: C.GPS_CONFIG, apply: (d, p) => void (d.gpsConfig = D.decodeGpsConfig(p)) },
   { id: 'mcu', area: 'ident', code: C.MCU_INFO, minApi: API.BF2025_12, apply: (d, p) => void (d.mcuName = D.decodeMcuInfo(p).name) },
   { id: 'sensorAlign', area: 'alignment', code: C.SENSOR_ALIGNMENT, apply: (d, p) => void (d.sensorAlign = D.decodeSensorAlignment(p)) },
   { id: 'accTrim', area: 'alignment', code: C.ACC_TRIM, apply: (d, p) => void (d.accTrim = D.decodeAccTrim(p)) },

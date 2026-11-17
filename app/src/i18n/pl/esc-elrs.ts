@@ -3,7 +3,7 @@ import type { Dict } from '../en';
 
 export const plBfInfo: Dict['bfInfo'] = {
   esc: {
-    head: 'INFO O ESC',
+    head: 'Informacje o ESC',
     key: 'interfejs 4-way',
     lead: 'Odczytuje firmware, wersję i ustawienia z każdego ESC. Tylko odczyt: nic nie jest zapisywane do ESC.',
     needs: 'Wymaga podłączonej baterii, zdjętych śmigieł i wyłączonej aparatury.',
@@ -125,6 +125,12 @@ export const plBfInfo: Dict['bfInfo'] = {
     failed: 'FC nie wrócił w czasie.',
   },
   elrs: {
+    pageTitle: 'ELRS',
+    updateHead: 'Aktualizacja ELRS',
+    pageSub: 'Odbiornik ExpressLRS i ustawienia łącza',
+    rxHead: 'Odbiornik',
+    toolsHead: 'Narzędzia do aktualizacji',
+    configurator: 'ELRS Configurator',
     head: 'Wersja odbiornika',
     readBtn: 'Odczytaj z odbiornika',
     rereadBtn: 'Odczytaj ponownie',

@@ -1,0 +1,347 @@
+/*
+ * Modes tab, 1.0 layout: one block per flight mode (name tile on the left, range rows on the right), like the
+ * Betaflight App. Own md-* classes, scoped under .bf-md, so the Tuning restyle cannot affect it.
+ */
+.bf-md {
+  --md-name: 210px;
+  --md-aux: 112px;
+  --md-us: 190px;
+  --md-logic: 210px;
+  --md-x: 30px;
+  --md-gap: 14px;
+  --md-pad: 14px;
+  --md-on: #34c58a;
+  padding: 0 28px;
+}
+
+/* ---- header ---- */
+.bf-md .md-head {
+  flex-wrap: wrap;
+  padding: 18px 0 12px;
+  min-height: 0;
+}
+.bf-md .md-count {
+  font-size: 14px;
+  color: var(--sub);
+}
+.bf-md .md-sp {
+  flex: 1;
+}
+.bf-md .md-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.bf-md .md-body {
+  padding: 18px 0 28px;
+}
+.bf-md .md-body > .bf-tuning-note {
+  margin: 0 0 14px;
+  border-radius: 8px;
+}
+.bf-md .md-body > .intro {
+  margin-bottom: 16px;
+}
+
+/* ---- scale header (columns line up with the range rows) ---- */
+.bf-md .md-scale {
+  display: grid;
+  grid-template-columns: var(--md-name) minmax(0, 1fr);
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.bf-md .md-scale-h {
+  padding-left: 2px;
+  font-weight: 600;
+  color: var(--text);
+}
+.bf-md .md-scale-in {
+  display: grid;
+  grid-template-columns: var(--md-aux) minmax(0, 1fr) var(--md-us) var(--md-logic) var(--md-x);
+  column-gap: var(--md-gap);
+  align-items: end;
+  padding: 0 var(--md-pad);
+}
+.bf-md .md-scale-in > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--text);
+}
+.bf-md .md-ax {
+  position: relative;
+  height: 18px;
+  margin: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sub);
+}
+.bf-md .md-ax span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+/* ---- mode blocks ---- */
+.bf-md .md-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bf-md .md-mode {
+  display: grid;
+  grid-template-columns: var(--md-name) minmax(0, 1fr);
+  border: 1px solid var(--v1-line);
+  border-radius: 12px;
+  background: var(--v1-panel);
+  overflow: hidden;
+}
+.bf-md .md-mode.empty {
+  background: transparent;
+}
+.bf-md .md-tile {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--v1-line);
+  background: #101d28;
+}
+.bf-md .md-mode.empty .md-tile {
+  background: transparent;
+}
+.bf-md .md-name {
+  font: 600 14px/1.3 var(--sans);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.bf-md .md-mode.empty .md-name {
+  font-weight: 500;
+  color: var(--sub);
+}
+.bf-md .md-act {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--md-on);
+  color: #06241a;
+  font: 700 11.5px/1.5 var(--sans);
+  font-style: normal;
+  letter-spacing: 0.04em;
+}
+.bf-md .md-act[hidden] {
+  display: none;
+}
+.bf-md .md-mode.on {
+  border-color: var(--md-on);
+}
+.bf-md .md-mode.on .md-tile {
+  background: rgba(52, 197, 138, 0.16);
+  border-right-color: var(--md-on);
+}
+.bf-md .md-ranges {
+  min-width: 0;
+  padding: 4px var(--md-pad);
+}
+
+/* ---- range rows ---- */
+.bf-md .md-range {
+  display: grid;
+  grid-template-columns: var(--md-aux) minmax(0, 1fr) var(--md-us) var(--md-logic) var(--md-x);
+  column-gap: var(--md-gap);
+  align-items: center;
+  min-height: 48px;
+  border-bottom: 1px solid var(--v1-line-2);
+}
+.bf-md .md-range.chg {
+  box-shadow: inset 3px 0 0 var(--hot);
+  margin-left: -8px;
+  padding-left: 8px;
+}
+.bf-md .md-range select,
+.bf-md .md-us input {
+  height: 32px;
+  border: 1px solid var(--v1-field-line);
+  border-radius: 8px;
+  background: var(--v1-field);
+  color: var(--ink);
+  font: 500 14px var(--mono);
+}
+.bf-md .md-range select {
+  width: 100%;
+  min-width: 0;
+  padding: 0 24px 0 10px;
+  font-family: var(--sans);
+}
+.bf-md .md-range select:hover,
+.bf-md .md-us input:hover {
+  border-color: #4c6a80;
+}
+.bf-md .md-range select:focus-visible,
+.bf-md .md-us input:focus-visible {
+  outline: 0;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 2px rgba(224, 168, 46, 0.25);
+}
+.bf-md .md-us input.bad {
+  border-color: var(--hot);
+  background: rgba(255, 74, 46, 0.14);
+}
+.bf-md .md-range.chg select,
+.bf-md .md-range.chg .md-us input {
+  border-color: var(--hot);
+}
+
+.bf-md .md-track {
+  position: relative;
+  height: 28px;
+  margin: 0 8px;
+  background:
+    linear-gradient(var(--v1-line), var(--v1-line)) 0 50% / 100% 10px no-repeat,
+    repeating-linear-gradient(to right, rgba(220, 239, 248, 0.16) 0 1px, transparent 1px 25%) 0 0 / 100% 100% no-repeat;
+  border-radius: 5px;
+}
+.bf-md .md-fill {
+  position: absolute;
+  top: 9px;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(224, 168, 46, 0.55);
+}
+.bf-md .md-range.hit .md-fill {
+  background: var(--md-on);
+}
+.bf-md .md-range.chg .md-fill {
+  background: rgba(255, 74, 46, 0.6);
+}
+.bf-md .md-mark {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  width: 0;
+  border-left: 3px solid var(--ink);
+  border-radius: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+.bf-md .md-track input[type='range'] {
+  position: absolute;
+  left: -8px;
+  top: 0;
+  width: calc(100% + 16px);
+  height: 28px;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+  z-index: 3;
+}
+.bf-md .md-track input[type='range']::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+.bf-md .md-track input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 24px;
+  margin-top: 2px;
+  border: 2px solid var(--v1-panel);
+  border-radius: 7px;
+  background: var(--amber);
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+.bf-md .md-track input[type='range']::-moz-range-thumb {
+  width: 10px;
+  height: 22px;
+  border: 2px solid var(--v1-panel);
+  border-radius: 7px;
+  background: var(--amber);
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+.bf-md .md-range.chg .md-track input[type='range']::-webkit-slider-thumb {
+  background: var(--hot);
+}
+.bf-md .md-track input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.bf-md .md-us {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sub);
+}
+.bf-md .md-us input {
+  width: 86px;
+  min-width: 0;
+  padding: 0 6px 0 10px;
+  text-align: right;
+}
+.bf-md .md-logic {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.bf-md .md-logic select:first-child {
+  flex: 0 0 84px;
+}
+.bf-md .md-logic select:last-child:not(:first-child) {
+  flex: 1;
+}
+.bf-md .md-x {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--sub);
+}
+.bf-md .md-x:hover {
+  color: var(--hot);
+  background: rgba(255, 74, 46, 0.1);
+}
+
+.bf-md .md-foot {
+  padding: 8px 0;
+}
+.bf-md .md-add {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13.5px;
+  gap: 8px;
+}
+.bf-md .md-add b {
+  font: 700 16px/1 var(--mono);
+  color: var(--amber);
+}
+.bf-md .md-mode.empty .md-ranges {
+  display: flex;
+  align-items: center;
+}
+.bf-md .md-mode.empty .md-foot {
+  padding: 6px 0;
+}
+
+/* ---- save bar ---- */
+.bf-md .bf-tuning-bar {
+  margin: 0 -28px;
+  padding: 12px 28px;
+}
+
+@media (max-width: 1300px) {
+  .bf-md {
+    --md-name: 160px;
+    --md-us: 176px;
+    --md-logic: 180px;
+    --md-aux: 100px;
+  }
+}

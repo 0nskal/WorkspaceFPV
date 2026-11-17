@@ -59,15 +59,9 @@ const portFields = (i: number): Record<string, FieldDef> => ({
   periphBaud: { key: `p${i}.periphBaud`, type: 'select', label: t(K('baud')), options: baudOpts(1, 14) },
 });
 
-/* ---------------- chips <-> old model ----------------
- * The draft keeps the old keys (msp, rx, telem, sensor, periph + bauds), so toWrites/buildPorts are unchanged.
- * A chip is just "exactly one of rx / telem / sensor / periph is set". Several at once = 'mixed' (old controls). */
-type Fn = 'none' | 'rx' | 'telem' | 'sensor' | 'periph' | 'mixed';
-type Chip = Exclude<Fn, 'mixed'>;
-const CHIPS: Chip[] = ['none', 'rx', 'telem', 'sensor', 'periph'];
-const chipLabel = (f: Fn) => t(K(f === 'none' ? 'fnUnused' : f === 'rx' ? 'chRx' : f === 'telem' ? 'chTelem' : f === 'sensor' ? 'chSensor' : f === 'periph' ? 'chPeriph' : 'mixed'));
 const labelOf = (list: Array<{ value: number | string; label: string }>, v: Val | undefined) => list.find((o) => Number(o.value) === Number(v))?.label ?? '';
-const withoutNone = (list: Array<{ value: number; label: string }>) => list.filter((o) => o.value !== 0);
+/** What a port carries, for the board schematic. */
+type Fn = 'none' | 'rx' | 'telem' | 'sensor' | 'periph' | 'mixed';
 
 function fnOf(r: Draft, i: number): Fn {
   const a: Fn[] = [];
@@ -131,38 +125,30 @@ function boardSvg(bf: BfData, r: Draft): string {
   return `<svg class="pt-svg" viewBox="150 0 640 ${bw + by * 2 + 16}" role="img" aria-label="${escapeHtml(t(K('boardAria')))}"><rect class="pt-board-bg" x="${bx}" y="${by}" width="${bw}" height="${bw}"/><path class="pt-trace" d="${traces}"/>${holes}<rect class="pt-usbc" x="${cx - 22}" y="${by + bw - 4}" width="44" height="14"/><text class="pt-usbt" x="${cx}" y="${by + bw + 26}" text-anchor="middle">USB</text><rect class="pt-mcu" x="${cx - 32}" y="${cy - 32}" width="64" height="64"/><path class="pt-ticks" d="${ticks}"/><circle class="pt-dot" cx="${cx - 24}" cy="${cy - 24}" r="2.5"/>${side(ports.slice(0, rightN), true)}${side(ports.slice(rightN), false)}</svg>`;
 }
 
-function boardPanel(bf: BfData, r: Draft): string {
+function boardBody(bf: BfData, r: Draft): string {
   const leg = (c: string, k: string) => `<span class="pt-key pt-c-${c}"><i></i>${escapeHtml(t(K(k)))}</span>`;
-  return `<section class="bf-panel pt-screen pt-boardbox"><header><span>${escapeHtml(t(K('boardTitle')))}</span><small>${escapeHtml(t(K('boardHint')))}</small></header>${boardSvg(bf, r)}<div class="pt-legend">${leg('rx', 'chRx')}${leg('msp', 'legMsp')}${leg('telem', 'chTelem')}${leg('sensor', 'chSensor')}${leg('periph', 'chPeriph')}${leg('off', 'fnUnused')}</div></section>`;
+  return `<div class="pt-screen pt-boardbox">${boardSvg(bf, r)}<div class="pt-legend">${leg('rx', 'chRx')}${leg('msp', 'legMsp')}${leg('telem', 'chTelem')}${leg('sensor', 'chSensor')}${leg('periph', 'chPeriph')}${leg('off', 'fnUnused')}</div></div>`;
 }
 
 function rowHtml(f: Record<string, FieldDef>, bf: BfData, i: number, r: Draft, b: Draft): string {
   const ports = bf.serial?.ports ?? [];
   const p = ports[i] as D.SerialPortCfg;
   const name = escapeHtml(D.serialPortName(p.id));
-  if (p.id === 20) return `<div class="pt-row pt-usbrow"><div class="pt-name mono">${name}</div><div class="pt-usbnote mono">${escapeHtml(t(K('usbNote')))}</div></div>`;
-  const fn = fnOf(r, i);
+  if (p.id === 20) return `<div class="pt-row pt-usbrow"><div class="pt-name mono">${name}</div><div class="pt-usbnote">${escapeHtml(t(K('usbNote')))}</div></div>`;
   const dup = dupOf(r, i, ports.length);
   const changed = Object.keys(b).some((k) => k.startsWith(`p${i}.`) && r[k] !== b[k]);
-  const chips =
-    fn === 'mixed'
-      ? `<span class="pt-mixed mono">${escapeHtml(t(K('mixed')))}</span><span class="pt-mixedhint">${escapeHtml(t(K('mixedHint')))}</span>`
-      : CHIPS.map((c) => `<button type="button" class="pt-chip${fn === c ? ' on' : ''}" role="radio" aria-checked="${fn === c}" data-p="${i}" data-fn="${c}">${escapeHtml(chipLabel(c))}</button>`).join('');
-  const sw = bareHtml(f.msp!, r, b).replace('<input ', `<input aria-label="MSP ${name}" `);
-  const mspBaud = r[`p${i}.msp`] ? bareHtml(f.mspBaud!, r, b) : '';
-  const typed = (field: string, list: Array<{ value: number; label: string }>) => bareHtml({ ...f[field]!, options: withoutNone(list) }, r, b);
-  let sub = '';
-  if (fn === 'telem') sub = typed('telem', telemOpts()) + bareHtml(f.telemBaud!, r, b);
-  else if (fn === 'sensor') sub = typed('sensor', sensorOpts()) + (r[`p${i}.sensor`] === F.GPS ? bareHtml(f.sensorBaud!, r, b) : '');
-  else if (fn === 'periph') sub = typed('periph', periphOpts()) + (r[`p${i}.periph`] === F.BLACKBOX ? bareHtml(f.periphBaud!, r, b) : '');
-  else if (fn === 'mixed') {
-    sub =
-      `<span class="pt-mxs"><span class="pt-mxl">${escapeHtml(t(K('colRx')))}</span>${bareHtml(f.rx!, r, b).replace('<input ', `<input aria-label="${escapeHtml(t(K('colRx')))} ${name}" `)}</span>` +
-      `<span class="pt-mxs"><span class="pt-mxl">${escapeHtml(t(K('colTelem')))}</span>${bareHtml(f.telem!, r, b)}${r[`p${i}.telem`] ? bareHtml(f.telemBaud!, r, b) : ''}</span>` +
-      `<span class="pt-mxs"><span class="pt-mxl">${escapeHtml(t(K('colSensor')))}</span>${bareHtml(f.sensor!, r, b)}${r[`p${i}.sensor`] === F.GPS ? bareHtml(f.sensorBaud!, r, b) : ''}</span>` +
-      `<span class="pt-mxs"><span class="pt-mxl">${escapeHtml(t(K('colPeriph')))}</span>${bareHtml(f.periph!, r, b)}${r[`p${i}.periph`] === F.BLACKBOX ? bareHtml(f.periphBaud!, r, b) : ''}</span>`;
-  }
-  return `<div class="pt-row${dup ? ' bad' : ''}${changed ? ' chg' : ''}" data-port="${i}"><div class="pt-name mono">${name}</div><div class="pt-fn" role="radiogroup" aria-label="${escapeHtml(t(K('colPort')))} ${name}">${chips}</div><div class="pt-msp"><span class="pt-msplbl mono">MSP</span>${sw}${mspBaud}</div>${sub ? `<div class="pt-sub">${sub}</div>` : ''}${dup ? `<div class="pt-msg" role="alert">${escapeHtml(dup)}</div>` : ''}</div>`;
+  const sw = (field: string, label: string) => bareHtml(f[field]!, r, b).replace('<input ', `<input aria-label="${escapeHtml(label)} ${name}" `);
+  const sel = (field: string, label: string) => bareHtml(f[field]!, r, b).replace('<select ', `<select aria-label="${escapeHtml(label)} ${name}" `);
+  const baud = (field: string, label: string) => bareHtml({ ...f[field]!, label }, r, b).replace('<select ', `<select aria-label="${escapeHtml(label)} ${name}" `);
+  const msp = !!r[`p${i}.msp`];
+  const cells = [
+    `<div class="pt-cell pt-c-msp" data-col="${escapeHtml(t(K('colMsp')))}"><div class="pt-line">${sw('msp', 'MSP')}${msp ? baud('mspBaud', t(K('baud'))) : ''}</div></div>`,
+    `<div class="pt-cell pt-c-rx" data-col="${escapeHtml(t(K('colRx')))}"><div class="pt-line">${sw('rx', t(K('colRx')))}</div></div>`,
+    `<div class="pt-cell" data-col="${escapeHtml(t(K('colTelem')))}"><div class="pt-line">${sel('telem', t(K('colTelem')))}</div>${r[`p${i}.telem`] ? `<div class="pt-line">${baud('telemBaud', t(K('baud')))}</div>` : ''}</div>`,
+    `<div class="pt-cell" data-col="${escapeHtml(t(K('colSensor')))}"><div class="pt-line">${sel('sensor', t(K('colSensor')))}</div>${r[`p${i}.sensor`] === F.GPS ? `<div class="pt-line">${baud('sensorBaud', t(K('baud')))}</div>` : ''}</div>`,
+    `<div class="pt-cell" data-col="${escapeHtml(t(K('colPeriph')))}"><div class="pt-line">${sel('periph', t(K('colPeriph')))}</div>${r[`p${i}.periph`] === F.BLACKBOX ? `<div class="pt-line">${baud('periphBaud', t(K('baud')))}</div>` : ''}</div>`,
+  ].join('');
+  return `<div class="pt-row${dup ? ' bad' : ''}${changed ? ' chg' : ''}" data-port="${i}"><div class="pt-name mono">${name}</div>${cells}${dup ? `<div class="pt-msg" role="alert">${escapeHtml(dup)}</div>` : ''}</div>`;
 }
 
 function groups(bf: BfData, draft: Draft): Group[] {
@@ -184,13 +170,14 @@ function groups(bf: BfData, draft: Draft): Group[] {
       wide: true,
       fields: all,
       render: (r, b) =>
-        `<div class="pt-screen pt-list"><div class="pt-head"><span>${escapeHtml(t(K('colPort')))} ${tip('tips.ports.uart')}</span><span class="pt-hfn">${th('colRx', 'tips.ports.rx')}${th('colTelem', 'tips.ports.telem')}${th('colSensor', 'tips.ports.sensor')}${th('colPeriph', 'tips.ports.periph')}</span><span>MSP ${tip('tips.ports.msp')}</span></div>` +
+        `<div class="pt-screen pt-list"><div class="pt-head"><span>${escapeHtml(t(K('colPort')))} ${tip('tips.ports.uart')}</span>${th('colMsp', 'tips.ports.msp')}${th('colRx', 'tips.ports.rx')}${th('colTelem', 'tips.ports.telem')}${th('colSensor', 'tips.ports.sensor')}${th('colPeriph', 'tips.ports.periph')}</div>` +
         ports.map((_, i) => rowHtml(fieldsOf[i]!, bf, i, r, b)).join('') +
         (noMsp ? `<p class="pt-note bad">${escapeHtml(t(K('errMsp')))}</p>` : '') +
         (hint ? `<p class="pt-note">${escapeHtml(hint)}</p>` : '') +
         (telemOff ? `<p class="pt-note">${escapeHtml(telemOff)}</p>` : '') +
         '</div>',
     },
+    { title: t(K('boardTitle')), hint: t(K('boardHint')), wide: true, fields: [], render: (r) => boardBody(bf, r) },
   ];
 }
 
@@ -230,24 +217,7 @@ const spec: TabSpec = {
   toDraft,
   groups,
   toWrites,
-  top: (bf, d) => `${intro('tips.ports.intro')}${boardPanel(bf, d)}`,
-  live: (el, _ctx, api) => {
-    const onClick = (e: Event) => {
-      const b = (e.target as HTMLElement).closest<HTMLElement>('.pt-chip');
-      if (!b || !el.contains(b) || b.getAttribute('aria-checked') === 'true') return;
-      const i = Number(b.dataset.p);
-      const fn = b.dataset.fn as Chip;
-      const d = api.draft();
-      // exactly one function: clear the others (baud values stay as they are)
-      d[`p${i}.telem`] = fn === 'telem' ? (telemOpts()[1]?.value ?? 0) : 0;
-      d[`p${i}.sensor`] = fn === 'sensor' ? (sensorOpts()[1]?.value ?? 0) : 0;
-      d[`p${i}.periph`] = fn === 'periph' ? F.VTX_MSP : 0;
-      api.set(`p${i}.rx`, fn === 'rx'); // sets the last key and re-renders
-      el.querySelector<HTMLElement>(`.pt-chip[data-p="${i}"][data-fn="${fn}"]`)?.focus();
-    };
-    el.addEventListener('click', onClick);
-    return () => el.removeEventListener('click', onClick);
-  },
+  top: () => intro('tips.ports.intro'),
   needsReboot: () => true,
   dynamic: (k) => /\.(msp|telem|sensor|periph|rx)$/.test(k),
   validate: (d, bf) => {

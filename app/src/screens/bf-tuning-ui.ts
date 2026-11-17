@@ -7,7 +7,7 @@ import type { Values } from '../bf/fieldtable';
 import { escapeHtml } from '../ui/dom';
 import { fmtNum, t } from '../i18n';
 import { icon } from '../ui/icons';
-import { tip, type TipKey } from '../ui/tip';
+import { tip, tipText, type TipKey } from '../ui/tip';
 
 export class Form {
   cur: Record<string, Values> = {};
@@ -101,6 +101,37 @@ export function fieldHtml(f: Form, s: FieldSpec): string {
   return `<div class="bf-tuning-f${ch} ${s.slider ? 'sl' : ''} ${s.cls ?? ''}" data-fk="${s.g}.${s.k}">${label}<span class="bf-tuning-c">${ctl}</span></div>`;
 }
 
+/** Betaflight-style row: [control | label | help bulb]. Same data attributes as fieldHtml, so bindForm drives it too. */
+export function rowHtml(f: Form, s: FieldSpec): string {
+  const bulb = s.tipKey ? tip(s.tipKey) : s.tip ? tipText(s.tip, s.label) : '<span class="bf-tip-gap"></span>';
+  const lbl = `<label class="bf-lbl">${escapeHtml(s.label)}</label>`;
+  if (!f.has(s.g, s.k)) return `<div class="bf-row na" title="${escapeHtml(t('bfTuning.common.unsupported'))}"><div class="bf-ctl"><span class="bf-tuning-na mono">—</span></div>${lbl}${bulb}</div>`;
+  const v = f.get(s.g, s.k);
+  const sc = s.scale ?? 1;
+  const dat = `data-g="${s.g}" data-k="${s.k}"`;
+  let ctl: string;
+  if (s.options) ctl = `<select ${dat} aria-label="${escapeHtml(s.label)}">${s.options.map((o) => `<option value="${o.v}"${o.v === v ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
+  else if (s.check) ctl = `<label class="bf-sw${v ? ' on' : ''}"><input type="checkbox" ${dat} ${v ? 'checked' : ''} aria-label="${escapeHtml(s.label)}"><i></i><span class="bf-sw-t">${escapeHtml(s.label)}</span></label>`;
+  else {
+    const rng = s.slider ? `<input type="range" class="bf-tuning-rng" ${dat} data-sync style="--p:${pct(v, s).toFixed(1)}%" min="${s.min * sc}" max="${s.max * sc}" step="${sc}" value="${numStr(v, sc)}" aria-label="${escapeHtml(s.label)}">` : '';
+    ctl = `<input type="number" class="mono" ${dat} min="${s.min * sc}" max="${s.max * sc}" step="${sc}" value="${numStr(v, sc)}" aria-label="${escapeHtml(s.label)}">${s.unit ? `<span class="bf-unit mono">${escapeHtml(s.unit)}</span>` : ''}${rng}`;
+  }
+  return `<div class="bf-row${f.isChanged(s.g, s.k) ? ' chg' : ''}${s.slider ? ' sl' : ''}" data-fk="${s.g}.${s.k}"><div class="bf-ctl">${ctl}</div>${lbl}${bulb}</div>`;
+}
+
+/** Bare number / select cell for tables (no label); changed values are marked on the cell. */
+export function cellHtml(f: Form, s: FieldSpec): string {
+  if (!f.has(s.g, s.k)) return `<span class="tn-cell na" title="${escapeHtml(t('bfTuning.common.unsupported'))}"><span class="bf-tuning-na mono">—</span></span>`;
+  const v = f.get(s.g, s.k);
+  const sc = s.scale ?? 1;
+  const dat = `data-g="${s.g}" data-k="${s.k}"`;
+  return `<span class="tn-cell bf-ctl${f.isChanged(s.g, s.k) ? ' chg' : ''}" data-fk="${s.g}.${s.k}"><input type="number" class="mono" ${dat} min="${s.min * sc}" max="${s.max * sc}" step="${sc}" value="${numStr(v, sc)}" aria-label="${escapeHtml(s.label)}">${s.unit ? `<span class="bf-unit mono">${escapeHtml(s.unit)}</span>` : ''}</span>`;
+}
+
+/** Panel with an amber pill title (the v1 kit's .bf-panel). */
+export const panelHtml = (title: string, body: string, opts: { tip?: TipKey; tipTxt?: string; hint?: string; expert?: boolean; cls?: string } = {}): string =>
+  `<section class="bf-panel ${opts.cls ?? ''}"${opts.expert ? ' data-level="expert"' : ''}><header><span class="bf-legend">${escapeHtml(title)}${opts.tip ? tip(opts.tip) : opts.tipTxt ? tipText(opts.tipTxt) : ''}</span>${opts.hint ? `<small>${escapeHtml(opts.hint)}</small>` : ''}</header>${body}</section>`;
+
 export const sectionHtml = (title: string, body: string, note = '', opts: { tip?: TipKey; expert?: boolean } = {}): string =>
   `<section class="bf-tuning-sec"${opts.expert ? ' data-level="expert"' : ''}><div class="bf-tuning-cap mono"><span>${escapeHtml(title)}${opts.tip ? ` ${tip(opts.tip)}` : ''}</span>${note ? `<span class="dim">${escapeHtml(note)}</span>` : ''}</div>${body}</section>`;
 
@@ -111,7 +142,7 @@ export const sectionHtml = (title: string, body: string, note = '', opts: { tip?
 export function bindForm(root: HTMLElement, form: Form, specs: () => FieldSpec[], onChange: (g: string, k: string) => void): () => void {
   const find = (g: string, k: string) => specs().find((s) => s.g === g && s.k === k);
   const refreshWrap = (inp: HTMLElement, g: string, k: string) => {
-    const wrap = inp.closest<HTMLElement>('.bf-tuning-f');
+    const wrap = inp.closest<HTMLElement>('.bf-tuning-f, .bf-row, .tn-cell');
     wrap?.classList.toggle('chg', form.isChanged(g, k));
   };
   const onInput = (e: Event) => {
@@ -134,9 +165,10 @@ export function bindForm(root: HTMLElement, form: Form, specs: () => FieldSpec[]
     }
     inp.classList.remove('bad');
     form.set(g, k, raw);
+    if (inp instanceof HTMLInputElement && inp.type === 'checkbox') inp.closest('.bf-sw')?.classList.toggle('on', inp.checked);
     // keep slider and number box of the same control in sync
     if (inp instanceof HTMLInputElement && inp.type !== 'checkbox') {
-      inp.closest('.bf-tuning-c')?.querySelectorAll<HTMLInputElement>('input[data-k]').forEach((o) => {
+      inp.closest('.bf-tuning-c, .bf-ctl')?.querySelectorAll<HTMLInputElement>('input[data-k]').forEach((o) => {
         if (o !== inp) o.value = numStr(raw, sc);
         if (o.type === 'range') o.style.setProperty('--p', `${pct(raw, spec).toFixed(1)}%`);
         o.classList.remove('bad');
@@ -173,7 +205,7 @@ export function barHtml(): string {
     <span class="bf-tuning-bar-sp"></span>
     <button class="btn ghost" data-act="ask">${icon('chip', 16)}${t('bfTuning.common.askAi')}</button>
     <button class="btn ghost" data-act="revert" disabled>${t('bfTuning.common.revert')}</button>
-    <button class="btn light" data-act="save" disabled>${icon('check', 16)}<span data-bar-save>${t('bfTuning.common.save')}</span></button>
+    <button class="btn amber" data-act="save" disabled>${icon('check', 16)}<span data-bar-save>${t('bfTuning.common.save')}</span></button>
   </div>`;
 }
 

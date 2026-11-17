@@ -1,166 +1,75 @@
+/**
+ * Motors tab ("Silniki", hash `esc`), laid out like the Betaflight Motors tab:
+ *   left  = Model type (mixer, reversed direction, quad diagram), ESC/Motor features, 3D, ESC info (4-way, read-only)
+ *   right = live gyro/accel graph with voltage/current/mAh, motor test (tiles with RPM/Err/Temp, vertical sliders,
+ *           master slider, "I understand the risks" switch = our props-off lock, STOP + Space).
+ * Safety: sliders are disabled until the switch is on, 30 % cap unless unlocked, the test stops on STOP/Space,
+ * window blur, tab leave, disconnect and reconnect. Settings are written only by the Save button (bf-motors-cfg.ts).
+ */
 import type { AppContext, ScreenMount } from '../context';
 import './esc.css';
-import { partLabel } from '../fc/diagnose';
 import { escLabel, summarizeEsc } from '../bf/esc-summary';
-import { telemetryActive } from '../bf/motors';
-import { fmtDate, fmtNum, t } from '../i18n';
-import { isDshot, motorPct, protocolName } from '../fc/state';
+import { MOTOR_PROTOCOLS, pctToMotor, telemetryActive } from '../bf/motors';
+import { fmtNum, t } from '../i18n';
+import { motorPct } from '../fc/state';
 import { hasWebSerial } from '../serial/port';
 import { MSP } from '../serial/msp';
 import { escapeHtml } from '../ui/dom';
 import { mountEscInfo } from './bf-esc-info';
 import { icon } from '../ui/icons';
 import { intro, tip } from '../ui/tip';
-import { mountMotorConfig, type MotorCfgHandle } from './bf-motors-cfg';
+import { mountMotorConfig, type MotorCfgHandle, type Recommendation } from './bf-motors-cfg';
 import { mountMotorTelemetry, type MotorTelHandle } from './bf-motors-tel';
+import { quadSvg } from './esc-quad';
 
 const SAFE_MAX = 30;
 const TICK_MS = 100;
+const HIST = 160;
+const COLORS = ['#ff4a2e', '#5fd3a5', '#5aa9e6', '#e0a82e'];
 
-/* ---------- rysunek drona z gory (styl Rentgen) ---------- */
-const VB_W = 600;
-const VB_H = 620;
-const CX = 300;
-const CY = 320;
-const INK = '#DCEFF8';
-const HOT = '#FF4A2E';
-const MOTORS = [
-  { n: 1, x: CX + 175, y: CY + 165, out: 45 }, // M1 tyl-prawy
-  { n: 2, x: CX + 175, y: CY - 165, out: -45 }, // M2 przod-prawy
-  { n: 3, x: CX - 175, y: CY + 165, out: 135 }, // M3 tyl-lewy
-  { n: 4, x: CX - 175, y: CY - 165, out: -135 }, // M4 przod-lewy
-];
-const f = (n: number) => +n.toFixed(2);
+type Sensor = 'gyro' | 'acc';
+const SCALES: Record<Sensor, number[]> = { gyro: [2000, 1000, 500, 250, 100, 50, 20, 10], acc: [4, 2, 1, 0.5, 0.25] };
+const RATES = [100, 200, 500];
 
-/** Kierunek obrotu: true = CW (patrzac z gory). Props in = domyslne ustawienie Betaflight. */
-function spinsCw(motor: number, propsOut: boolean): boolean {
-  const cwIn = motor === 2 || motor === 3;
-  return propsOut ? !cwIn : cwIn;
-}
-
-function spinArrow(m: (typeof MOTORS)[number], cw: boolean): string {
-  const r = 72;
-  const a0 = ((m.out - 55) * Math.PI) / 180;
-  const a1 = ((m.out + 55) * Math.PI) / 180;
-  const p = (a: number): [number, number] => [m.x + r * Math.cos(a), m.y + r * Math.sin(a)];
-  const [sx, sy] = p(cw ? a0 : a1);
-  const [ex, ey] = p(cw ? a1 : a0);
-  const sweep = cw ? 1 : 0;
-  const end = cw ? a1 : a0;
-  const dir = cw ? 1 : -1;
-  const tx = -Math.sin(end) * dir;
-  const ty = Math.cos(end) * dir;
-  const rx = Math.cos(end);
-  const ry = Math.sin(end);
-  const tip = [ex + tx * 9, ey + ty * 9];
-  const b1 = [ex + rx * 5.5, ey + ry * 5.5];
-  const b2 = [ex - rx * 5.5, ey - ry * 5.5];
-  const lbl = p(cw ? a0 - 0.2 : a1 + 0.2);
-  return (
-    `<path d="M${f(sx)} ${f(sy)} A${r} ${r} 0 0 ${sweep} ${f(ex)} ${f(ey)}" fill="none" stroke="${INK}" stroke-width="1.4" opacity=".85"/>` +
-    `<polygon points="${f(tip[0])},${f(tip[1])} ${f(b1[0])},${f(b1[1])} ${f(b2[0])},${f(b2[1])}" fill="${INK}"/>` +
-    `<text x="${f(lbl[0])}" y="${f(lbl[1] + 4)}" text-anchor="middle" class="esc-dirlbl">${cw ? 'CW' : 'CCW'}</text>`
-  );
-}
-
-function renderDroneSvg(opts: { hot: boolean; propsOut: boolean; hotText: string; film: string }): string {
-  const { hot, propsOut } = opts;
-  const arms = MOTORS.map((m) => {
-    const ang = (Math.atan2(m.y - CY, m.x - CX) * 180) / Math.PI;
-    const len = Math.hypot(m.x - CX, m.y - CY);
-    return `<g transform="translate(${CX} ${CY}) rotate(${f(ang)})"><rect x="40" y="-9" width="${f(len - 40)}" height="18" fill="rgba(207,230,242,.12)" stroke="${INK}" stroke-width=".9"/><rect x="40" y="-9" width="${f(len - 40)}" height="18" fill="url(#esc-cf)"/><rect x="${f(len - 62)}" y="-3" width="26" height="6" rx="3" fill="rgba(7,11,16,.6)" stroke="${INK}" stroke-width=".6" opacity=".7"/><circle cx="${f(len - 22)}" cy="0" r="5" fill="rgba(7,11,16,.6)" stroke="${INK}" stroke-width=".7"/></g>`;
-  }).join('');
-  const props = MOTORS.map((m) => {
-    const cw = spinsCw(m.n, propsOut);
-    return (
-      `<g data-m="${m.n - 1}">` +
-      `<circle class="esc-disc" cx="${m.x}" cy="${m.y}" r="105" fill="rgba(207,230,242,.07)" stroke="${INK}" stroke-width=".9" stroke-dasharray="4 5" opacity="1"/>` +
-      `<g transform="translate(${m.x} ${m.y}) rotate(${m.n * 37}) scale(1 ${cw ? 1 : -1})" opacity=".6">${[0, 120, 240].map((a) => `<use href="#esc-blade" transform="rotate(${a})"/>`).join('')}</g>` +
-      spinArrow(m, cw) +
-      `<circle class="esc-hub" cx="${m.x}" cy="${m.y}" r="26" fill="#0B1016" stroke="${INK}" stroke-width="1.2"/>` +
-      `<g transform="translate(${m.x} ${m.y})"><use href="#esc-motor"/></g>` +
-      `<text x="${m.x}" y="${m.y + 5}" text-anchor="middle" class="esc-mid">M${m.n}</text>` +
-      `<text x="${m.x}" y="${m.y + 48}" text-anchor="middle" class="esc-pct" data-pct="${m.n - 1}">--</text>` +
-      `<text x="${m.x}" y="${m.y + 66}" text-anchor="middle" class="esc-pct esc-rpm" data-rpm="${m.n - 1}"></text>` +
-      `</g>`
-    );
-  }).join('');
-  const bodyPts = '248,250 352,250 366,266 366,374 352,390 248,390 234,374 234,266';
-  const body = `<polygon points="${bodyPts}" fill="rgba(207,230,242,.1)" stroke="${INK}" stroke-width="1" filter="url(#esc-glow)"/><polygon points="${bodyPts}" fill="url(#esc-cf)"/>` +
-    [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sy]) => `<circle cx="${CX + sx * 54}" cy="${CY + sy * 58}" r="6.5" fill="rgba(207,230,242,.3)" stroke="${INK}" stroke-width=".7"/><circle cx="${CX + sx * 54}" cy="${CY + sy * 58}" r="3" fill="#0B1016" stroke="${INK}" stroke-width=".6"/>`).join('');
-  const ink = hot ? HOT : INK;
-  const mos = (x: number, y: number, left: boolean) =>
-    `<g transform="translate(${x} ${y})"><rect width="12" height="9" fill="${hot ? 'rgba(255,74,46,.55)' : 'rgba(207,230,242,.22)'}" stroke="${ink}" stroke-width=".8"/><rect x="${left ? 12 : -4}" y="1" width="4" height="1.8" fill="${ink}" opacity=".7"/><rect x="${left ? 12 : -4}" y="3.6" width="4" height="1.8" fill="${ink}" opacity=".7"/><rect x="${left ? 12 : -4}" y="6.2" width="4" height="1.8" fill="${ink}" opacity=".7"/><rect x="${left ? 2 : 3}" y="1.6" width="7" height="2.6" fill="${hot ? 'rgba(255,120,90,.6)' : 'rgba(207,230,242,.4)'}"/></g>`;
-  let mosAll = '';
-  for (let i = 0; i < 4; i++) mosAll += mos(268, 291 + i * 15, true) + mos(320, 291 + i * 15, false);
-  const board =
-    `<rect x="262" y="284" width="76" height="72" fill="${hot ? 'rgba(255,74,46,.34)' : 'rgba(207,230,242,.2)'}" stroke="${ink}" stroke-width="1.3"${hot ? ' filter="url(#esc-hotglow)"' : ''}/>` +
-    (hot ? `<circle cx="300" cy="320" r="52" fill="url(#esc-focus)"/>` : '') +
-    mosAll +
-    `<circle cx="300" cy="320" r="11" fill="#0B1016" stroke="${ink}" stroke-width="1.2"/><circle cx="300" cy="320" r="7" fill="none" stroke="${ink}" stroke-width=".6" opacity=".7"/><path d="M293 320H307" stroke="${ink}" stroke-width=".6" opacity=".7"/>`;
-  const pads = [-1, 1]
-    .map((sy) => [0, 1, 2].map((i) => `<rect x="${278 + i * 16}" y="${sy < 0 ? 280 : 358}" width="9" height="8" fill="${hot ? 'rgba(255,74,46,.45)' : 'rgba(207,230,242,.4)'}" stroke="${ink}" stroke-width=".7"/>`).join(''))
-    .join('') +
-    `<rect x="288" y="340" width="24" height="9" fill="rgba(207,230,242,.12)" stroke="${ink}" stroke-width=".7"/>` +
-    [0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<rect x="${290 + i * 3}" y="342" width="1.8" height="5" fill="${ink}" opacity=".8"/>`).join('');
-  const leader = hot
-    ? `<line x1="266" y1="320" x2="22" y2="320" stroke="${HOT}" stroke-width="1"/><circle cx="266" cy="320" r="3" fill="${HOT}"/>` +
-      `<rect x="22" y="283" width="7" height="7" fill="${HOT}"/><text x="36" y="290" class="esc-hotlbl">ESC</text>` +
-      `<text x="22" y="312" class="esc-hottxt">${escapeHtml(opts.hotText)}</text>`
-    : `<text x="300" y="418" text-anchor="middle" class="esc-sub">${escapeHtml(t('esc.boardLabel'))}</text>`;
-  return `<svg class="esc-svg" viewBox="0 0 ${VB_W} ${VB_H}" role="img" aria-label="${escapeHtml(t('esc.droneAria'))}">
-    <defs>
-      <filter id="esc-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      <filter id="esc-hotglow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      <pattern id="esc-cf" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0h3v3H0zM3 3h3v3H3z" fill="rgba(207,230,242,.11)"/></pattern>
-      <path id="esc-blade" d="M17 -4C36 -20 66 -24 92 -11C101 -6 100 2 89 6C64 13 38 11 17 5Z" fill="rgba(207,230,242,.13)" stroke="${INK}" stroke-width=".8"/>
-      <g id="esc-motor" fill="none" stroke="${INK}">${Array.from({ length: 12 }, (_, k) => `<rect x="17" y="-2.2" width="6.5" height="4.4" transform="rotate(${k * 30})" fill="rgba(255,160,100,.2)" stroke-width=".5" opacity=".8"/>`).join('')}<circle r="14.5" stroke-width=".5" stroke-dasharray="1.6 1.9" opacity=".7"/>${Array.from({ length: 6 }, (_, k) => `<path d="M24.6 0A24.6 24.6 0 0 1 22 7" transform="rotate(${k * 60 + 12})" stroke-width="1.3" opacity=".55"/>`).join('')}</g>
-      <radialGradient id="esc-focus"><stop offset="0" stop-color="${HOT}" stop-opacity=".45"/><stop offset="1" stop-color="${HOT}" stop-opacity="0"/></radialGradient>
-    </defs>
-    <g class="esc-film">
-      <line x1="${CX}" y1="62" x2="${CX}" y2="${VB_H - 14}" stroke="${INK}" stroke-width=".6" stroke-dasharray="3 7" opacity=".28"/>
-      <line x1="12" y1="${CY}" x2="${VB_W - 12}" y2="${CY}" stroke="${INK}" stroke-width=".6" stroke-dasharray="3 7" opacity=".2"/>
-      <path d="M${CX} 44V12M${CX - 6} 22l6-8 6 8" fill="none" stroke="${INK}" stroke-width="1" opacity=".8"/>
-      <text x="${CX + 14}" y="24" class="esc-film-t">${escapeHtml(t('esc.film'))}</text>
-      <text x="14" y="16" class="esc-film-t">L</text>
-      <text x="14" y="${VB_H - 8}" class="esc-film-t">${escapeHtml(opts.film)}</text>
-      <text x="${VB_W - 14}" y="${VB_H - 8}" text-anchor="end" class="esc-film-t">kV 60 · mAs 2</text>
-    </g>
-    ${arms}${body}${board}${pads}${props}${leader}
-  </svg>`;
-}
-
-/* ---------- ekran ---------- */
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   let view: 'empty' | 'main' | '' = '';
   let propsOut = false;
-  let droneKey = '';
   let cfgHandle: MotorCfgHandle | null = null;
   let telHandle: MotorTelHandle | null = null;
-  // test silnikow
-  let propsOff = false; // zawsze odznaczone przy wejsciu
+  let offInfo: (() => void) | null = null;
+  // motor test
+  let propsOff = false; // "I understand the risks": always off when the tab opens
   let unlock = false;
   const vals = [0, 0, 0, 0];
+  let master = 0;
   let timer: ReturnType<typeof setInterval> | null = null;
   let inflight = false;
-  let offInfo: (() => void) | null = null; // ESC info panel (bf-esc-info.ts)
+  // live graph
+  let sensor: Sensor = 'gyro';
+  let scale = 2000;
+  let rate = 100;
+  let lastSample = 0;
+  let oneG = 0;
+  const hist: Array<[number, number, number]> = [];
+  let drawQueued = false;
+  let quadKey = '';
 
   const q = <T extends Element = HTMLElement>(sel: string): T | null => el.querySelector<T>(sel);
   const maxPct = () => (unlock ? 100 : SAFE_MAX);
   const anyActive = () => vals.some((v) => v > 0);
 
-  /* ----- test: wysylanie ----- */
+  /* ---------- motor test: sending ---------- */
   function payload(): Uint8Array {
     const b = new Uint8Array(16);
     const dv = new DataView(b.buffer);
-    for (let i = 0; i < 8; i++) dv.setUint16(i * 2, i < 4 ? 1000 + vals[i] * 10 : 1000, true);
+    for (let i = 0; i < 8; i++) dv.setUint16(i * 2, i < 4 ? pctToMotor(vals[i]) : 1000, true);
     return b;
   }
 
   function sendNow(): void {
     const link = ctx.link();
     if (!link || link.busy) return;
-    if (ctx.state.get().mode === 'demo') return; // demo: symulacja po stronie UI
+    if (ctx.state.get().mode === 'demo') return; // demo: simulated in the UI only
     if (inflight) return;
     inflight = true;
     link
@@ -197,64 +106,14 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (timer) clearInterval(timer);
     timer = null;
     vals.fill(0);
+    master = 0;
     if (was) sendZeros();
     paintTest();
     paintMotors();
   }
 
-  /* ----- malowanie ----- */
-  function currentPct(): Array<number | null> {
-    const s = ctx.state.get();
-    if (s.mode === 'demo' && anyActive()) return vals.slice();
-    const t = s.telemetry;
-    return t ? t.motors.slice(0, 4).map(motorPct) : [null, null, null, null];
-  }
-
-  function paintMotors(): void {
-    const pcts = currentPct();
-    for (let i = 0; i < 4; i++) {
-      const txt = q<SVGTextElement>(`[data-pct="${i}"]`);
-      const g = q<SVGGElement>(`g[data-m="${i}"]`);
-      const p = pcts[i];
-      if (txt) txt.textContent = p === null ? '--' : `${p}%`;
-      const rpmTxt = q<SVGTextElement>(`[data-rpm="${i}"]`);
-      const tel = telHandle?.latest()[i];
-      if (rpmTxt) rpmTxt.textContent = tel && tel.rpm > 0 ? `${tel.rpm} rpm` : '';
-      if (g) {
-        const disc = g.querySelector<SVGElement>('.esc-disc');
-        const hub = g.querySelector<SVGElement>('.esc-hub');
-        const on = (p ?? 0) > 0;
-        const test = vals[i] > 0;
-        disc?.setAttribute('fill', `rgba(${test ? '255,110,80' : '207,230,242'},${(0.06 + ((p ?? 0) / 100) * (test ? 0.3 : 0.12)).toFixed(3)})`);
-        hub?.setAttribute('stroke', vals[i] > 0 ? HOT : INK);
-        txt?.classList.toggle('on', test && on);
-      }
-    }
-    paintBars(pcts);
-    paintCards();
-  }
-
-  /** Output and RPM bars under the sliders (transform only). */
-  function paintBars(pcts: Array<number | null>): void {
-    const tel = telHandle?.latest() ?? [];
-    const act = telemetryActive(tel);
-    const rpms = [0, 1, 2, 3].map((i) => (tel[i] && act ? tel[i].rpm : 0));
-    const top = Math.max(...rpms, 0);
-    for (let i = 0; i < 4; i++) {
-      const o = pcts[i] ?? 0;
-      const ob = q<HTMLElement>(`[data-obar="${i}"]`);
-      const rb = q<HTMLElement>(`[data-rbar="${i}"]`);
-      if (ob) ob.style.transform = `scaleY(${(o / 100).toFixed(3)})`;
-      if (rb) rb.style.transform = `scaleY(${top > 0 ? (rpms[i] / top).toFixed(3) : 0})`;
-      const ot = q(`[data-otxt="${i}"]`);
-      const rt = q(`[data-rtxt="${i}"]`);
-      if (ot) ot.textContent = pcts[i] === null ? '—' : `${o}%`;
-      if (rt) rt.textContent = rpms[i] > 0 ? fmtNum(rpms[i]) : '—';
-    }
-  }
-
-  /** One readout card per motor next to its corner of the drawing; amber + tag when something is off. */
-  function paintCards(): void {
+  /* ---------- diagnosis: problem motors and the protocol recommendation ---------- */
+  function motorTags(): string[] {
     const s = ctx.state.get();
     const tel = telHandle?.latest() ?? [];
     const active = telemetryActive(tel);
@@ -262,123 +121,259 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const sum = summarizeEsc(scan);
     const main = sum ? [...sum.groups].sort((a, b) => b.motors.length - a.motors.length)[0].name : null;
     const anyRpm = active && tel.slice(0, 4).some((m) => m && m.rpm > 0);
-    for (let i = 0; i < 4; i++) {
-      const card = q(`[data-mc="${i}"]`);
-      if (!card) continue;
+    return [0, 1, 2, 3].map((i) => {
       const m = tel[i];
       const live = !!m && active;
       const dev = scan?.escs.find((e) => e.index === i);
       const fw = dev ? escLabel(dev) : null;
-      let tag = '';
-      if (dev?.status === 'no-response') tag = t('bfMotors.tagNoEsc');
-      else if (dev && !fw) tag = t('bfMotors.tagUnknownFw');
-      else if (fw && main && sum && sum.groups.length > 1 && fw !== main) tag = t('bfMotors.tagFwDiffers');
-      else if (live && anyRpm && m.rpm === 0) tag = t('bfMotors.tagNoRpm');
-      else if (live && m.invalidPct >= 2) tag = t('bfMotors.tagHighLost');
-      else if (live && m.tempC >= 60) tag = t('bfMotors.tagHot');
-      const dash = '—';
-      const html = `<div class="ev-card-h"><b class="mono">M${i + 1}</b>${tag ? `<span class="ev-tag mono">${escapeHtml(tag)}</span>` : ''}</div>
-        <dl class="mono"><div><dt>${t('bfMotors.rpm').toUpperCase()}</dt><dd>${live ? fmtNum(m.rpm) : dash}</dd></div>
-        <div><dt>${t('bfMotors.cardTemp')}</dt><dd>${live ? `${fmtNum(m.tempC, 0)} °C` : dash}</dd></div>
-        <div><dt>${t('bfMotors.lost')}</dt><dd class="${live && m.invalidPct >= 2 ? 'bad' : ''}">${live ? `${fmtNum(m.invalidPct, 1)}%` : dash}</dd></div>
-        <div><dt>${t('bfMotors.cardFw')}</dt><dd>${fw ? escapeHtml(fw) : dash}</dd></div></dl>`;
-      if (card.dataset.sig !== html) {
-        card.dataset.sig = html;
-        card.innerHTML = html;
-      }
-      card.classList.toggle('warn', !!tag);
-    }
+      if (dev?.status === 'no-response') return t('bfMotors.tagNoEsc');
+      if (dev && !fw) return t('bfMotors.tagUnknownFw');
+      if (fw && main && sum && sum.groups.length > 1 && fw !== main) return t('bfMotors.tagFwDiffers');
+      if (live && anyRpm && m.rpm === 0) return t('bfMotors.tagNoRpm');
+      if (live && m.invalidPct >= 2) return t('bfMotors.tagHighLost');
+      if (live && m.tempC >= 60) return t('bfMotors.tagHot');
+      return '';
+    });
   }
 
-  /** Protocol bar: current protocol, warning + recommendation from the diagnosis. */
-  function paintProto(): void {
-    const cur = q('.ev-proto-cur');
-    if (!cur) return;
-    const cfg = ctx.state.get().config;
+  function recommend(): Recommendation | null {
     const d = ctx.diagnosis();
+    const problems = d.checks.filter((c) => c.part === 'esc' && (c.severity === 'fail' || c.severity === 'warn')).map((c) => c.label);
     const grab = (id: string) => d.suggestions.find((x) => x.id === id);
-    const protoRec = grab('protocol')?.commands[0]?.match(/=\s*(\w+)/)?.[1] ?? '';
-    const bidirRec = !!grab('bidir');
-    const list = [protoRec, bidirRec ? t('bfMotors.bidirName') : ''].filter(Boolean).join(' + ');
-    const name = cfg ? protocolName(cfg.motorPwmProtocol) : '—';
-    const html = `<span class="ev-proto-l">${t('bfMotors.protoLabel')}:</span> <b class="mono${list ? ' warn' : ''}">${escapeHtml(name)}</b>${list ? `<span class="ev-proto-w" role="img" aria-label="${t('bfMotors.protoWarnAria')}">${icon('alert', 16)}</span><span class="ev-chip mono">${escapeHtml(t('bfMotors.recommended', { list }))}</span>` : ''}`;
-    if (cur.innerHTML !== html) cur.innerHTML = html;
+    const name = grab('protocol')?.commands[0]?.match(/=\s*(\w+)/)?.[1] ?? '';
+    const proto = MOTOR_PROTOCOLS.find((p) => p.name === name.toUpperCase())?.id ?? null;
+    const bidir = !!grab('bidir');
+    if (!problems.length && proto === null && !bidir) return null;
+    return { problems, protocol: proto, bidir };
+  }
+
+  /* ---------- painting ---------- */
+  function currentPct(): Array<number | null> {
+    const s = ctx.state.get();
+    if (s.mode === 'demo' && anyActive()) return vals.slice();
+    const tl = s.telemetry;
+    return tl ? tl.motors.slice(0, 4).map(motorPct) : [null, null, null, null];
+  }
+
+  function paintMotors(): void {
+    if (view !== 'main') return;
+    const pcts = currentPct();
+    const tel = telHandle?.latest() ?? [];
+    const active = telemetryActive(tel);
+    const tags = motorTags();
+    const scan = ctx.state.get().hw.esc;
+    const dash = '—';
+    for (let i = 0; i < 4; i++) {
+      const tile = q(`[data-tile="${i}"]`);
+      if (!tile) continue;
+      const p = pcts[i];
+      const m = tel[i];
+      const live = !!m && active;
+      const dev = scan?.escs.find((e) => e.index === i);
+      const fw = dev ? escLabel(dev) : null;
+      const tag = tags[i];
+      const html = `<div class="mt-tile-v mono">${p === null ? dash : pctToMotor(p)}</div><div class="mt-tile-p mono">${p === null ? '' : `${p}%`}</div>${tag ? `<span class="mt-tag">${escapeHtml(tag)}</span>` : ''}`;
+      if (tile.dataset.sig !== html) {
+        tile.dataset.sig = html;
+        tile.innerHTML = html;
+      }
+      tile.classList.toggle('hot', !!tag);
+      tile.classList.toggle('live', vals[i] > 0);
+      const st = q(`[data-stats="${i}"]`);
+      if (st) {
+        const lost = live && m.invalidPct >= 2;
+        const hotT = live && m.tempC >= 60;
+        const sh = `<div><span>RPM</span><b class="mono">${live ? fmtNum(m.rpm) : dash}</b></div><div><span>Err</span><b class="mono${lost ? ' bad' : ''}">${live ? `${fmtNum(m.invalidPct, 1)}%` : dash}</b></div><div><span>Temp</span><b class="mono${hotT ? ' bad' : ''}">${live ? `${fmtNum(m.tempC, 0)} °C` : dash}</b></div>${fw ? `<div class="mt-fw" title="${escapeHtml(t('bfMotors.cardFw'))}"><span>FW</span><b class="mono">${escapeHtml(fw)}</b></div>` : ''}`;
+        if (st.dataset.sig !== sh) {
+          st.dataset.sig = sh;
+          st.innerHTML = sh;
+        }
+      }
+    }
+    paintQuad(tags);
+  }
+
+  function paintQuad(tags = motorTags()): void {
+    const box = q('.mt-quad');
+    if (!box) return;
+    const mixer = cfgHandle?.mixer() ?? 3;
+    const hot = tags.map((x, i) => (x ? i : -1)).filter((i) => i >= 0);
+    const key = JSON.stringify([mixer, propsOut, hot, vals, t('bfMotors.front')]);
+    if (key === quadKey) return;
+    quadKey = key;
+    box.innerHTML = mixer === 3
+      ? quadSvg({ propsOut, hot, active: vals, aria: t('bfMotors.quadAria'), front: t('bfMotors.front') })
+      : `<p class="mt-msg">${t('bfMotors.quadOnly')}</p>`;
   }
 
   function paintTest(): void {
-    const status = q('.esc-test-state');
-    if (status) {
-      status.textContent = !propsOff ? t('esc.stateLocked') : anyActive() ? t('esc.stateLive') : t('esc.stateReady');
-      status.classList.toggle('live', propsOff && anyActive());
-    }
-    const warn = q('.esc-warn');
-    if (warn) {
-      warn.classList.toggle('on', propsOff);
-      warn.innerHTML = `${icon('alert', 18)}<span>${propsOff ? t('esc.warnOn') : t('esc.warnOff')}</span>`;
+    if (view !== 'main') return;
+    const state = q('.mt-state');
+    if (state) {
+      state.textContent = !propsOff ? t('esc.stateLocked') : anyActive() ? t('esc.stateLive') : t('esc.stateReady');
+      state.className = `mt-state ${!propsOff ? 'locked' : anyActive() ? 'live' : 'ready'}`;
     }
     const max = maxPct();
-    el.querySelectorAll<HTMLInputElement>('input.esc-range').forEach((r) => {
+    el.querySelectorAll<HTMLInputElement>('input.mt-range').forEach((r) => {
       const idx = r.dataset.m;
       r.disabled = !propsOff;
       r.max = String(max);
-      const v = idx === 'all' ? Math.max(...vals) : vals[Number(idx)];
+      const v = idx === 'all' ? master : vals[Number(idx)];
       r.value = String(v);
-      const col = r.closest('.esc-slider');
-      const out = col?.querySelector('.esc-val');
+      r.style.setProperty('--p', `${((v / max) * 100).toFixed(1)}%`);
+      const col = r.closest('.mt-col-m');
+      const out = col?.querySelector('.mt-sl-v');
       if (out) out.textContent = `${v}%`;
       col?.classList.toggle('dis', !propsOff);
-      col?.classList.toggle('live', v > 0);
+      col?.classList.toggle('on', v > 0);
     });
+    const sw = q('.mt-risk .bf-sw');
+    sw?.classList.toggle('on', propsOff);
     const un = q<HTMLInputElement>('#esc-unlock');
     if (un) un.disabled = !propsOff;
-    const stop = q<HTMLButtonElement>('.esc-stop');
-    if (stop) stop.classList.toggle('armed', propsOff && anyActive());
-  }
-
-  function paintDrone(): void {
-    const s = ctx.state.get();
-    const d = ctx.diagnosis();
-    const hot = d.focus === 'esc';
-    let hotText = '';
-    if (hot && s.config) {
-      const bidirOff = isDshot(s.config.motorPwmProtocol) && !s.config.bidir ? ` · ${t('xray.bidirOff')}` : '';
-      hotText = `${partLabel('esc')} · ${protocolName(s.config.motorPwmProtocol).replace(/^DSHOT/, 'DShot')}${bidirOff}`;
-    }
-    const film = `WORKSPACEFPV · ${(s.info?.craftName || t('common.drone')).toUpperCase()} · ${fmtDate()}`;
-    const key = JSON.stringify([hot, hotText, propsOut, film]);
-    if (key === droneKey) return;
-    droneKey = key;
-    const box = q('.esc-art');
-    if (box) box.innerHTML = renderDroneSvg({ hot, propsOut, hotText, film });
-    paintMotors();
+    q('.mt-unlock')?.classList.toggle('dis', !propsOff);
+    q('.mt-risk')?.classList.toggle('on', propsOff);
+    q('.mt-stop')?.classList.toggle('armed', propsOff && anyActive());
+    const mv = q('[data-master]');
+    if (mv) mv.textContent = String(pctToMotor(master));
   }
 
   function paintOverlay(): void {
-    const ov = q('.esc-overlay');
+    const ov = q('.mt-overlay');
     if (ov) ov.hidden = ctx.state.get().conn !== 'reconnecting';
   }
 
-  function paintPropsToggle(): void {
-    el.querySelectorAll<HTMLButtonElement>('[data-props]').forEach((b) => {
-      const on = (b.dataset.props === 'out') === propsOut;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', String(on));
+  /* ---------- live graph ---------- */
+  function sample(): void {
+    const tl = ctx.state.get().telemetry;
+    if (!tl || view !== 'main') return;
+    const now = Date.now();
+    if (now - lastSample < rate - 15) return;
+    lastSample = now;
+    let v: [number, number, number];
+    if (sensor === 'gyro') v = [tl.gyro[0], tl.gyro[1], tl.gyro[2]];
+    else {
+      // MSP_RAW_IMU sends 512 per g on most boards (2048 on some); pick by the magnitude at the first sample
+      const mag = Math.hypot(tl.acc[0], tl.acc[1], tl.acc[2]);
+      if (!oneG) oneG = mag > 1200 ? 2048 : 512;
+      v = [tl.acc[0] / oneG, tl.acc[1] / oneG, tl.acc[2] / oneG];
+    }
+    hist.push(v);
+    if (hist.length > HIST) hist.shift();
+    paintReadout(v);
+    paintPower();
+    if (!drawQueued) {
+      drawQueued = true;
+      requestAnimationFrame(() => {
+        drawQueued = false;
+        drawGraph();
+      });
+    }
+  }
+
+  function paintReadout(v: [number, number, number]): void {
+    const rms = Math.sqrt((v[0] ** 2 + v[1] ** 2 + v[2] ** 2) / 3);
+    const d = sensor === 'gyro' ? 2 : 3;
+    [...v, rms].forEach((x, i) => {
+      const o = q(`[data-ro="${i}"]`);
+      if (o) o.textContent = fmtNum(x, d);
     });
   }
 
-  /* ----- widoki ----- */
+  function paintPower(): void {
+    const tl = ctx.state.get().telemetry;
+    const set = (k: string, s: string) => {
+      const o = q(`[data-pw="${k}"]`);
+      if (o && o.textContent !== s) o.textContent = s;
+    };
+    set('v', tl ? `${fmtNum(tl.vbat, 2)} V` : '—');
+    set('a', tl ? `${fmtNum(tl.amperage, 2)} A` : '—');
+    set('mah', tl ? `${fmtNum(tl.mah)} mAh` : '—');
+  }
+
+  function drawGraph(): void {
+    const cv = q<HTMLCanvasElement>('.mt-graph canvas');
+    if (!cv) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth;
+    const h = cv.clientHeight;
+    if (!w || !h) return;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+    }
+    const g = cv.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const left = 44;
+    const pw = w - left - 6;
+    const top = 8;
+    const ph = h - top - 8;
+    const y = (v: number) => top + ph / 2 - (Math.max(-scale, Math.min(scale, v)) / scale) * (ph / 2);
+    g.font = '11px "IBM Plex Mono", monospace';
+    g.textAlign = 'right';
+    g.textBaseline = 'middle';
+    for (const k of [-1, -0.5, 0, 0.5, 1]) {
+      const yy = y(k * scale);
+      g.strokeStyle = k === 0 ? '#3a5266' : '#1c2c3a';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(left, Math.round(yy) + 0.5);
+      g.lineTo(left + pw, Math.round(yy) + 0.5);
+      g.stroke();
+      g.fillStyle = '#8fa9b8';
+      g.fillText(fmtNum(k * scale, scale < 1 ? 2 : 0), left - 6, yy);
+    }
+    for (let i = 1; i < 4; i++) {
+      const xx = Math.round(left + (pw * i) / 4) + 0.5;
+      g.strokeStyle = '#1c2c3a';
+      g.beginPath();
+      g.moveTo(xx, top);
+      g.lineTo(xx, top + ph);
+      g.stroke();
+    }
+    const n = hist.length;
+    if (n < 2) return;
+    const dx = pw / (HIST - 1);
+    const x0 = left + pw - (n - 1) * dx;
+    for (let a = 0; a < 3; a++) {
+      g.strokeStyle = COLORS[a];
+      g.lineWidth = 1.6;
+      g.beginPath();
+      hist.forEach((v, i) => (i ? g.lineTo(x0 + i * dx, y(v[a])) : g.moveTo(x0, y(v[a]))));
+      g.stroke();
+    }
+  }
+
+  function resetGraph(): void {
+    hist.length = 0;
+    oneG = 0;
+    for (let i = 0; i < 4; i++) {
+      const o = q(`[data-ro="${i}"]`);
+      if (o) o.textContent = '0';
+    }
+    drawGraph();
+  }
+
+  function scaleOptions(): string {
+    const unit = sensor === 'gyro' ? 'deg/s' : 'g';
+    return SCALES[sensor].map((v) => `<option value="${v}" ${v === scale ? 'selected' : ''}>${v} ${unit}</option>`).join('');
+  }
+
+  /* ---------- views ---------- */
   function buildEmpty(): void {
     const s = ctx.state.get();
     const busy = s.conn === 'connecting';
     const noSerial = !hasWebSerial();
     el.innerHTML = `
-      <div class="esc-empty">
-        <div class="esc-empty-card">
-          <div class="esc-empty-t mono">${t('esc.emptyTag')}</div>
-          <h1>${t('esc.emptyTitle')}</h1>
+      <div class="bf-tab mt">
+        <header class="bf-head"><h2>${t('bfMotors.title')}</h2></header>
+        <div class="mt-empty">
+          <h3>${t('esc.emptyTitle')}</h3>
           <p>${t('esc.emptyLead')}</p>
           <div class="start-btns">
-            <button class="btn light" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('common.connect')}</button>
+            <button class="btn amber" data-act="connect" ${busy || noSerial ? 'disabled' : ''}>${icon('plug', 16)}${busy ? t('common.connecting') : t('common.connect')}</button>
             <button class="btn ghost" data-act="demo" ${busy ? 'disabled' : ''}>${icon('play', 16)}${t('common.demo')}</button>
           </div>
           ${noSerial ? `<div class="start-msg warn">${t('conn.noWebSerial')}</div>` : ''}
@@ -388,7 +383,6 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     view = 'empty';
     offInfo?.();
     offInfo = null;
-    droneKey = '';
     destroyBf();
   }
 
@@ -396,80 +390,114 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     propsOff = false;
     unlock = false;
     vals.fill(0);
-    droneKey = '';
+    master = 0;
+    quadKey = '';
+    hist.length = 0;
     destroyBf();
-    propsOut = false; // set from MSP_MIXER_CONFIG by the motor configuration panel
+    propsOut = false;
     const col = (i: number | 'all') => {
       const all = i === 'all';
-      const label = all ? t('esc.all') : `M${(i as number) + 1}`;
       const aria = all ? t('esc.allPower') : t('esc.motorPower', { n: (i as number) + 1 });
-      return `<label class="esc-slider ev-col${all ? ' all' : ''} dis">
-        <span class="ev-col-h"><span class="esc-sl-n mono">${label}</span><span class="esc-val mono">0%</span></span>
-        <span class="ev-col-b"><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="${i}" disabled aria-label="${aria}">${
-          all ? '' : `<span class="ev-bar"><i data-obar="${i}"></i></span><span class="ev-bar rpm"><i data-rbar="${i}"></i></span>`
-        }</span>
-        ${all ? '' : `<span class="ev-col-f mono"><span><small>${t('bfMotors.colOut')}</small><b data-otxt="${i}">—</b></span><span><small>${t('bfMotors.colRpm')}</small><b data-rtxt="${i}">—</b></span></span>`}
-      </label>`;
+      return `<div class="mt-col-m${all ? ' all' : ''} dis">
+        <div class="mt-col-n mono">${all ? escapeHtml(t('bfMotors.master')) : (i as number) + 1}</div>
+        ${all ? `<div class="mt-tile mt-tile-all">${tip('tips.motors.master')}<div class="mt-tile-v mono" data-master>1000</div><div class="mt-tile-p mono">${escapeHtml(t('esc.all'))}</div></div><div class="mt-stats"></div>` : `<div class="mt-tile" data-tile="${i}" aria-live="off"></div><div class="mt-stats" data-stats="${i}"></div>`}
+        <div class="mt-sl-v mono">0%</div>
+        <div class="mt-sl"><input class="mt-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="${i}" disabled aria-label="${escapeHtml(aria)}"></div>
+      </div>`;
     };
-    const card = (i: number) => `<div class="ev-card ev-card-${i + 1}" data-mc="${i}"></div>`;
+    const gyroSel = `<select class="v1-in" data-g="sensor" aria-label="${escapeHtml(t('bfMotors.sensor'))}"><option value="gyro">${t('bfMotors.gyro')}</option><option value="acc">${t('bfMotors.acc')}</option></select>`;
+    const rateSel = `<select class="v1-in" data-g="rate" aria-label="${escapeHtml(t('bfMotors.rate'))}">${RATES.map((r) => `<option value="${r}" ${r === rate ? 'selected' : ''}>${r} ms</option>`).join('')}</select>`;
+    const scaleSel = `<select class="v1-in" data-g="scale" aria-label="${escapeHtml(t('bfMotors.scale'))}">${scaleOptions()}</select>`;
+    const ro = (i: number, l: string) => `<div class="mt-ro"><span>${l}</span><b class="mono" data-ro="${i}" style="--c:${COLORS[i]}">0</b></div>`;
     el.innerHTML = `
-      <div class="esc esc-v2">
-        ${intro('tips.motors.intro')}
-        <section class="ev-stage" aria-label="${t('esc.droneAria')}">
-          ${card(3)}${card(1)}${card(2)}${card(0)}
-          <div class="esc-art"></div>
-        </section>
-        <section class="ev-safety">
-          <label class="ev-lock"><input type="checkbox" id="esc-propsoff" class="ev-lock-in"><span class="ev-sw" aria-hidden="true"><i></i></span><span class="ev-lock-t"><small class="mono">${t('bfMotors.lockLabel')}</small><b>${t('esc.propsOff')}</b></span>${tip('tips.motors.propsOff')}</label>
-          <div class="esc-warn" role="alert"></div>
-          <label class="esc-check small ev-unlock"><input type="checkbox" id="esc-unlock" disabled><span>${t('esc.unlock', { max: SAFE_MAX })}</span>${tip('tips.motors.unlock')}</label>
-          <button type="button" class="esc-stop">${icon('stop', 18)}<span>${t('esc.stop')}</span><kbd class="mono">${t('esc.space')}</kbd></button>
-        </section>
-        <section class="ev-test esc-panel">
-          <header><span class="mono">${t('esc.testHead')} ${tip('tips.motors.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
-          <div class="ev-cols">${[0, 1, 2, 3].map(col).join('')}${col('all')}</div>
-        </section>
-        <section class="ev-proto">
-          <button type="button" class="ev-proto-bar" data-act="proto-toggle" aria-expanded="false" aria-label="${t('bfMotors.protoToggle')}">
-            <span class="ev-proto-cur"></span>
-            <span class="ev-pending mono">${t('bfMotors.protoPending')}</span>
-            <svg class="ev-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-          </button>
-          <div class="ev-proto-body">
-            <div class="ev-proto-cfg">
-              <section class="esc-panel bf-motors-cfg"></section>
+      <div class="bf-tab mt">
+        <header class="bf-head"><h2>${t('bfMotors.title')}</h2></header>
+        <div class="bf-body mt-body">
+          ${intro('tips.motors.intro')}
+          <div class="mt-grid">
+            <div class="mt-left">
+              <section class="bf-panel mt-model">
+                <header><span class="bf-legend">${t('bfMotors.pModel')}</span></header>
+                <div class="mt-model-cfg"></div>
+                <div class="mt-quad"></div>
+                <p class="mt-quad-cap">${t('bfMotors.numbering')} ${tip('tips.motors.numbering')}</p>
+              </section>
+              <section class="bf-panel">
+                <header><span class="bf-legend">${t('bfMotors.pEsc')}</span></header>
+                <div class="mt-esc-cfg"></div>
+              </section>
+              <section class="bf-panel">
+                <header><span class="bf-legend">${t('bfMotors.p3d')}</span></header>
+                <div class="mt-3d-cfg"></div>
+              </section>
+              <div class="mt-escinfo"></div>
             </div>
-            <div class="ev-proto-aux">
-              <div class="esc-info">
-                <div data-level="expert"><small class="mono">${t('esc.infoView')}</small><b>${t('esc.infoViewVal')}</b></div>
-                <div><small class="mono">${t('esc.infoProps')} ${tip('tips.motors.direction')}</small>
-                  <span class="esc-tog"><button type="button" data-props="in" aria-pressed="true">props in</button><button type="button" data-props="out" aria-pressed="false">props out</button></span></div>
-                <div><small class="mono">${t('esc.infoNumbering')} ${tip('tips.motors.numbering')}</small><b>${t('esc.infoNumberingVal')}</b></div>
-              </div>
-              <div class="bf-motors-tel"></div>
-              <div class="bf-esc-info-host"></div>
+            <div class="mt-right">
+              <section class="bf-panel mt-live">
+                <header><span class="bf-legend">${t('bfMotors.pLive')} ${tip('tips.motors.liveGraph')}</span></header>
+                <div class="mt-live-grid">
+                  <div class="mt-graph"><canvas aria-label="${escapeHtml(t('bfMotors.graphAria'))}" role="img"></canvas></div>
+                  <div class="mt-gctl">
+                    <div class="mt-gctl-top"><button type="button" class="btn amber mt-btn-sm" data-act="greset">${t('bfMotors.reset')}</button>${gyroSel}</div>
+                    <label class="mt-gl"><span>${t('bfMotors.rate')}</span>${rateSel}</label>
+                    <label class="mt-gl"><span>${t('bfMotors.scale')}</span>${scaleSel}</label>
+                    ${ro(0, 'X')}${ro(1, 'Y')}${ro(2, 'Z')}${ro(3, 'RMS')}
+                  </div>
+                </div>
+                <dl class="mt-power">
+                  <div><dt>${t('bfMotors.voltage')}</dt><dd class="mono" data-pw="v">—</dd></div>
+                  <div><dt>${t('bfMotors.current')}</dt><dd class="mono" data-pw="a">—</dd></div>
+                  <div><dt>${t('bfMotors.used')}</dt><dd class="mono" data-pw="mah">—</dd></div>
+                </dl>
+              </section>
+              <section class="bf-panel mt-test">
+                <header><span class="bf-legend">${t('bfMotors.pTest')} ${tip('tips.motors.testHead')}</span><small class="mt-state locked">${t('esc.stateLocked')}</small></header>
+                <div class="mt-cols">${[0, 1, 2, 3].map(col).join('')}${col('all')}</div>
+                <div class="mt-tel"></div>
+                <div class="mt-risk">
+                  <div class="mt-risk-txt">
+                    <h4>${t('bfMotors.riskTitle')}</h4>
+                    <p class="mt-risk-red">${t('bfMotors.riskRed')}</p>
+                    <ul>
+                      <li>${t('bfMotors.risk1')}</li>
+                      <li>${t('bfMotors.risk2')}</li>
+                      <li>${t('bfMotors.risk3')}</li>
+                      <li>${t('bfMotors.risk4')}</li>
+                    </ul>
+                  </div>
+                  <div class="mt-risk-ctl">
+                    <label class="mt-understand"><span class="bf-sw"><input type="checkbox" id="esc-propsoff"><i></i></span><b>${t('bfMotors.understand')}</b>${tip('tips.motors.propsOff')}</label>
+                    <label class="mt-unlock dis"><input type="checkbox" id="esc-unlock" disabled><span>${t('esc.unlock', { max: SAFE_MAX })}</span>${tip('tips.motors.unlock')}</label>
+                    <button type="button" class="mt-stop">${icon('stop', 18)}<span>${t('bfMotors.stopMotors')}</span><kbd class="mono">${t('esc.space')}</kbd></button>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
-        </section>
-        <div class="esc-overlay" hidden><div class="mono">${t('esc.restarting')}</div></div>
+        </div>
+        <footer class="bf-save mt-bar"></footer>
+        <div class="mt-overlay" hidden><div>${t('esc.restarting')}</div></div>
       </div>`;
     view = 'main';
     paintTest();
-    // MSP-based motor configuration (protocol, bidir, idle, poles, direction) and live ESC telemetry
-    const cfgHost = q('.bf-motors-cfg');
-    const telHost = q('.bf-motors-tel');
-    if (cfgHost)
-      cfgHandle = mountMotorConfig(cfgHost, ctx, {
+    paintPower();
+    cfgHandle = mountMotorConfig(
+      { model: q('.mt-model-cfg')!, esc: q('.mt-esc-cfg')!, d3: q('.mt-3d-cfg')!, bar: q('.mt-bar')! },
+      ctx,
+      {
         onReversed: (v) => {
           propsOut = v;
-          paintPropsToggle();
-          paintDrone();
+          paintQuad();
         },
         stopTest,
-      });
-    if (telHost) telHandle = mountMotorTelemetry(telHost, ctx, () => paintMotors());
+        recommend,
+      },
+    );
+    telHandle = mountMotorTelemetry(q('.mt-tel')!, ctx, () => paintMotors());
     offInfo?.();
-    offInfo = mountEscInfo(q('.bf-esc-info-host') as HTMLElement, ctx);
+    offInfo = mountEscInfo(q('.mt-escinfo') as HTMLElement, ctx);
+    paintMotors();
+    requestAnimationFrame(drawGraph);
   }
 
   function destroyBf(): void {
@@ -477,14 +505,6 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     telHandle?.destroy();
     cfgHandle = null;
     telHandle = null;
-  }
-
-  function sync(): void {
-    paintDrone();
-    paintPropsToggle();
-    paintOverlay();
-    paintMotors();
-    paintProto();
   }
 
   function render(): void {
@@ -496,41 +516,39 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     }
     if (s.conn === 'reconnecting') stopTest();
     if (view !== 'main') buildMain();
-    sync();
+    paintOverlay();
+    paintMotors();
+    cfgHandle?.refreshRec();
   }
 
-  /* ----- zdarzenia ----- */
-  function setAll(v: number): void {
-    vals.fill(v);
-  }
-
+  /* ---------- events ---------- */
   el.addEventListener('click', (e) => {
     const tg = e.target as HTMLElement;
     const act = tg.closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'connect') return void ctx.connect();
     if (act === 'demo') return void ctx.connectDemo();
-    const pv = tg.closest<HTMLElement>('[data-props]');
-    if (pv) {
-      propsOut = pv.dataset.props === 'out';
-      cfgHandle?.setReversed(propsOut); // the real setting (yaw_motors_reversed) is a pending edit saved from the config panel
-      paintPropsToggle();
-      paintDrone();
-      return;
-    }
-    if (tg.closest('.esc-stop')) return stopTest();
-    const pt = tg.closest<HTMLElement>('[data-act="proto-toggle"]');
-    if (pt) {
-      const box = pt.closest('.ev-proto');
-      const open = !box?.classList.contains('open');
-      box?.classList.toggle('open', open);
-      pt.setAttribute('aria-expanded', String(open));
-    }
+    if (act === 'greset') return resetGraph();
+    if (tg.closest('.mt-stop')) return stopTest();
   });
 
   el.addEventListener('change', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (t.id === 'esc-propsoff') {
-      propsOff = t.checked;
+    const tg = e.target as HTMLInputElement | HTMLSelectElement;
+    const g = tg.dataset.g;
+    if (g === 'sensor') {
+      sensor = tg.value === 'acc' ? 'acc' : 'gyro';
+      scale = sensor === 'gyro' ? 2000 : 2;
+      const sc = q<HTMLSelectElement>('[data-g="scale"]');
+      if (sc) sc.innerHTML = scaleOptions();
+      resetGraph();
+      return;
+    }
+    if (g === 'rate') return void (rate = Number(tg.value) || 100);
+    if (g === 'scale') {
+      scale = Number(tg.value) || scale;
+      return drawGraph();
+    }
+    if (tg.id === 'esc-propsoff') {
+      propsOff = (tg as HTMLInputElement).checked;
       if (!propsOff) {
         stopTest();
         unlock = false;
@@ -538,21 +556,24 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         if (un) un.checked = false;
       }
       paintTest();
-    } else if (t.id === 'esc-unlock') {
-      unlock = t.checked;
+    } else if (tg.id === 'esc-unlock') {
+      unlock = (tg as HTMLInputElement).checked;
       if (!unlock) {
         for (let i = 0; i < 4; i++) vals[i] = Math.min(vals[i], SAFE_MAX);
+        master = Math.min(master, SAFE_MAX);
       }
       paintTest();
     }
   });
 
   el.addEventListener('input', (e) => {
-    const t = e.target as HTMLInputElement;
-    if (!t.classList.contains('esc-range') || !propsOff) return;
-    const v = Math.max(0, Math.min(maxPct(), Math.round(Number(t.value))));
-    if (t.dataset.m === 'all') setAll(v);
-    else vals[Number(t.dataset.m)] = v;
+    const tg = e.target as HTMLInputElement;
+    if (!tg.classList.contains('mt-range') || !propsOff) return;
+    const v = Math.max(0, Math.min(maxPct(), Math.round(Number(tg.value))));
+    if (tg.dataset.m === 'all') {
+      master = v;
+      vals.fill(v);
+    } else vals[Number(tg.dataset.m)] = v;
     paintTest();
     paintMotors();
     if (anyActive()) startLoop();
@@ -569,13 +590,17 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const onVis = () => {
     if (document.hidden) stopTest();
   };
+  const onResize = () => drawGraph();
   window.addEventListener('keydown', onKey, true);
   window.addEventListener('blur', onBlur);
+  window.addEventListener('resize', onResize);
   document.addEventListener('visibilitychange', onVis);
 
   const off = ctx.state.subscribe(render);
   const offT = ctx.state.subscribeTelemetry(() => {
-    if (view === 'main') paintMotors();
+    if (view !== 'main') return;
+    paintMotors();
+    sample();
   });
   render();
 
@@ -587,6 +612,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     offT();
     window.removeEventListener('keydown', onKey, true);
     window.removeEventListener('blur', onBlur);
+    window.removeEventListener('resize', onResize);
     document.removeEventListener('visibilitychange', onVis);
   };
 };

@@ -1,0 +1,30 @@
+/** Lightbulb tips for the Sensors and GPS tabs (tips.sensors.*, tips.gps.*). */
+export const enTipsSensors = {
+  sensors: {
+    intro: 'Here you switch sensors on and off, tell the FC how the board is mounted and calibrate the accelerometer. The model and the numbers on the right show what the FC thinks right now: tilt the quad by hand and they must follow. Changes are written with Save.',
+    hardware: 'Each switch enables one sensor chip. Betaflight turns a sensor off by setting its hardware to NONE. The gyro cannot be switched off. Changing a switch needs a reboot, which Save does for you.',
+    acc: 'The accelerometer gives the FC the "down" direction. Angle, Horizon, GPS Rescue and the horizon on the OSD need it. Acro flying works without, but arming can complain if it is missing and expected.',
+    mag: 'The compass gives the heading without GPS movement. Only needed for GPS Rescue on some builds. A badly placed compass is worse than none, so switch it off if it is not on a mast away from the power wires.',
+    baro: 'Measures altitude from air pressure. Used by GPS Rescue and the altitude readout. Many boards have one built in; foam over it keeps prop wash off the sensor.',
+    orientation: 'How the FC board is turned relative to the frame, in degrees. All zero when the arrow on the board points to the nose and it lies flat. Yaw 90, 180 or 270 for a board turned that way. A wrong value flips the quad on takeoff, so check the model on the right.',
+    autoAlign: 'Measures the tilt of the board from gravity while the quad lies level and fills in Roll and Pitch. It does not find Yaw. You still have to press Save, then check that the model sits level.',
+    calibrate: 'Teaches the FC what "level" is. Put the quad on a flat surface and keep it still for 3 seconds. Do it after you change the board orientation or when Angle mode drifts.',
+    trim: 'Small level offset for Angle, Horizon and GPS Rescue, in tenths of a degree. Leave at 0 unless the quad keeps drifting to one side in Angle mode after a calibration.',
+    attitude: 'Live attitude from the FC. Roll tilts left and right, pitch is nose up or down, yaw is the heading. "Reset Z axis" only zeroes the yaw shown here, it changes nothing in the FC.',
+    live: 'Raw readings from the sensors as graphs: gyro in degrees per second, accelerometer in g (about 1 g on the vertical axis when still), magnetometer raw, barometer altitude. Handy for finding noise, a dead axis or a sensor that does not respond. A faster refresh rate loads the link more.',
+  },
+  gps: {
+    intro: 'Set up the GPS module here and watch it find satellites. A good fix needs a clear sky: take the quad outside and wait until Satellites shows 8 or more and the fix says OK. The module needs a UART with the GPS function on the Ports tab.',
+    enable: 'Turns the GPS feature on in the firmware. Needs a GPS module on a UART with the GPS function enabled (Ports tab). Required for GPS Rescue and for GPS data in OSD, telemetry and the blackbox. Needs a reboot.',
+    protocol: 'How the module talks to the FC. UBLOX is right for nearly every module sold for FPV (M8, M10, M9). NMEA is the generic text protocol, MSP is for a GPS connected over another MSP device, VIRTUAL is for simulation.',
+    autoConfig: 'Lets the FC configure a u-blox module itself at start-up: update rate, enabled satellite systems, SBAS. Keep it on unless you configured the module with u-center.',
+    galileo: 'Also use the European Galileo satellites. More satellites in view means a faster and steadier fix. Works on M8 modules and newer; very old modules ignore it.',
+    homeOnce: 'On: the home point is set at the first fix after power-up and never again. Off: it is reset every time you arm. For GPS Rescue "once" is the safer choice, as long as you arm only after the first fix.',
+    sbas: 'Ground-based correction signal for a more accurate position. Pick the system for your region: EGNOS in Europe, WAAS in North America, MSAS in Japan, GAGAN in India. Auto-detect works in most cases.',
+    signal: 'Every satellite the module sees. The Sat ID badge is green when the satellite is used for the position, red when not. The bar is signal strength (C/N0). Many fully locked satellites with strong bars mean a good fix.',
+    general: 'The position the FC works with right now. Heading shows the IMU (gyro) and the GPS course; they only agree while the quad is moving. Speed is in cm/s.',
+    dop: 'Dilution of precision: how well the satellites are spread across the sky. Below 1 is excellent, 1 to 2 good, above 5 poor. Lower is better.',
+    declination: 'Difference between true north and magnetic north at your location, in degrees. The FC uses it to turn compass heading into true heading.',
+    location: 'A simple radar: the home point in the middle, the quad as the arrow, north up. No map is downloaded, so it works offline. The link opens the position in OpenStreetMap in your browser.',
+  },
+};

@@ -2,7 +2,7 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
-## Unreleased
+## 0.5.0 – 2026-11-17
 
 - **Basic and Expert mode.** On first start the app asks how much you know about FPV; switch any time in the top bar or in Settings. Basic shows only the tabs needed to get a quad flying (Workshop, Setup, Configuration, Power, Receiver, Modes, Motors, OSD, PID Tuning, ELRS), hides advanced fields and explains each tab at the top. Expert shows everything: Ports, Failsafe, Blackbox, Autotune, CLI and all advanced settings.
 - **Lightbulb tips.** A small bulb next to settings lights up on hover and explains in plain words what the setting does and what to set. Always on in Basic mode, optional in Expert mode.
@@ -46,7 +46,7 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
 
-## Nowości (jeszcze bez wydania)
+## 0.5.0 – 2026-11-17
 
 - **Tryb podstawowy i ekspert.** Przy pierwszym uruchomieniu appka pyta, ile wiesz o FPV; zmienisz to w każdej chwili na górnym pasku albo w Ustawieniach. Podstawowy pokazuje tylko zakładki potrzebne, żeby dron poleciał (Warsztat, Setup, Konfiguracja, Zasilanie, Odbiornik, Tryby, Silniki, OSD, Strojenie PID, ELRS), chowa zaawansowane pola i u góry każdej zakładki tłumaczy, do czego służy. Ekspert pokazuje wszystko: porty, failsafe, blackbox, autotune, CLI i wszystkie zaawansowane ustawienia.
 - **Żarówki z podpowiedziami.** Mała żarówka obok ustawienia zapala się po najechaniu i prostymi słowami tłumaczy, co robi to ustawienie i co wpisać. W trybie podstawowym zawsze włączone, w ekspercie do wyłączenia.

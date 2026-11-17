@@ -8,6 +8,7 @@ import { diagnose } from './fc/diagnose';
 import { deriveCore, readAll, startTelemetry, statusFromEx } from './fc/read';
 import { FcStore, rssiPct, type FcState } from './fc/state';
 import { BLOCKED_CLI } from './serial/cli';
+import { MspError } from './serial/msp';
 import { DemoLink } from './serial/demo';
 import { SerialLink } from './serial/link';
 import { hasWebSerial } from './serial/port';
@@ -80,7 +81,12 @@ export function createApp(root: HTMLElement): AppContext {
 
   /* ---------------- polaczenie ---------------- */
 
-  async function attach(l: FcLink): Promise<void> {
+  /** Why the FC is rebooting (set by hw-info before the ELRS passthrough); used when it does not answer afterwards. */
+  let rebootCause: 'elrs-passthrough' | null = null;
+  /** Board of the FC that announced the passthrough reboot (the store is reset before the reconnect). */
+  let lastBoard = '';
+
+  async function attach(l: FcLink, opts: { afterReboot?: boolean } = {}): Promise<void> {
     stopTelemetry?.();
     link = l;
     if (l instanceof SerialLink) identity = l.identity;
@@ -89,16 +95,27 @@ export function createApp(root: HTMLElement): AppContext {
     try {
       const data = await readAll(l, bf);
       coreKey = JSON.stringify([data.info, data.config]);
+      rebootCause = null; // it came back: the reboot worked
       store.patch({ ...data, conn: 'connected', mode: l.kind, error: null });
       // Same safety as the Configurator: no arming while a tool is connected (released on disconnect).
       if (settings.get().armingDisable && bf.get().supported) void bf.setArmingDisabled(true);
       stopTelemetry = startTelemetry(l, store, bf);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      const timeout = e instanceof MspError && e.kind === 'timeout';
+      const board = store.get().info?.boardName || lastBoard;
       await l.close().catch(() => undefined);
       link = null;
       bf.reset();
-      store.reset({ error: t('conn.readFail', { msg }) });
+      let error = t('conn.readFail', { msg });
+      if (timeout && (opts.afterReboot || rebootCause)) {
+        // The FC did not reboot: after `serialpassthrough ... reset` it keeps forwarding to the receiver until power-cycled.
+        error = rebootCause === 'elrs-passthrough' ? t('conn.stuckPassthrough') : t('conn.stuckAfterReboot');
+        const known = settings.get().noDtrReset;
+        if (rebootCause === 'elrs-passthrough' && board && !known.includes(board)) settings.set({ noDtrReset: [...known, board] });
+      } else if (timeout) error += ' ' + t('conn.replugHint');
+      rebootCause = null;
+      store.reset({ error });
     }
   }
 
@@ -110,7 +127,7 @@ export function createApp(root: HTMLElement): AppContext {
     if (reason === 'reboot' && identity) {
       store.patch({ conn: 'reconnecting' });
       try {
-        await attach(await SerialLink.reconnect(identity));
+        await attach(await SerialLink.reconnect(identity), { afterReboot: true });
         toast(t('conn.reconnected'), 'ok');
       } catch (e) {
         store.reset({ error: e instanceof Error ? e.message : t('conn.reconnectFail') });
@@ -338,6 +355,10 @@ export function createApp(root: HTMLElement): AppContext {
     openDrawer: () => {
       drawerOpen = true;
       syncLayout();
+    },
+    noteRebootCause: (c) => {
+      rebootCause = c;
+      if (c) lastBoard = store.get().info?.boardName || lastBoard;
     },
     toast,
     confirm: confirmDialog,

@@ -2,6 +2,10 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 0.5.1 – 2026-11-17
+
+- **Fix: FC stuck after the ELRS version read.** Some boards (seen on a GEPRC F722 with Betaflight 2026.6) do not restart when the app drops DTR after `serialpassthrough … reset`, so they keep forwarding to the receiver and every MSP request times out ("MSP timeout (command 1)"). The app now says what happened and to unplug and replug the USB cable, remembers that board and never reads ELRS on it automatically again. The automatic ELRS read after connecting is now off by default (Settings); the manual read warns about the replug.
+
 ## 0.5.0 – 2026-11-17
 
 - **Basic and Expert mode.** On first start the app asks how much you know about FPV; switch any time in the top bar or in Settings. Basic shows only the tabs needed to get a quad flying (Workshop, Setup, Configuration, Power, Receiver, Modes, Motors, OSD, PID Tuning, ELRS), hides advanced fields and explains each tab at the top. Expert shows everything: Ports, Failsafe, Blackbox, Autotune, CLI and all advanced settings.
@@ -45,6 +49,10 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.5.1 – 2026-11-17
+
+- **Poprawka: FC zawieszony po odczycie wersji ELRS.** Niektóre płytki (np. GEPRC F722 z Betaflight 2026.6) nie restartują się, gdy appka opuszcza DTR po `serialpassthrough … reset`, więc dalej przekazują dane do odbiornika, a każde zapytanie MSP kończy się błędem „Timeout MSP (komenda 1)”. Appka mówi teraz, co się stało, i każe odpiąć i podpiąć kabel USB, zapamiętuje tę płytkę i już nigdy nie odczytuje na niej ELRS automatycznie. Automatyczny odczyt ELRS po połączeniu jest teraz domyślnie wyłączony (Ustawienia); ręczny odczyt ostrzega o konieczności ponownego podpięcia.
 
 ## 0.5.0 – 2026-11-17
 

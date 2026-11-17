@@ -31,12 +31,20 @@ export interface Settings {
   uiMode: UiMode | '';
   /** Lightbulb tips in expert mode (basic mode always shows them). */
   expertTips: boolean;
+  /**
+   * Boards (BOARD_INFO name) where `serialpassthrough ... reset` does not reboot the FC when DTR drops (seen on a
+   * GEPRC F722, Betaflight 2026.6): after an ELRS read they stay in passthrough until the USB cable is replugged.
+   * The ELRS read never runs automatically on them and the confirmation warns about the replug.
+   */
+  noDtrReset: string[];
+  /** Settings migrations already applied. */
+  rev: number;
 }
 
 export type UiMode = 'basic' | 'expert';
 
 const KEY = 'workspacefpv.settings.v1';
-const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, aiProvider: '', claudeCodeModel: DEFAULT_CLAUDE_CODE_MODEL, geminiKey: '', geminiModel: DEFAULT_GEMINI_MODEL, ollamaUrl: DEFAULT_OLLAMA_URL, ollamaModel: '', checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: true, uiMode: '', expertTips: true };
+const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, aiProvider: '', claudeCodeModel: DEFAULT_CLAUDE_CODE_MODEL, geminiKey: '', geminiModel: DEFAULT_GEMINI_MODEL, ollamaUrl: DEFAULT_OLLAMA_URL, ollamaModel: '', checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: false, uiMode: '', expertTips: true, noDtrReset: [], rev: 1 };
 
 export class SettingsStore {
   private s: Settings = { ...DEFAULTS };
@@ -48,6 +56,11 @@ export class SettingsStore {
       if (raw) {
         this.s = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
         delete (this.s as unknown as Record<string, unknown>).elrsVersion; // removed: the ELRS version is read from the receiver now
+        if (!(this.s.rev >= 1)) {
+          // rev 1: the automatic ELRS read can leave some boards stuck in passthrough; it is opt-in now
+          this.s = { ...this.s, autoElrsInfo: false, rev: 1 };
+          localStorage.setItem(KEY, JSON.stringify(this.s));
+        }
       }
     } catch {
       /* brak localStorage - zostaja domyslne */

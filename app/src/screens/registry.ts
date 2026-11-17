@@ -40,25 +40,47 @@ export interface ScreenDef {
 }
 
 export const SCREENS: ScreenDef[] = [
-  { id: 'warsztat', titleKey: 'tabs.warsztat', icon: 'chip', mount: warsztat.mount, requiresConnection: false, group: 'overview', level: 'basic' },
+  { id: 'warsztat', titleKey: 'tabs.warsztat', icon: 'home', mount: warsztat.mount, requiresConnection: false, group: 'overview', level: 'basic' },
   { id: 'setup', titleKey: 'bfSetup.tab', icon: 'chip', mount: bfSetup.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'expert' },
   { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'power', titleKey: 'bfPower.tab', icon: 'chart', mount: bfPower.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'alert', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc', level: 'expert' },
+  { id: 'power', titleKey: 'bfPower.tab', icon: 'battery', mount: bfPower.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'shield', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc', level: 'expert' },
   { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'esc', titleKey: 'tabs.esc', icon: 'plug', mount: esc.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'osd', titleKey: 'bfOsd.tab', icon: 'panel', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'esc', titleKey: 'tabs.esc', icon: 'fan', mount: esc.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'osd', titleKey: 'bfOsd.tab', icon: 'monitor', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning', level: 'basic' },
-  { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'download', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
+  { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'wave', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
   { id: 'autotune', titleKey: 'tabs.autotune', icon: 'sliders', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'expert' },
   { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools', level: 'basic' },
-  { id: 'cli', titleKey: 'bfCli.tab', icon: 'play', mount: bfCli.mount, requiresConnection: true, group: 'tools', level: 'expert' },
+  { id: 'cli', titleKey: 'bfCli.tab', icon: 'terminal', mount: bfCli.mount, requiresConnection: true, group: 'tools', level: 'expert' },
   { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false, group: 'tools', level: 'basic' },
 ];
 
 export const DEFAULT_SCREEN = SCREENS[0]!.id;
+
+/** Sidebar sections (Start, Hardware, Flight, Tuning, Tools) and which tab belongs where. */
+export type Section = 'start' | 'hardware' | 'flight' | 'tuning' | 'tools';
+export const SECTIONS: Section[] = ['start', 'hardware', 'flight', 'tuning', 'tools'];
+const SECTION_OF: Record<string, Section> = {
+  warsztat: 'start',
+  setup: 'start',
+  ports: 'hardware',
+  config: 'hardware',
+  power: 'hardware',
+  'bf-receiver': 'hardware',
+  esc: 'hardware',
+  'bf-modes': 'flight',
+  failsafe: 'flight',
+  osd: 'flight',
+  'bf-tuning': 'tuning',
+  blackbox: 'tuning',
+  autotune: 'tuning',
+  elrs: 'tools',
+  cli: 'tools',
+};
+export const sectionOf = (id: string): Section => SECTION_OF[id] ?? 'tools';
 
 /** Tabs visible in the given interface mode. */
 export const screenVisible = (sc: ScreenDef, mode: 'basic' | 'expert'): boolean => mode === 'expert' || sc.level === 'basic';

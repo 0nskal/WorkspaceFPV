@@ -1,6 +1,7 @@
 /** English strings of the PID Tuning tab (shared "common" strings also serve the Receiver and Modes tabs). */
 export const enBfTuning = {
   tab: 'PID Tuning',
+  lead: 'Per-profile PID gains, rates with live curves and filters.',
   sub: { pid: 'PID', rates: 'Rates', filters: 'Filters' },
   common: {
     unsupported: 'Not supported by this firmware',

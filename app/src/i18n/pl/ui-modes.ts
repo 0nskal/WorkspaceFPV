@@ -1,4 +1,4 @@
-import type { enMode, enSnip, enTipsUi } from '../en/ui-modes';
+import type { enMode, enNav, enSnip, enTipsUi } from '../en/ui-modes';
 
 export const plMode: typeof enMode = {
   label: 'Interfejs',
@@ -21,6 +21,31 @@ export const plMode: typeof enMode = {
   tipBattery: 'Akumulator',
   tipReceiver: 'Odbiornik',
   tipEsc: 'ESC',
+  wsGreetMorning: 'Dzień dobry.',
+  wsGreetDay: 'Cześć.',
+  wsGreetEvening: 'Dobry wieczór.',
+  wsSub: 'Co dziś naprawiamy?',
+  wsZoneTitle: 'Podłącz kontroler lotu przez USB',
+  wsZoneHelp: 'Kontroler Betaflight przez USB. W przeglądarce wybierasz port, aplikacja desktopowa znajdzie go sama.',
+  wsBackup: 'Ostatnia kopia',
+  wsBackupDownload: 'Pobierz',
+  wsVersion: 'Wersja aplikacji',
+  wsVersionText: 'WorkspaceFPV {version}',
+  wsDemoCard: 'Wypróbuj demo',
+  wsDemoText: 'Symulowany quad 5" z problemem ESC.',
+};
+
+export const plNav: typeof enNav = {
+  start: 'Start',
+  hardware: 'Sprzęt',
+  flight: 'Lot',
+  tuning: 'Strojenie',
+  tools: 'Narzędzia',
+  search: 'Szukaj',
+  searchPh: 'Szukaj zakładki albo ustawienia, np. „bieguny silnika”, „failsafe”',
+  searchEmpty: 'Nic nie znaleziono.',
+  tab: 'Zakładka',
+  problems: 'Do poprawy: {n}',
 };
 
 export const plTipsUi: typeof enTipsUi = {

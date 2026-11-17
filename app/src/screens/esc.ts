@@ -1,6 +1,9 @@
 import type { AppContext, ScreenMount } from '../context';
+import './esc.css';
 import { partLabel } from '../fc/diagnose';
-import { fmtDate, t } from '../i18n';
+import { escLabel, summarizeEsc } from '../bf/esc-summary';
+import { telemetryActive } from '../bf/motors';
+import { fmtDate, fmtNum, t } from '../i18n';
 import { isDshot, motorPct, protocolName } from '../fc/state';
 import { hasWebSerial } from '../serial/port';
 import { MSP } from '../serial/msp';
@@ -227,6 +230,79 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         txt?.classList.toggle('on', test && on);
       }
     }
+    paintBars(pcts);
+    paintCards();
+  }
+
+  /** Output and RPM bars under the sliders (transform only). */
+  function paintBars(pcts: Array<number | null>): void {
+    const tel = telHandle?.latest() ?? [];
+    const act = telemetryActive(tel);
+    const rpms = [0, 1, 2, 3].map((i) => (tel[i] && act ? tel[i].rpm : 0));
+    const top = Math.max(...rpms, 0);
+    for (let i = 0; i < 4; i++) {
+      const o = pcts[i] ?? 0;
+      const ob = q<HTMLElement>(`[data-obar="${i}"]`);
+      const rb = q<HTMLElement>(`[data-rbar="${i}"]`);
+      if (ob) ob.style.transform = `scaleY(${(o / 100).toFixed(3)})`;
+      if (rb) rb.style.transform = `scaleY(${top > 0 ? (rpms[i] / top).toFixed(3) : 0})`;
+      const ot = q(`[data-otxt="${i}"]`);
+      const rt = q(`[data-rtxt="${i}"]`);
+      if (ot) ot.textContent = pcts[i] === null ? '—' : `${o}%`;
+      if (rt) rt.textContent = rpms[i] > 0 ? fmtNum(rpms[i]) : '—';
+    }
+  }
+
+  /** One readout card per motor next to its corner of the drawing; amber + tag when something is off. */
+  function paintCards(): void {
+    const s = ctx.state.get();
+    const tel = telHandle?.latest() ?? [];
+    const active = telemetryActive(tel);
+    const scan = s.hw.esc;
+    const sum = summarizeEsc(scan);
+    const main = sum ? [...sum.groups].sort((a, b) => b.motors.length - a.motors.length)[0].name : null;
+    const anyRpm = active && tel.slice(0, 4).some((m) => m && m.rpm > 0);
+    for (let i = 0; i < 4; i++) {
+      const card = q(`[data-mc="${i}"]`);
+      if (!card) continue;
+      const m = tel[i];
+      const live = !!m && active;
+      const dev = scan?.escs.find((e) => e.index === i);
+      const fw = dev ? escLabel(dev) : null;
+      let tag = '';
+      if (dev?.status === 'no-response') tag = t('bfMotors.tagNoEsc');
+      else if (dev && !fw) tag = t('bfMotors.tagUnknownFw');
+      else if (fw && main && sum && sum.groups.length > 1 && fw !== main) tag = t('bfMotors.tagFwDiffers');
+      else if (live && anyRpm && m.rpm === 0) tag = t('bfMotors.tagNoRpm');
+      else if (live && m.invalidPct >= 2) tag = t('bfMotors.tagHighLost');
+      else if (live && m.tempC >= 60) tag = t('bfMotors.tagHot');
+      const dash = '—';
+      const html = `<div class="ev-card-h"><b class="mono">M${i + 1}</b>${tag ? `<span class="ev-tag mono">${escapeHtml(tag)}</span>` : ''}</div>
+        <dl class="mono"><div><dt>${t('bfMotors.rpm').toUpperCase()}</dt><dd>${live ? fmtNum(m.rpm) : dash}</dd></div>
+        <div><dt>${t('bfMotors.cardTemp')}</dt><dd>${live ? `${fmtNum(m.tempC, 0)} °C` : dash}</dd></div>
+        <div><dt>${t('bfMotors.lost')}</dt><dd class="${live && m.invalidPct >= 2 ? 'bad' : ''}">${live ? `${fmtNum(m.invalidPct, 1)}%` : dash}</dd></div>
+        <div><dt>${t('bfMotors.cardFw')}</dt><dd>${fw ? escapeHtml(fw) : dash}</dd></div></dl>`;
+      if (card.dataset.sig !== html) {
+        card.dataset.sig = html;
+        card.innerHTML = html;
+      }
+      card.classList.toggle('warn', !!tag);
+    }
+  }
+
+  /** Protocol bar: current protocol, warning + recommendation from the diagnosis. */
+  function paintProto(): void {
+    const cur = q('.ev-proto-cur');
+    if (!cur) return;
+    const cfg = ctx.state.get().config;
+    const d = ctx.diagnosis();
+    const grab = (id: string) => d.suggestions.find((x) => x.id === id);
+    const protoRec = grab('protocol')?.commands[0]?.match(/=\s*(\w+)/)?.[1] ?? '';
+    const bidirRec = !!grab('bidir');
+    const list = [protoRec, bidirRec ? t('bfMotors.bidirName') : ''].filter(Boolean).join(' + ');
+    const name = cfg ? protocolName(cfg.motorPwmProtocol) : '—';
+    const html = `<span class="ev-proto-l">${t('bfMotors.protoLabel')}:</span> <b class="mono${list ? ' warn' : ''}">${escapeHtml(name)}</b>${list ? `<span class="ev-proto-w" role="img" aria-label="${t('bfMotors.protoWarnAria')}">${icon('alert', 16)}</span><span class="ev-chip mono">${escapeHtml(t('bfMotors.recommended', { list }))}</span>` : ''}`;
+    if (cur.innerHTML !== html) cur.innerHTML = html;
   }
 
   function paintTest(): void {
@@ -237,6 +313,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     }
     const warn = q('.esc-warn');
     if (warn) {
+      warn.classList.toggle('on', propsOff);
       warn.innerHTML = `${icon('alert', 18)}<span>${propsOff ? t('esc.warnOn') : t('esc.warnOff')}</span>`;
     }
     const max = maxPct();
@@ -246,10 +323,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       r.max = String(max);
       const v = idx === 'all' ? Math.max(...vals) : vals[Number(idx)];
       r.value = String(v);
-      const out = r.parentElement?.querySelector('.esc-val');
+      const col = r.closest('.esc-slider');
+      const out = col?.querySelector('.esc-val');
       if (out) out.textContent = `${v}%`;
-      r.parentElement?.classList.toggle('dis', !propsOff);
-      r.parentElement?.classList.toggle('live', v > 0);
+      col?.classList.toggle('dis', !propsOff);
+      col?.classList.toggle('live', v > 0);
     });
     const un = q<HTMLInputElement>('#esc-unlock');
     if (un) un.disabled = !propsOff;
@@ -321,38 +399,58 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     droneKey = '';
     destroyBf();
     propsOut = false; // set from MSP_MIXER_CONFIG by the motor configuration panel
-    const rows = [0, 1, 2, 3]
-      .map(
-        (i) =>
-          `<label class="esc-slider dis"><span class="esc-sl-n mono">M${i + 1}</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="${i}" disabled aria-label="${t('esc.motorPower', { n: i + 1 })}"><span class="esc-val mono">0%</span></label>`,
-      )
-      .join('');
+    const col = (i: number | 'all') => {
+      const all = i === 'all';
+      const label = all ? t('esc.all') : `M${(i as number) + 1}`;
+      const aria = all ? t('esc.allPower') : t('esc.motorPower', { n: (i as number) + 1 });
+      return `<label class="esc-slider ev-col${all ? ' all' : ''} dis">
+        <span class="ev-col-h"><span class="esc-sl-n mono">${label}</span><span class="esc-val mono">0%</span></span>
+        <span class="ev-col-b"><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="${i}" disabled aria-label="${aria}">${
+          all ? '' : `<span class="ev-bar"><i data-obar="${i}"></i></span><span class="ev-bar rpm"><i data-rbar="${i}"></i></span>`
+        }</span>
+        ${all ? '' : `<span class="ev-col-f mono"><span><small>${t('bfMotors.colOut')}</small><b data-otxt="${i}">—</b></span><span><small>${t('bfMotors.colRpm')}</small><b data-rtxt="${i}">—</b></span></span>`}
+      </label>`;
+    };
+    const card = (i: number) => `<div class="ev-card ev-card-${i + 1}" data-mc="${i}"></div>`;
     el.innerHTML = `
-      <div class="esc">
-        <div class="esc-left">
+      <div class="esc esc-v2">
+        ${intro('tips.motors.intro')}
+        <section class="ev-stage" aria-label="${t('esc.droneAria')}">
+          ${card(3)}${card(1)}${card(2)}${card(0)}
           <div class="esc-art"></div>
-          <div class="bf-motors-tel"></div>
-          <div class="esc-info">
-            <div data-level="expert"><small class="mono">${t('esc.infoView')}</small><b>${t('esc.infoViewVal')}</b></div>
-            <div><small class="mono">${t('esc.infoProps')} ${tip('tips.motors.direction')}</small>
-              <span class="esc-tog"><button type="button" data-props="in" aria-pressed="true">props in</button><button type="button" data-props="out" aria-pressed="false">props out</button></span></div>
-            <div><small class="mono">${t('esc.infoNumbering')} ${tip('tips.motors.numbering')}</small><b>${t('esc.infoNumberingVal')}</b></div>
+        </section>
+        <section class="ev-safety">
+          <label class="ev-lock"><input type="checkbox" id="esc-propsoff" class="ev-lock-in"><span class="ev-sw" aria-hidden="true"><i></i></span><span class="ev-lock-t"><small class="mono">${t('bfMotors.lockLabel')}</small><b>${t('esc.propsOff')}</b></span>${tip('tips.motors.propsOff')}</label>
+          <div class="esc-warn" role="alert"></div>
+          <label class="esc-check small ev-unlock"><input type="checkbox" id="esc-unlock" disabled><span>${t('esc.unlock', { max: SAFE_MAX })}</span>${tip('tips.motors.unlock')}</label>
+          <button type="button" class="esc-stop">${icon('stop', 18)}<span>${t('esc.stop')}</span><kbd class="mono">${t('esc.space')}</kbd></button>
+        </section>
+        <section class="ev-test esc-panel">
+          <header><span class="mono">${t('esc.testHead')} ${tip('tips.motors.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
+          <div class="ev-cols">${[0, 1, 2, 3].map(col).join('')}${col('all')}</div>
+        </section>
+        <section class="ev-proto">
+          <button type="button" class="ev-proto-bar" data-act="proto-toggle" aria-expanded="false" aria-label="${t('bfMotors.protoToggle')}">
+            <span class="ev-proto-cur"></span>
+            <span class="ev-pending mono">${t('bfMotors.protoPending')}</span>
+            <svg class="ev-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="ev-proto-body">
+            <div class="ev-proto-cfg">
+              <section class="esc-panel bf-motors-cfg"></section>
+            </div>
+            <div class="ev-proto-aux">
+              <div class="esc-info">
+                <div data-level="expert"><small class="mono">${t('esc.infoView')}</small><b>${t('esc.infoViewVal')}</b></div>
+                <div><small class="mono">${t('esc.infoProps')} ${tip('tips.motors.direction')}</small>
+                  <span class="esc-tog"><button type="button" data-props="in" aria-pressed="true">props in</button><button type="button" data-props="out" aria-pressed="false">props out</button></span></div>
+                <div><small class="mono">${t('esc.infoNumbering')} ${tip('tips.motors.numbering')}</small><b>${t('esc.infoNumberingVal')}</b></div>
+              </div>
+              <div class="bf-motors-tel"></div>
+              <div class="bf-esc-info-host"></div>
+            </div>
           </div>
-        </div>
-        <div class="esc-side">
-          ${intro('tips.motors.intro')}
-          <section class="esc-panel bf-motors-cfg"></section>
-          <div class="bf-esc-info-host"></div>
-          <section class="esc-panel">
-            <header><span class="mono">${t('esc.testHead')} ${tip('tips.motors.testHead')}</span><span class="mono esc-test-state">${t('esc.stateLocked')}</span></header>
-            <label class="esc-check"><input type="checkbox" id="esc-propsoff"><span>${t('esc.propsOff')}</span>${tip('tips.motors.propsOff')}</label>
-            <div class="esc-warn" role="alert"></div>
-            ${rows}
-            <label class="esc-slider all dis"><span class="esc-sl-n">${t('esc.all')}</span><input class="esc-range" type="range" min="0" max="${SAFE_MAX}" step="1" value="0" data-m="all" disabled aria-label="${t('esc.allPower')}"><span class="esc-val mono">0%</span></label>
-            <label class="esc-check small"><input type="checkbox" id="esc-unlock" disabled><span>${t('esc.unlock', { max: SAFE_MAX })}</span>${tip('tips.motors.unlock')}</label>
-            <button type="button" class="esc-stop">${icon('stop', 20)}<span>${t('esc.stop')}</span><kbd class="mono">${t('esc.space')}</kbd></button>
-          </section>
-        </div>
+        </section>
         <div class="esc-overlay" hidden><div class="mono">${t('esc.restarting')}</div></div>
       </div>`;
     view = 'main';
@@ -386,6 +484,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     paintPropsToggle();
     paintOverlay();
     paintMotors();
+    paintProto();
   }
 
   function render(): void {
@@ -419,6 +518,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       return;
     }
     if (tg.closest('.esc-stop')) return stopTest();
+    const pt = tg.closest<HTMLElement>('[data-act="proto-toggle"]');
+    if (pt) {
+      const box = pt.closest('.ev-proto');
+      const open = !box?.classList.contains('open');
+      box?.classList.toggle('open', open);
+      pt.setAttribute('aria-expanded', String(open));
+    }
   });
 
   el.addEventListener('change', (e) => {

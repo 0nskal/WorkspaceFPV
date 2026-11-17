@@ -1,0 +1,173 @@
+/* Warsztat: ekran startowy (bez podlaczonego FC). Wszystko pod .ws-start. */
+.ws-start {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 40px 40px 32px;
+}
+.ws-start > .ws-in {
+  max-width: 960px;
+}
+.ws-head h1 {
+  font-size: 34px;
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.ws-head p {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--sub);
+  max-width: 680px;
+}
+.ws-start .ws-intro {
+  margin-top: 14px;
+}
+.ws-zone {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 32px 36px;
+  border: 1px dashed var(--sub);
+  background: var(--film);
+}
+.ws-zone-ico {
+  flex: none;
+  color: var(--sub);
+}
+.ws-zone-body {
+  min-width: 0;
+}
+.ws-zone h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ws-zone p {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--sub);
+  max-width: 520px;
+}
+.ws-start .start-btns {
+  margin-top: 20px;
+  align-items: center;
+}
+.ws-start .btn.primary-amber {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--bg);
+  font-weight: 600;
+}
+.ws-start .bf-progress {
+  margin-top: 16px;
+}
+.ws-start .start-msg {
+  max-width: none;
+}
+.ws-cards {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.ws-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--bar-line);
+  background: var(--film);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  min-width: 0;
+}
+.ws-card .i {
+  flex: none;
+  color: var(--amber);
+}
+.ws-card-t {
+  min-width: 0;
+  flex: 1;
+}
+.ws-card b {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sub);
+  font-family: var(--mono);
+}
+.ws-card .ws-v {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.ws-card {
+  cursor: pointer;
+}
+.ws-card .btn {
+  flex: none;
+}
+button.ws-card:focus-visible,
+.ws-start .btn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.ws-card:hover {
+    border-color: var(--amber);
+  }
+}
+@keyframes ws-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ws-head,
+.ws-zone,
+.ws-cards {
+  animation: ws-in 200ms var(--ease-out) both;
+}
+.ws-zone {
+  animation-delay: 50ms;
+}
+.ws-cards {
+  animation-delay: 100ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-head,
+  .ws-zone,
+  .ws-cards {
+    animation-name: ws-fade;
+  }
+  @keyframes ws-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+@media (max-width: 760px) {
+  .ws-zone {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

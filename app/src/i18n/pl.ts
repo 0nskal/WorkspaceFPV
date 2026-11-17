@@ -15,7 +15,7 @@ import { plBfBlackbox } from './pl/blackbox';
 import { plBfCli } from './pl/cli';
 import { plBfOsd } from './pl/osd';
 import { plAiProviders } from './pl/ai-providers';
-import { plMode, plSnip, plTipsUi } from './pl/ui-modes';
+import { plMode, plNav, plSnip, plTipsUi } from './pl/ui-modes';
 import { plTipsCore } from './pl/tips-core';
 import { plTipsFc } from './pl/tips-fc';
 import { plTipsRx } from './pl/tips-rx';
@@ -159,6 +159,10 @@ export const pl: Dict = {
     summaryProblems: 'Reguły znalazły problemy: {n}. Największy dotyczy: {part}.',
   },
   drawer: {
+    health: 'Stan konfiguracji',
+    healthHint: 'Odsetek reguł, które przechodzą (ostrzeżenie liczy się w połowie).',
+    toFix: 'Do poprawy',
+    okList: 'W porządku ({n})',
     title: 'Asystent',
     r: 'karta pacjenta',
     allOk: 'Wszystko OK',
@@ -460,6 +464,7 @@ export const pl: Dict = {
   bfOsd: plBfOsd,
   aiProviders: plAiProviders,
   mode: plMode,
+  nav: plNav,
   snip: plSnip,
   tipsUi: plTipsUi,
   tips: { ...plTipsCore, ...plTipsFc, ...plTipsRx, ...plTipsMotors, ...plTipsTuning },

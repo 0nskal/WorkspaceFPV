@@ -5,6 +5,7 @@ import { t } from '../i18n';
 
 const INK = '#DCEFF8';
 const HOT = '#FF4A2E';
+const AMBER = '#E0A82E';
 const SUB = '#8FA9B8';
 const f1 = (v: number) => v.toFixed(1);
 
@@ -48,7 +49,7 @@ export function ratesChart(cur: Values, orig: Values): string {
     const o = rates(orig, a as 0 | 1 | 2);
     const changed = type !== otype || r.rcRate !== o.rcRate || r.expo !== o.expo || r.superRate !== o.superRate || r.limit !== o.limit;
     if (changed) g += `<path d="${path(pts(otype, o))}" fill="none" stroke="${SUB}" stroke-width="1.2" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>`;
-    g += `<path d="${path(pts(type, r))}" fill="none" stroke="${changed ? HOT : INK}" stroke-width="${a === 0 ? 2.2 : 1.8}" ${DASH[a] ? `stroke-dasharray="${DASH[a]}"` : ''}/>`;
+    g += `<path d="${path(pts(type, r))}" fill="none" stroke="${changed ? HOT : a === 0 ? AMBER : INK}" stroke-width="${a === 0 ? 2.2 : 1.6}" ${DASH[a] ? `stroke-dasharray="${DASH[a]}"` : ''}/>`;
     const mx = pts(type, r)[N]![1];
     if (!labels.some((l) => l.v === Math.round(mx))) labels.push({ v: Math.round(mx), y: y(mx) - 5, hot: changed });
   }
@@ -81,7 +82,7 @@ export function throttleChart(cur: Values, orig: Values, api = 46): string {
   g += `<text x="${c.l + c.pw}" y="${c.t + c.ph + 27}" text-anchor="end" class="bf-tuning-tick">${t('bfTuning.rates.thrX')}</text>`;
   const changed = cur.throttleMid !== orig.throttleMid || cur.throttleExpo !== orig.throttleExpo || (api >= 47 && cur.throttleHover !== orig.throttleHover);
   if (changed) g += `<path d="${line(orig.throttleMid ?? 50, orig.throttleExpo ?? 0, orig.throttleHover)}" fill="none" stroke="${SUB}" stroke-width="1.2" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>`;
-  g += `<path d="${line(cur.throttleMid ?? 50, cur.throttleExpo ?? 0, cur.throttleHover)}" fill="none" stroke="${changed ? HOT : INK}" stroke-width="2"/>`;
+  g += `<path d="${line(cur.throttleMid ?? 50, cur.throttleExpo ?? 0, cur.throttleHover)}" fill="none" stroke="${changed ? HOT : AMBER}" stroke-width="2"/>`;
   const hov = cur.throttleHover;
   if (hov !== undefined) g += `<line x1="${c.l}" x2="${c.l + c.pw}" y1="${f1(y(hov / 100))}" y2="${f1(y(hov / 100))}" stroke="${INK}" stroke-opacity=".45" stroke-dasharray="3 4"/><text x="${c.l + 4}" y="${f1(y(hov / 100) - 4)}" class="bf-tuning-tick">${t('bfTuning.rates.hover')} ${hov}%</text>`;
   return `<svg class="bf-tuning-svg" viewBox="0 0 ${c.W} ${c.H}" role="img" aria-label="${t('bfTuning.rates.throttleAria')}">${g}</svg>`;
@@ -134,9 +135,9 @@ export function filterChart(v: Values): string {
   const gDyn = (v.gyroLpf1DynMin ?? 0) > 0 && (v.gyroLpf1DynMax ?? 0) > 0 && !(v.gyroLpf1Hz ?? 0);
   const gyro = (lp1: number) => (f: number) => lowpassGain(gType1, lp1, f) * lowpassGain(gType2, v.gyroLpf2Hz ?? 0, f);
   if (gDyn) {
-    g += `<path d="${curve(gyro(v.gyroLpf1DynMin!))}" fill="none" stroke="${INK}" stroke-opacity=".4" stroke-width="1.2"/>`;
-    g += `<path d="${curve(gyro(v.gyroLpf1DynMax!))}" fill="none" stroke="${INK}" stroke-width="2"/>`;
-  } else g += `<path d="${curve(gyro(v.gyroLpf1Hz ?? 0))}" fill="none" stroke="${INK}" stroke-width="2"/>`;
+    g += `<path d="${curve(gyro(v.gyroLpf1DynMin!))}" fill="none" stroke="${AMBER}" stroke-opacity=".45" stroke-width="1.2"/>`;
+    g += `<path d="${curve(gyro(v.gyroLpf1DynMax!))}" fill="none" stroke="${AMBER}" stroke-width="2"/>`;
+  } else g += `<path d="${curve(gyro(v.gyroLpf1Hz ?? 0))}" fill="none" stroke="${AMBER}" stroke-width="2"/>`;
   // D-term
   const dDyn = (v.dtermLpf1DynMin ?? 0) > 0 && (v.dtermLpf1DynMax ?? 0) > 0;
   const dT1 = v.dtermLpf1Type ?? 0;
@@ -144,7 +145,7 @@ export function filterChart(v: Values): string {
   const dterm = (lp1: number) => (f: number) => lowpassGain(dT1, lp1, f) * lowpassGain(dT2, v.dtermLpf2Hz ?? 0, f);
   if (dDyn) {
     g += `<path d="${curve(dterm(v.dtermLpf1DynMin!))}" fill="none" stroke="${SUB}" stroke-opacity=".5" stroke-width="1.2" stroke-dasharray="6 4"/>`;
-    g += `<path d="${curve(dterm(v.dtermLpf1DynMax!))}" fill="none" stroke="${SUB}" stroke-width="1.8" stroke-dasharray="6 4"/>`;
-  } else g += `<path d="${curve(dterm(v.dtermLpf1Hz ?? 0))}" fill="none" stroke="${SUB}" stroke-width="1.8" stroke-dasharray="6 4"/>`;
+    g += `<path d="${curve(dterm(v.dtermLpf1DynMax!))}" fill="none" stroke="${INK}" stroke-width="1.6" stroke-dasharray="6 4"/>`;
+  } else g += `<path d="${curve(dterm(v.dtermLpf1Hz ?? 0))}" fill="none" stroke="${INK}" stroke-width="1.6" stroke-dasharray="6 4"/>`;
   return `<svg class="bf-tuning-svg" viewBox="0 0 ${c.W} ${c.H}" role="img" aria-label="${t('bfTuning.filters.chartAria')}">${g}</svg>`;
 }

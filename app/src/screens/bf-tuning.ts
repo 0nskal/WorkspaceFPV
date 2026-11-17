@@ -14,6 +14,7 @@ import { escapeHtml } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { intro, tip, type TipKey } from '../ui/tip';
 import { t, type Key } from '../i18n';
+import './bf-tuning.css';
 import { barHtml, bindForm, disconnectedHtml, errMsg, errorHtml, fieldHtml, Form, noticeHtml, sectionHtml, updateBar, type FieldSpec } from './bf-tuning-ui';
 import { filterChart, maxRatesOf, ratesChart, ratesTypeOf, throttleChart } from './bf-tuning-charts';
 
@@ -36,7 +37,7 @@ const RATE_UI: Record<(typeof RATES_TYPES)[number], { rc: { scale: number; unit:
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   const form = new Form();
   const root = document.createElement('div');
-  root.className = 'bf-tuning';
+  root.className = 'bf-tuning bf-tun';
   el.appendChild(root);
 
   let disposed = false;
@@ -278,8 +279,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const seg = (kind: 'pid' | 'rate', n: number, cur: number) =>
       Array.from({ length: n }, (_, i) => `<button class="bf-tuning-seg${i === cur ? ' on' : ''}" data-act="profile" data-kind="${kind}" data-i="${i}" aria-pressed="${i === cur}">${i + 1}</button>`).join('');
     return `<div class="bf-tuning-profiles">
-      <span class="bf-tuning-pl mono">${t('bfTuning.common.pidProfile')} ${tip('tips.tuning.profilePid')}</span><span class="bf-tuning-segs">${seg('pid', st.pidProfileCount, st.pidProfile)}</span>
-      <span class="bf-tuning-pl mono">${t('bfTuning.common.rateProfile')} ${tip('tips.tuning.profileRate')}</span><span class="bf-tuning-segs">${seg('rate', st.rateProfileCount ?? 4, st.rateProfile)}</span>
+      <span class="bf-tuning-pg"><span class="bf-tuning-pl mono">${t('bfTuning.common.pidProfile')} ${tip('tips.tuning.profilePid')}</span><span class="bf-tuning-segs">${seg('pid', st.pidProfileCount, st.pidProfile)}</span></span>
+      <span class="bf-tuning-pg"><span class="bf-tuning-pl mono">${t('bfTuning.common.rateProfile')} ${tip('tips.tuning.profileRate')}</span><span class="bf-tuning-segs">${seg('rate', st.rateProfileCount ?? 4, st.rateProfile)}</span></span>
       <span class="bf-tuning-pnote dim">${t('bfTuning.common.profileNote')}</span>
     </div>`;
   }
@@ -306,22 +307,24 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     return `<div class="bf-tuning-note info" data-at><i></i><span>${t('bfTuning.pid.autotune', { list: escapeHtml(parts.join(' · ')) })}</span><button class="btn ghost" data-act="applyAt">${icon('arrowUp', 14)}${t('bfTuning.pid.applyAt')}</button></div>`;
   }
 
-  function pidView(): string {
+  /** PID tab: `top` goes into the card under the sub-tabs, `rest` below it. */
+  function pidView(): { top: string; rest: string } {
     const sp = pidSpecs();
     const f = (g: string, k: string) => fieldHtml(form, spec(sp, g, k));
     const rows = [0, 1, 2]
       .map((a) => `<tr><th scope="row">${AXIS_NAME[PID_AXES[a]!]}</th><td>${f('pid', `p${a}`)}</td><td>${f('pid', `i${a}`)}</td><td>${f('pid', `d${a}`)}</td><td>${f('adv', `dMax${a}`)}</td><td>${f('adv', `ff${a}`)}</td></tr>`)
       .join('');
     const grp = (title: string, keys: string[], tk?: TipKey) => sectionHtml(title, `<div class="bf-tuning-grid">${keys.map((k) => f('adv', k)).join('')}</div>`, '', { tip: tk, expert: true });
-    return `${intro('tips.tuning.intro')}${autotuneBanner()}
-      ${sectionHtml(t('bfTuning.pid.tableCap'), `<table class="bf-tuning-tbl"><thead><tr><th scope="col">${t('bfTuning.pid.axis')}</th><th scope="col">P ${tip('tips.tuning.p')}</th><th scope="col">I ${tip('tips.tuning.i')}</th><th scope="col">D ${tip('tips.tuning.d')}</th><th scope="col">D max ${tip('tips.tuning.dMax')}</th><th scope="col">F ${tip('tips.tuning.ff')}</th></tr></thead><tbody>${rows}</tbody></table>`, '', { tip: 'tips.tuning.pidTable' })}
-      ${hasAdv ? `<div class="bf-tuning-cols">
+    const top = `${intro('tips.tuning.intro')}${autotuneBanner()}
+      ${sectionHtml(t('bfTuning.pid.tableCap'), `<table class="bf-tuning-tbl"><thead><tr><th scope="col">${t('bfTuning.pid.axis')}</th><th scope="col">P ${tip('tips.tuning.p')}</th><th scope="col">I ${tip('tips.tuning.i')}</th><th scope="col">D ${tip('tips.tuning.d')}</th><th scope="col">D max ${tip('tips.tuning.dMax')}</th><th scope="col">F ${tip('tips.tuning.ff')}</th></tr></thead><tbody>${rows}</tbody></table>`, '', { tip: 'tips.tuning.pidTable' })}`;
+    const rest = hasAdv ? `<div class="bf-tuning-cols">
         ${grp(t('bfTuning.pid.gTpa'), ['tpaMode', 'tpaRate', 'tpaBreakpoint'], 'tips.tuning.tpa')}
         ${grp(t('bfTuning.pid.gIterm'), ['itermRelax', 'itermRelaxType', 'itermRelaxCutoff', 'antiGravityGain', 'itermRotation'], 'tips.tuning.itermRelax')}
         ${grp(t('bfTuning.pid.gDmax'), ['dMaxGain', 'dMaxAdvance'], 'tips.tuning.dynDamping')}
         ${grp(t('bfTuning.pid.gFf'), ['ffTransition', 'ffAveraging', 'ffSmoothFactor', 'ffBoost', 'ffMaxRateLimit', 'ffJitterFactor'])}
         ${grp(t('bfTuning.pid.gOther'), ['throttleBoost', 'thrustLinearization', 'vbatSagCompensation', 'motorOutputLimit', 'angleLimit', 'acroTrainerAngle', 'dynIdleMinRpm', 'useIntegratedYaw'])}
-      </div>` : noticeHtml('warn', t('bfTuning.common.advUnsupported'))}`;
+      </div>` : noticeHtml('warn', t('bfTuning.common.advUnsupported'));
+    return { top, rest };
   }
 
   function ratesLegend(): string {
@@ -386,8 +389,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       return;
     }
     if (sub === 'filters' && document.documentElement.dataset.mode === 'basic') sub = lastSub = 'pid';
-    const body = sub === 'pid' ? pidView() : sub === 'rates' ? ratesView() : filtersView();
-    root.innerHTML = `<div class="bf-tuning-head"><div class="bf-tuning-title mono"><span class="bf-tuning-sq"></span>${t('bfTuning.tab')}</div>${profileBar()}</div>${subnav()}<div class="bf-tuning-body">${body}</div>${barHtml()}`;
+    const pv = sub === 'pid' ? pidView() : null;
+    const body = pv ? pv.rest : sub === 'rates' ? ratesView() : filtersView();
+    root.innerHTML = `<div class="bf-tuning-head"><div class="tun-titles"><h1 class="tun-h1">${t('bfTuning.tab')}</h1><p class="tun-lead">${t('bfTuning.lead')}</p></div>${profileBar()}</div>
+      <div class="tun-top">${subnav()}${pv ? `<div class="tun-top-body">${pv.top}</div>` : ''}</div><div class="bf-tuning-body">${body}</div>${barHtml()}`;
     root.scrollTop = top;
     updateBar(root, form.count(), { busy });
   }

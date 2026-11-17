@@ -86,6 +86,11 @@ export function t(key: Key, params?: Params): string {
   return typeof v === 'string' ? fill(v, params) : key;
 }
 
+/** Raw subtree of the current dictionary (e.g. tree('tips') for the search). */
+export function tree(prefix: string): unknown {
+  return walk(dicts[current], prefix) ?? walk(dicts.en, prefix);
+}
+
 /** Plural category: English one/many; Polish one (1), few (2-4, not 12-14), many (5+). */
 export function pluralCategory(n: number, lang: Lang = current): 'one' | 'few' | 'many' {
   const a = Math.abs(n);

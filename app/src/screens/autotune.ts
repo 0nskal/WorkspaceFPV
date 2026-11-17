@@ -8,6 +8,7 @@
  * controls the drone. State survives tab and mode switches (module scope), the flow state also reloads.
  */
 import type { AutotuneOptions } from '../analysis/autotune';
+import { chirpSetupCli } from '../analysis/chirp';
 import { RunError, runAutotune } from '../analysis/run';
 import type { Source } from '../analysis/run-core';
 import { publishSuggestion } from '../bf/autotune-link';
@@ -67,7 +68,7 @@ const mem: {
   busy: null,
   error: null,
   coach: { elapsed: 0, running: false, skipFlips: false, startedAt: 0, base: 0 },
-  ui: { tab: 'overview', stepMode: 'all', stepAxis: 'roll', signal: 'gyro', form: 'sliders', selected: new Set(), hot: false, details: false, session: null },
+  ui: { tab: 'overview', stepMode: 'all', stepAxis: 'roll', chirpAxis: 'roll', signal: 'gyro', form: 'sliders', selected: new Set(), hot: false, details: false, session: null },
 };
 /** Render function of the mounted screen (an analysis started before a tab / mode switch ends in the new one). */
 let live: (() => void) | null = null;
@@ -427,10 +428,13 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (r.noise.gyro) L.push(`Gyro noise > 100 Hz: ${fmtNum(r.noise.gyro.hfRms, 2)} deg/s; peaks: ${r.noise.gyro.peaks.slice(0, 4).map((p) => `${Math.round(p.hz)} Hz ${p.kind}`).join(', ') || 'none'}`);
     if (r.filters.delay) L.push(`Filter delay: ${fmtNum(r.filters.delay.ms, 2)} ms`);
     L.push(`Propwash: ${r.propwash.level}${r.propwash.ratio !== null ? ` (${fmtNum(r.propwash.ratio, 1)}x, ${r.propwash.events} chops)` : ''}`);
+    for (const c of r.chirp?.axes ?? []) {
+      if (c) L.push(`CHIRP ${['roll', 'pitch', 'yaw'][c.axis]}: bandwidth ${c.bandwidthHz === null ? '?' : fmtNum(c.bandwidthHz, 0)} Hz, crossover ${c.crossoverHz === null ? '?' : fmtNum(c.crossoverHz, 0)} Hz, phase margin ${c.phaseMarginDeg === null ? '?' : fmtNum(c.phaseMarginDeg, 0)} deg, max sensitivity ${fmtNum(c.sMaxDb, 1)} dB at ${fmtNum(c.sMaxHz, 0)} Hz, tracking peak ${fmtNum(c.tPeakDb, 1)} dB, coherence ${Math.round(c.coherence * 100)} %`);
+    }
     if (r.settings?.pid) L.push(`PIDs in the log (P/I/D): roll ${r.settings.pid.roll.join('/')}, pitch ${r.settings.pid.pitch.join('/')}, yaw ${r.settings.pid.yaw.join('/')}`);
     if (r.settings?.simplified) L.push(`Sliders: mode ${r.settings.simplified.mode}, master ${r.settings.simplified.master ?? '?'}, PI ${r.settings.simplified.pi ?? '?'}, D ${r.settings.simplified.d ?? '?'}, FF ${r.settings.simplified.ff ?? '?'}`);
     if (mem.ui.hot) L.push('The pilot says the motors came down hot.');
-    const adv = [...r.pids.advice, ...r.filters.advice].filter((a) => a.severity !== 'ok').slice(0, 10);
+    const adv = [...r.pids.advice, ...r.filters.advice, ...(r.chirp?.advice ?? [])].filter((a) => a.severity !== 'ok').slice(0, 12);
     if (adv.length) L.push(`${t('atFlow.ai.rules')}\n- ${adv.map(adviceText).join('\n- ')}`);
     const cmds = expert() ? selectedCommands(applyUnits(r, mem.ui.form), mem.ui.selected) : basicPlan(r).commands;
     L.push(cmds.length ? `${t('atFlow.ai.cmds')}\n${cmds.join('\n')}` : t('atFlow.ai.noCmds'));
@@ -590,6 +594,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
       case 'step-axis':
         mem.ui.stepAxis = arg as UiState['stepAxis'];
         return render();
+      case 'chirp-axis':
+        mem.ui.chirpAxis = arg as UiState['chirpAxis'];
+        return render();
+      case 'chirp-setup':
+        return applyCmds(chirpSetupCli(), t('atFlow.expert.chirp.setupTitle'), escapeHtml(t('atFlow.expert.chirp.setupNote')));
       case 'signal':
         mem.ui.signal = arg as UiState['signal'];
         return render();

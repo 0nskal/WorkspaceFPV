@@ -1,3 +1,4 @@
+import { synthChirpLog } from './synth-chirp';
 import { analyze } from './analyze';
 import { autotune, type AutotuneOptions, type AutotuneResult } from './autotune';
 import { LogError, parseCsv } from './parse';
@@ -37,7 +38,7 @@ export async function processSource(src: Source, onProgress: (frac: number) => v
 export async function loadSessions(src: Source, onProgress: (frac: number) => void): Promise<LogData[]> {
   if (src.kind === 'demo') {
     onProgress(0.5);
-    return synthDemoSessions();
+    return [...synthDemoSessions(), synthChirpLog()];
   }
   const head = new Uint8Array(await src.file.slice(0, 80).arrayBuffer());
   if (!looksLikeBbl(head)) return [await parseCsv(src.file, onProgress)];

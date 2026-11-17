@@ -324,3 +324,85 @@ export function gauge(value: number | null, max: number, good: number): string {
   const pct = (v: number) => `${Math.max(0, Math.min(100, (v / max) * 100)).toFixed(1)}%`;
   return `<span class="ax-gauge" aria-hidden="true"><i class="ok" style="width:${pct(good)}"></i>${value === null ? '' : `<b style="left:${pct(value)}"></b>`}</span>`;
 }
+
+export interface BodeLine {
+  /** Frequency [Hz] and value (dB or degrees). */
+  pts: Array<[number, number]>;
+  color: string;
+  dash?: string;
+  width?: number;
+  glow?: boolean;
+  /** Fade points whose coherence is below 0.6 (same length as pts). */
+  weak?: boolean[];
+}
+
+/** Bode panel (log frequency axis): magnitude [dB] or phase [deg], with optional horizontal guides and markers. */
+export function bodeChart(
+  lines: BodeLine[],
+  o: { aria: string; noData: string; unit: 'dB' | 'deg' | 'coh'; fMin: number; fMax: number; yMin: number; yMax: number; guides?: Array<{ v: number; label: string; color?: string }>; marks?: Array<{ hz: number; label: string; color?: string }>; h?: number },
+): string {
+  const W = 740;
+  const H = o.h ?? 200;
+  const l = 46;
+  const r = 66;
+  const t = 14;
+  const b = 32;
+  const pw = W - l - r;
+  const ph = H - t - b;
+  const id = `bd${++uid}`;
+  const lx0 = Math.log10(o.fMin);
+  const lx1 = Math.log10(o.fMax);
+  const x = (hz: number) => l + ((Math.log10(Math.max(o.fMin, Math.min(o.fMax, hz))) - lx0) / (lx1 - lx0)) * pw;
+  const y = (v: number) => t + (1 - (Math.max(o.yMin, Math.min(o.yMax, v)) - o.yMin) / (o.yMax - o.yMin)) * ph;
+  let g = defs(id);
+  const stepY = o.unit === 'coh' ? 0.25 : o.unit === 'deg' ? 90 : (o.yMax - o.yMin) / 6 >= 8 ? 10 : 5;
+  for (let v = Math.ceil(o.yMin / stepY) * stepY; v <= o.yMax + 1e-6; v += stepY) {
+    g += `<line x1="${l}" x2="${l + pw}" y1="${f1(y(v))}" y2="${f1(y(v))}" stroke="${INK}" stroke-opacity="${v === 0 ? 0.4 : 0.08}"/>`;
+    g += `<text x="${l - 8}" y="${f1(y(v) + 3.5)}" text-anchor="end" class="at-tick">${v}</text>`;
+  }
+  for (let e = Math.floor(lx0); e <= Math.ceil(lx1); e++) {
+    for (const m of [1, 2, 5]) {
+      const hz = m * 10 ** e;
+      if (hz < o.fMin * 0.999 || hz > o.fMax * 1.001) continue;
+      g += `<line x1="${f1(x(hz))}" x2="${f1(x(hz))}" y1="${t}" y2="${t + ph}" stroke="${INK}" stroke-opacity="${m === 1 ? 0.12 : 0.05}"/>`;
+      g += `<text x="${f1(x(hz))}" y="${t + ph + 17}" text-anchor="middle" class="at-tick">${hz >= 1 ? hz : hz.toFixed(1)}</text>`;
+    }
+  }
+  g += `<text x="${l + pw}" y="${t + ph + 30}" text-anchor="end" class="at-tick">f [Hz]${o.unit === 'coh' ? '' : ` · ${o.unit === 'deg' ? '°' : 'dB'}`}</text>`;
+  for (const gd of o.guides ?? []) {
+    if (gd.v < o.yMin || gd.v > o.yMax) continue;
+    g += `<line x1="${l}" x2="${l + pw}" y1="${f1(y(gd.v))}" y2="${f1(y(gd.v))}" stroke="${gd.color ?? AMBER}" stroke-opacity=".7" stroke-dasharray="4 4"/>`;
+    g += `<text x="${l + pw + 6}" y="${f1(y(gd.v) + 3.5)}" class="at-tick" style="fill:${gd.color ?? AMBER}">${esc(gd.label)}</text>`;
+  }
+  let any = false;
+  for (const ln of lines) {
+    if (ln.pts.length < 2) continue;
+    any = true;
+    // whole line faint, then the parts with good coherence on top
+    const seg = (keep: (i: number) => boolean) => {
+      let d = '';
+      let pen = false;
+      for (let i = 0; i < ln.pts.length; i++) {
+        if (!keep(i)) {
+          pen = false;
+          continue;
+        }
+        const [hz, v] = ln.pts[i]!;
+        d += `${pen ? 'L' : 'M'}${f1(x(hz))} ${f1(y(v))}`;
+        pen = true;
+      }
+      return d;
+    };
+    const stroke = `stroke="${ln.color}" stroke-width="${ln.width ?? 1.7}"${ln.dash ? ` stroke-dasharray="${ln.dash}"` : ''} stroke-linejoin="round"`;
+    if (ln.weak?.some(Boolean)) g += `<path d="${seg(() => true)}" fill="none" ${stroke} stroke-opacity=".3"/>`;
+    const strong = seg((i) => !ln.weak?.[i]);
+    if (strong) g += `<path d="${strong}" fill="none" ${stroke}${ln.glow ? ` filter="url(#${id}-g)"` : ''}/>`;
+  }
+  for (const m of o.marks ?? []) {
+    const px = x(m.hz);
+    g += `<line x1="${f1(px)}" x2="${f1(px)}" y1="${t}" y2="${t + ph}" stroke="${m.color ?? HOT}" stroke-opacity=".8" stroke-dasharray="2 3"/>`;
+    g += `<text x="${f1(px + 5)}" y="${t + 10}" class="at-tick" style="fill:${m.color ?? HOT}">${esc(m.label)}</text>`;
+  }
+  if (!any) g += `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" class="at-tick">${esc(o.noData)}</text>`;
+  return `<svg class="at-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria)}">${g}</svg>`;
+}

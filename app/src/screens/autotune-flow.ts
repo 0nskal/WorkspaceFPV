@@ -33,12 +33,13 @@ export interface Round {
   applied: string[];
 }
 
-export type ExpertTab = 'overview' | 'step' | 'noise' | 'filters' | 'propwash' | 'pids' | 'series' | 'rounds';
+export type ExpertTab = 'overview' | 'step' | 'noise' | 'filters' | 'propwash' | 'pids' | 'series' | 'chirp' | 'rounds';
 
 export interface UiState {
   tab: ExpertTab;
   stepMode: 'all' | 'size' | 'throttle';
   stepAxis: 'roll' | 'pitch' | 'yaw';
+  chirpAxis: 'roll' | 'pitch' | 'yaw';
   signal: 'gyro' | 'gyroUnfilt' | 'dterm';
   form: 'sliders' | 'raw';
   selected: Set<string>;

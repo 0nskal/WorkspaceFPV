@@ -140,4 +140,16 @@ export const plAutotune2: typeof enAutotune2 = {
     dterm: 'Log nie ma członu D (axisD): szum D nie jest sprawdzany.',
     rate: 'Częstotliwość logowania jest niska. Użyj co najmniej 1 kHz (lepiej 2 kHz).',
   },
+  chirp: {
+    ok: '{axis}: czysta pętla. Zapas fazy {pm}°, szczyt czułości {s} dB, pasmo {bw} Hz. Nic nie zmieniaj.',
+    sensHigh: '{axis}: szczyt czułości {s} dB przy {sHz} Hz. Zakłócenia w okolicy tej częstotliwości są wzmacniane (odbicia, bujanie na średnim gazie). Zwykle za dużo D jak na opóźnienie filtrów albo za duże opóźnienie: spróbuj trochę mniej D albo słabszych filtrów gyro / D-term, jeśli szum na to pozwala.',
+    sensLow: '{axis}: szczyt czułości {s} dB przy {sHz} Hz. Garb przy niskich częstotliwościach to zwykle za dużo P względem D albo nakręcający się I: spróbuj trochę mniej P (albo trochę więcej D).',
+    lowPm: '{axis}: zapas fazy tylko {pm}° przy przejściu {fc} Hz. Poniżej 45° dron dzwoni po ruchach, poniżej 30° jest blisko oscylacji. Zmniejsz trochę P albo mnożnik główny, albo zmniejsz opóźnienie filtrów.',
+    tPeak: '{axis}: szczyt śledzenia {t} dB przy {tHz} Hz. Dron przestrzeliwuje szybkie ruchy w tym zakresie. Trochę więcej D albo trochę mniej P/FF to wygładzi.',
+    room: '{axis}: duży zapas (faza {pm}°, czułość {s} dB). Jest miejsce na ostrzejsze strojenie: spróbuj +5-10 % P (suwak PI) i poleć CHIRP jeszcze raz.',
+    lowCoh: '{axis}: koherencja tylko {coh} %. Dane są zaszumione albo przemiatanie było za małe, więc liczby dla tej osi są przybliżone. Poleć jeszcze raz przy spokojnym powietrzu, nie ruszaj drążkami albo zwiększ chirp_amplitude_{axis}.',
+    incomplete: '{axis}: przemiatanie skończyło się na {hz} Hz po {s} s. Trzymaj przełącznik CHIRP włączony do końca (chirp_time_seconds), inaczej brakuje wysokich częstotliwości.',
+    missingAxes: 'Brak przemiatania dla: {axes}. Każde kolejne włączenie przełącznika CHIRP testuje następną oś (roll, pitch, yaw).',
+    ffOn: 'Feedforward był włączony podczas testu. Śledzenie jest poprawne, ale czułość i zapasy są tylko przybliżone. Do najczystszego pomiaru leć CHIRP z reakcją na drążki (feedforward) na 0.',
+  },
 };

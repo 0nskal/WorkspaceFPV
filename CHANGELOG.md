@@ -2,6 +2,10 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 0.6.3 – 2026-11-17
+
+- **Fix: Gemini "unexpected model name format".** If the Model field holds something that is not a model id (for example the key name "Default Gemini API Key" copied from AI Studio), the app now uses the default gemini-2.5-flash instead of failing; a "models/" prefix is accepted. The key field also mentions the newer key format (AQ.…).
+
 ## 0.6.2 – 2026-11-17
 
 - **Illustrations.** Five generated illustrations in the app's X-ray style (no text, small WebP files, about 135 kB together): a quad on the Workshop start screen, a flight controller with a USB cable in the connect zone and on tabs that need a connected FC, pictures on the Basic / Expert cards and a radio link on the ELRS tab (Basic mode).
@@ -67,6 +71,10 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 0.6.3 – 2026-11-17
+
+- **Poprawka: Gemini „unexpected model name format”.** Jeśli w polu Model jest coś, co nie jest nazwą modelu (np. nazwa klucza „Default Gemini API Key” skopiowana z AI Studio), appka używa domyślnego gemini-2.5-flash zamiast zwracać błąd; prefiks „models/” jest akceptowany. Pole klucza podpowiada też nowszy format kluczy (AQ.…).
 
 ## 0.6.2 – 2026-11-17
 

@@ -3,7 +3,7 @@ import { t } from '../i18n';
 import { bridgeStream, BridgeError, desktopAi } from './bridge';
 import { streamGemini, type GeminiClientLike } from './gemini-core';
 import { listOllamaModels, normalizeBase, ollamaErrorMessage, OllamaHttpError, streamOllamaChat, type FetchFn } from './ollama-core';
-import { AiError, DEFAULT_CLAUDE_CODE_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_URL, PROVIDER_IDS, cleanTurns, joinSystem, type AiConfig, type AiProvider, type Availability, type ChatTurn, type ProviderId, type StopReason, textTurns } from './types';
+import { AiError, DEFAULT_CLAUDE_CODE_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_URL, PROVIDER_IDS, cleanTurns, joinSystem, type AiConfig, type AiProvider, type Availability, type ChatTurn, type ProviderId, type StopReason, textTurns, normalizeGeminiModel } from './types';
 
 const isAbort = (e: unknown, signal: AbortSignal) => signal.aborted || (e instanceof DOMException && e.name === 'AbortError');
 
@@ -107,7 +107,7 @@ function geminiProvider(cfg: () => AiConfig): AiProvider {
     },
     async stream(messages, system, onText, signal) {
       const c = cfg();
-      const model = c.geminiModel.trim() || DEFAULT_GEMINI_MODEL;
+      const model = normalizeGeminiModel(c.geminiModel);
       try {
         const { GoogleGenAI } = await import('@google/genai'); // loaded only when Gemini is used
         const client = new GoogleGenAI({ apiKey: c.geminiKey.trim() });
@@ -125,7 +125,7 @@ export function describeGeminiError(e: unknown, model: string): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (status === 401 || status === 403 || /API key not valid|API_KEY_INVALID|PERMISSION_DENIED/i.test(msg)) return t('aiProviders.err.geminiAuth');
   if (status === 429 || /RESOURCE_EXHAUSTED|quota/i.test(msg)) return t('aiProviders.err.geminiRate');
-  if (status === 404 || /not found|is not supported/i.test(msg)) return t('aiProviders.err.geminiModel', { model });
+  if (status === 404 || /not found|is not supported|model name format/i.test(msg)) return t('aiProviders.err.geminiModel', { model });
   if (status === undefined && (e instanceof TypeError || /failed to fetch|network/i.test(msg))) return t('aiProviders.err.geminiConnection');
   return t('aiProviders.err.geminiApi', { msg: msg.slice(0, 300) });
 }

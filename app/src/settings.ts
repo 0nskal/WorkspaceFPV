@@ -27,10 +27,16 @@ export interface Settings {
   autoEscInfo: boolean;
   /** Read the ELRS receiver version via CRSF passthrough once after connect (the FC reboots afterwards). */
   autoElrsInfo: boolean;
+  /** Interface level: 'basic' (beginner: fewer tabs, explanations everywhere) or 'expert' (every Betaflight function). '' = not chosen yet. */
+  uiMode: UiMode | '';
+  /** Lightbulb tips in expert mode (basic mode always shows them). */
+  expertTips: boolean;
 }
 
+export type UiMode = 'basic' | 'expert';
+
 const KEY = 'workspacefpv.settings.v1';
-const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, aiProvider: '', claudeCodeModel: DEFAULT_CLAUDE_CODE_MODEL, geminiKey: '', geminiModel: DEFAULT_GEMINI_MODEL, ollamaUrl: DEFAULT_OLLAMA_URL, ollamaModel: '', checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: true };
+const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, aiProvider: '', claudeCodeModel: DEFAULT_CLAUDE_CODE_MODEL, geminiKey: '', geminiModel: DEFAULT_GEMINI_MODEL, ollamaUrl: DEFAULT_OLLAMA_URL, ollamaModel: '', checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: true, uiMode: '', expertTips: true };
 
 export class SettingsStore {
   private s: Settings = { ...DEFAULTS };

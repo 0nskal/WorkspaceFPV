@@ -35,27 +35,32 @@ export interface ScreenDef {
   nav?: boolean;
   /** Tab bar group (Betaflight-like order): overview, flight-controller setup, tuning and logs, tools. */
   group: 'overview' | 'fc' | 'tuning' | 'tools';
+  /** 'basic' = shown in both modes, 'expert' = only in expert mode (like Betaflight's expert-only tabs). */
+  level: 'basic' | 'expert';
 }
 
 export const SCREENS: ScreenDef[] = [
-  { id: 'warsztat', titleKey: 'tabs.warsztat', icon: 'chip', mount: warsztat.mount, requiresConnection: false, group: 'overview' },
-  { id: 'setup', titleKey: 'bfSetup.tab', icon: 'chip', mount: bfSetup.mount, requiresConnection: true, group: 'fc' },
-  { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc' },
-  { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc' },
-  { id: 'power', titleKey: 'bfPower.tab', icon: 'chart', mount: bfPower.mount, requiresConnection: true, group: 'fc' },
-  { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'alert', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc' },
-  { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true, group: 'fc' },
-  { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true, group: 'fc' },
-  { id: 'esc', titleKey: 'tabs.esc', icon: 'plug', mount: esc.mount, requiresConnection: true, group: 'fc' },
-  { id: 'osd', titleKey: 'bfOsd.tab', icon: 'panel', mount: bfOsd.mount, requiresConnection: true, group: 'fc' },
-  { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning' },
-  { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'download', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning' },
-  { id: 'autotune', titleKey: 'tabs.autotune', icon: 'sliders', mount: autotune.mount, requiresConnection: false, group: 'tuning' },
-  { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools' },
-  { id: 'cli', titleKey: 'bfCli.tab', icon: 'play', mount: bfCli.mount, requiresConnection: true, group: 'tools' },
-  { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false, group: 'tools' },
+  { id: 'warsztat', titleKey: 'tabs.warsztat', icon: 'chip', mount: warsztat.mount, requiresConnection: false, group: 'overview', level: 'basic' },
+  { id: 'setup', titleKey: 'bfSetup.tab', icon: 'chip', mount: bfSetup.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'expert' },
+  { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'power', titleKey: 'bfPower.tab', icon: 'chart', mount: bfPower.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'alert', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc', level: 'expert' },
+  { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'esc', titleKey: 'tabs.esc', icon: 'plug', mount: esc.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'osd', titleKey: 'bfOsd.tab', icon: 'panel', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning', level: 'basic' },
+  { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'download', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
+  { id: 'autotune', titleKey: 'tabs.autotune', icon: 'sliders', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'expert' },
+  { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools', level: 'basic' },
+  { id: 'cli', titleKey: 'bfCli.tab', icon: 'play', mount: bfCli.mount, requiresConnection: true, group: 'tools', level: 'expert' },
+  { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false, group: 'tools', level: 'basic' },
 ];
 
 export const DEFAULT_SCREEN = SCREENS[0]!.id;
+
+/** Tabs visible in the given interface mode. */
+export const screenVisible = (sc: ScreenDef, mode: 'basic' | 'expert'): boolean => mode === 'expert' || sc.level === 'basic';
 
 export const findScreen = (id: string): ScreenDef | undefined => SCREENS.find((s) => s.id === id);

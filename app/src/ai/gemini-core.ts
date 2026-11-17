@@ -10,7 +10,7 @@ export interface GeminiClientLike {
   models: {
     generateContentStream(p: {
       model: string;
-      contents: Array<{ role: string; parts: Array<{ text: string }> }>;
+      contents: Array<{ role: string; parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> }>;
       config?: { systemInstruction?: string; abortSignal?: AbortSignal };
     }): Promise<AsyncIterable<GeminiChunk>>;
   };
@@ -24,7 +24,12 @@ export function mapGeminiFinish(r: string | undefined): StopReason {
 }
 
 export async function streamGemini(client: GeminiClientLike, model: string, system: string, messages: ChatTurn[], onText: (d: string) => void, signal?: AbortSignal): Promise<StreamResult> {
-  const contents = messages.filter((m) => m.text.trim()).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] }));
+  const contents = messages
+    .filter((m) => m.text.trim())
+    .map((m) => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: m.image && m.role === 'user' ? [{ inlineData: { mimeType: m.image.mime, data: m.image.data } }, { text: m.text }] : [{ text: m.text }],
+    }));
   const stream = await client.models.generateContentStream({ model, contents, config: { systemInstruction: system, abortSignal: signal } });
   let text = '';
   let finish: string | undefined;

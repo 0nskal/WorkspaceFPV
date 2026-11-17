@@ -21,6 +21,10 @@
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
   --sans: 'IBM Plex Sans', system-ui, 'Segoe UI', sans-serif;
   --tab-y: 178px;
+  /* motion (Emil Kowalski's curves): enter/exit, on-screen movement, drawers */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 *,
@@ -3358,3 +3362,389 @@ p.bf-note { padding: 8px 14px; }
 .prov-test.ok { color: var(--ok); }
 .prov-test.bad { color: var(--hot); }
 .via { margin-top: 8px; font: 400 11px var(--mono); color: var(--muted); }
+
+
+/* ================= interface modes (Basic / Expert) ================= */
+html[data-mode='basic'] [data-level='expert'],
+html[data-mode='expert'] [data-only='basic'] {
+  display: none !important;
+}
+.mode-sw {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 28px;
+  border: 1px solid var(--bar-line);
+  font: 500 12px var(--sans);
+}
+.mode-sw button {
+  position: relative;
+  z-index: 1;
+  padding: 0 12px;
+  color: var(--sub);
+  transition: color 0.16s ease;
+}
+.mode-sw button[aria-checked='true'] {
+  color: var(--bg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .mode-sw button[aria-checked='false']:hover {
+    color: var(--text);
+  }
+}
+/* the light block slides between the two halves (transform only) */
+.mode-thumb {
+  position: absolute;
+  inset: 0 50% 0 0;
+  background: var(--text);
+  transition: transform 0.22s var(--ease-in-out);
+}
+.mode-sw[data-on='expert'] .mode-thumb {
+  transform: translateX(100%);
+}
+.mode-modal {
+  width: min(720px, 92vw);
+}
+.mode-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  text-align: left;
+  border: 1px solid var(--card-edge);
+  color: var(--dark);
+  transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.12s var(--ease-out);
+}
+.mode-card b {
+  font-size: 17px;
+}
+.mode-card span {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.mode-card em {
+  margin-top: auto;
+  font: 500 12px var(--mono);
+  font-style: normal;
+  color: var(--ph);
+}
+@media (hover: hover) and (pointer: fine) {
+  .mode-card:hover {
+    border-color: var(--dark);
+    background: var(--surf);
+  }
+}
+.mode-card:active {
+  transform: scale(0.98);
+}
+.mode-lead {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.expert-only {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  height: 100%;
+  color: var(--sub);
+  font-size: 15px;
+}
+
+/* ================= lightbulb tips ================= */
+html[data-tips='off'] .tip {
+  display: none;
+}
+.tip {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -2px 0 -2px 2px;
+  vertical-align: middle;
+  color: var(--sub);
+  flex: none;
+}
+.bulb {
+  display: block;
+  overflow: visible;
+}
+.bulb-glass,
+.bulb-fil,
+.bulb-base {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bulb-glass {
+  fill: var(--amber);
+  fill-opacity: 0;
+  transition: fill-opacity 0.18s ease, stroke 0.18s ease;
+}
+.bulb-fil {
+  transition: stroke 0.18s ease;
+}
+/* soft glow behind the glass: opacity + scale only */
+.bulb-halo {
+  fill: var(--amber);
+  opacity: 0;
+  transform: scale(0.6);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+.tip.lit .bulb-glass,
+.bulb.lit .bulb-glass {
+  fill-opacity: 0.32;
+  stroke: var(--amber);
+}
+.tip.lit .bulb-fil,
+.bulb.lit .bulb-fil {
+  stroke: #ffd36b;
+}
+.tip.lit .bulb-halo,
+.bulb.lit .bulb-halo {
+  opacity: 0.22;
+  transform: scale(1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tip:hover {
+    color: var(--text);
+  }
+}
+.drawer .tip,
+.modal .tip {
+  color: var(--ph);
+}
+.tip-bubble {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  top: 0;
+  max-width: 340px;
+  padding: 10px 12px;
+  background: var(--card);
+  color: var(--dark);
+  border: 1px solid var(--card-edge);
+  border-left: 3px solid var(--amber);
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.97) translateY(-2px);
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+.tip-bubble[data-side='above'] {
+  transform: scale(0.97) translateY(2px);
+}
+.tip-bubble.on {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.16s var(--ease-out), transform 0.16s var(--ease-out);
+}
+.tip-bubble b {
+  display: block;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+.tip-bubble strong {
+  font-weight: 600;
+}
+.intro {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--bar-line);
+  border-left: 3px solid var(--amber);
+  background: var(--film);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.55;
+  max-width: 920px;
+}
+.intro .bulb {
+  flex: none;
+  margin-top: 2px;
+  color: var(--amber);
+}
+.intro p {
+  margin: 0;
+}
+
+/* ================= screen fragment for the AI (snip) ================= */
+.snip-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  cursor: crosshair;
+  background: rgba(7, 11, 16, 0.38);
+  animation: snip-in 0.15s var(--ease-out);
+}
+.snip-ov.dragging {
+  background: transparent;
+}
+@keyframes snip-in {
+  from {
+    opacity: 0;
+  }
+}
+.snip-hint {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  background: var(--card);
+  color: var(--dark);
+  border: 1px solid var(--card-edge);
+  font: 500 13px var(--sans);
+  pointer-events: none;
+}
+.snip-box {
+  position: fixed;
+  left: 0;
+  top: 0;
+  outline: 2px solid var(--amber);
+  /* dims everything outside the selection; direct manipulation, not an animation */
+  box-shadow: 0 0 0 100vmax rgba(7, 11, 16, 0.5);
+  pointer-events: none;
+}
+.in .snipb {
+  color: var(--ph);
+  display: grid;
+  place-items: center;
+}
+@media (hover: hover) and (pointer: fine) {
+  .in .snipb:hover,
+  .in .clip:hover {
+    color: var(--dark);
+  }
+}
+.attach {
+  flex-direction: column;
+  align-items: stretch;
+}
+.att {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.att > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.att small {
+  font-size: 11px;
+  color: var(--ph);
+}
+.att button {
+  display: grid;
+  place-items: center;
+}
+.snip-att img,
+.u-snip img {
+  width: 56px;
+  height: 36px;
+  object-fit: cover;
+  object-position: left top;
+  border: 1px solid var(--card-edge);
+  flex: none;
+}
+.u-snip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font: 400 11.5px var(--mono);
+  opacity: 0.8;
+}
+.ptr {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin: 0 2px;
+  padding: 1px 7px;
+  vertical-align: baseline;
+  border: 1px solid var(--amber);
+  background: rgba(224, 168, 46, 0.12);
+  color: var(--dark);
+  font: 500 12px var(--sans);
+  transition: background-color 0.14s ease, transform 0.12s var(--ease-out);
+}
+.ptr span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ptr:hover {
+    background: rgba(224, 168, 46, 0.28);
+  }
+}
+.ptr:active {
+  transform: scale(0.97);
+}
+/* where the AI points: a ring that lands, pulses twice and fades (rare action, a little delight is allowed) */
+.ai-ring {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 55;
+  pointer-events: none;
+  animation: ai-ring-out 0.3s ease 2.6s forwards;
+}
+.ai-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  outline: 2px solid var(--amber);
+  animation: ai-ring-in 0.24s var(--ease-out), ai-ring-pulse 0.9s ease-in-out 0.24s 2;
+}
+@keyframes ai-ring-in {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+@keyframes ai-ring-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes ai-ring-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ai-ring-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-thumb {
+    transition: none;
+  }
+  .tip-bubble,
+  .tip-bubble[data-side='above'],
+  .tip-bubble.on {
+    transform: none;
+  }
+  .ai-ring::before {
+    animation: ai-ring-fade 0.2s ease;
+  }
+}

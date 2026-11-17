@@ -3,7 +3,7 @@ import { t } from '../i18n';
 import { bridgeStream, BridgeError, desktopAi } from './bridge';
 import { streamGemini, type GeminiClientLike } from './gemini-core';
 import { listOllamaModels, normalizeBase, ollamaErrorMessage, OllamaHttpError, streamOllamaChat, type FetchFn } from './ollama-core';
-import { AiError, DEFAULT_CLAUDE_CODE_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_URL, PROVIDER_IDS, cleanTurns, joinSystem, type AiConfig, type AiProvider, type Availability, type ChatTurn, type ProviderId, type StopReason } from './types';
+import { AiError, DEFAULT_CLAUDE_CODE_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_URL, PROVIDER_IDS, cleanTurns, joinSystem, type AiConfig, type AiProvider, type Availability, type ChatTurn, type ProviderId, type StopReason, textTurns } from './types';
 
 const isAbort = (e: unknown, signal: AbortSignal) => signal.aborted || (e instanceof DOMException && e.name === 'AbortError');
 
@@ -39,7 +39,11 @@ function anthropicProvider(cfg: () => AiConfig): AiProvider {
               { type: 'text', text: system.prompt },
               { type: 'text', text: system.context, cache_control: { type: 'ephemeral' } },
             ],
-            messages: cleanTurns(messages).map((m) => ({ role: m.role, content: m.text })),
+            messages: cleanTurns(messages).map((m) =>
+              m.image && m.role === 'user'
+                ? { role: m.role, content: [{ type: 'image' as const, source: { type: 'base64' as const, media_type: m.image.mime, data: m.image.data } }, { type: 'text' as const, text: m.text }] }
+                : { role: m.role, content: m.text },
+            ),
             // Server-side fallback on a classifier refusal (available for Opus 5.x models).
             ...(c.anthropicModel.startsWith('claude-opus-5') ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
           },
@@ -78,7 +82,7 @@ function claudeCodeProvider(cfg: () => AiConfig): AiProvider {
       const api = desktopAi();
       if (!api) throw new AiError(t('aiProviders.err.ccDesktop'));
       try {
-        return await bridgeStream(api, { provider: 'claude-code', model: cfg().claudeCodeModel || DEFAULT_CLAUDE_CODE_MODEL, prompt: system.prompt, messages, context: system.context }, onText, signal);
+        return await bridgeStream(api, { provider: 'claude-code', model: cfg().claudeCodeModel || DEFAULT_CLAUDE_CODE_MODEL, prompt: system.prompt, messages: textTurns(messages), context: system.context }, onText, signal);
       } catch (e) {
         if (isAbort(e, signal)) throw e;
         if (e instanceof BridgeError) {
@@ -181,8 +185,8 @@ function ollamaProvider(cfg: () => AiConfig): AiProvider {
       };
       try {
         const api = desktopAi();
-        if (api) return await bridgeStream(api, { provider: 'ollama', baseUrl: base, model, system: joinSystem(system), messages }, onText, signal);
-        return await streamOllamaChat(browserFetch, { baseUrl: base, model, system: joinSystem(system), messages }, onText, signal);
+        if (api) return await bridgeStream(api, { provider: 'ollama', baseUrl: base, model, system: joinSystem(system), messages: textTurns(messages) }, onText, signal);
+        return await streamOllamaChat(browserFetch, { baseUrl: base, model, system: joinSystem(system), messages: textTurns(messages) }, onText, signal);
       } catch (e) {
         if (isAbort(e, signal)) throw e;
         if (e instanceof OllamaHttpError || e instanceof BridgeError) throw mapHttp(e);

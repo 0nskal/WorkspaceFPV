@@ -15,6 +15,12 @@ import { plBfBlackbox } from './pl/blackbox';
 import { plBfCli } from './pl/cli';
 import { plBfOsd } from './pl/osd';
 import { plAiProviders } from './pl/ai-providers';
+import { plMode, plSnip, plTipsUi } from './pl/ui-modes';
+import { plTipsCore } from './pl/tips-core';
+import { plTipsFc } from './pl/tips-fc';
+import { plTipsRx } from './pl/tips-rx';
+import { plTipsMotors } from './pl/tips-motors';
+import { plTipsTuning } from './pl/tips-tuning';
 
 export const pl: Dict = {
   lang: {
@@ -450,4 +456,8 @@ export const pl: Dict = {
   bfCli: plBfCli,
   bfOsd: plBfOsd,
   aiProviders: plAiProviders,
+  mode: plMode,
+  snip: plSnip,
+  tipsUi: plTipsUi,
+  tips: { ...plTipsCore, ...plTipsFc, ...plTipsRx, ...plTipsMotors, ...plTipsTuning },
 };

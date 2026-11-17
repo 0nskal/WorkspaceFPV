@@ -9,6 +9,7 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 - **Ports:** a board schematic with UART pads coloured by function, one compact row per port with function chips, MSP switch and baud, and inline conflict warnings.
 - **Motors:** readouts next to each motor on the frame (RPM, temperature, errors, ESC firmware), the problem motor highlighted, props lock and STOP in one bar, motor test columns and a protocol bar with the recommended setting.
 - **PID tuning and Workshop:** restyled panels, tabs and charts; a new start screen with a USB connect zone.
+- **Softer look:** rounded panels and buttons, pill switches, chips and status, round slider thumbs with an amber fill.
 
 ## 0.5.1 – 2026-11-17
 
@@ -65,6 +66,7 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 - **Porty:** schemat płytki z padami UART w kolorach funkcji, jeden zwarty wiersz na port z chipami funkcji, przełącznikiem MSP i baudem oraz ostrzeżenia o konfliktach od razu w wierszu.
 - **Silniki:** odczyty przy każdym silniku na ramie (obroty, temperatura, błędy, firmware ESC), podświetlony silnik z problemem, blokada śmigieł i STOP w jednym pasku, kolumny testu silników i pasek protokołu z zalecanym ustawieniem.
 - **Strojenie PID i Warsztat:** nowe panele, zakładki i wykresy; nowy ekran startowy ze strefą podłączania USB.
+- **Miękki wygląd:** zaokrąglone panele i przyciski, pigułkowe przełączniki, chipy i status, okrągłe uchwyty suwaków z bursztynowym wypełnieniem.
 
 ## 0.5.1 – 2026-11-17
 

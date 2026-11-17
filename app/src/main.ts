@@ -12,6 +12,7 @@ import '@fontsource/ibm-plex-mono/latin-ext-400.css';
 import '@fontsource/ibm-plex-mono/latin-ext-500.css';
 import './ui/styles.css';
 import { createApp } from './app';
+import './ui/soft.css'; // after the screens' own stylesheets: rounded panels, pills, round slider thumbs
 import { migrateLegacyStorage } from './migrate-storage';
 
 migrateLegacyStorage(); // before anything reads settings / language

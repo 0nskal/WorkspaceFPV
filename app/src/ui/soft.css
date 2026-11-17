@@ -1,0 +1,270 @@
+/*
+ * Soft layer: rounded panels, pill switches and chips, round slider thumbs (the look of the redesign mockups),
+ * on top of the X-ray colours. Loaded after every other stylesheet. One radius scale:
+ *   --r-xs 4px  (checkboxes, kbd, tags)   --r-sm 8px (buttons, inputs, nav items)
+ *   --r    12px (panels, cards)           --r-lg 16px (dialogs, big zones)      --r-pill (chips, switches, badges)
+ */
+:root {
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --lift: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 12px 32px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* ---------- controls: buttons, inputs, selects ---------- */
+.btn,
+.qa button,
+.ib,
+.side-search,
+.esc-tog button,
+.elrs-seg button,
+.bf-osd-prof button,
+.bf-modes-add,
+.at-cmd,
+.upd-bar,
+.in,
+.snip-hint,
+input:not([type='range']):not([type='checkbox']):not([type='radio']),
+select,
+textarea {
+  border-radius: var(--r-sm);
+}
+.side-search kbd,
+.search-in kbd,
+.esc-stop kbd,
+.bf-tuning-chk .box,
+.elrs-chk .box,
+.snip-att img,
+.u-snip img,
+.ptr {
+  border-radius: var(--r-xs);
+}
+
+/* ---------- panels and cards ---------- */
+.card,
+.bf-panel,
+.esc-info,
+.esc-panel,
+.at-empty,
+.bf-esc-card,
+.bf-motors-tel,
+.bf-cli-term,
+.bf-osd-grid,
+.bf-blackbox-done,
+.prov,
+.mode-card,
+.intro,
+.elrs-mk,
+.pt-screen .pt-mixed,
+.bf-tun .tun-top,
+.bf-tun .bf-tuning-body .bf-tuning-sec,
+.bf-tun .bf-tuning-plot,
+.esc-v2 .ev-stage,
+.esc-v2 .ev-card,
+.esc-v2 .ev-safety,
+.esc-v2 .ev-bar,
+.esc-v2 .ev-proto,
+.ws-card,
+.tip-bubble,
+.drawer .code {
+  border-radius: var(--r);
+}
+.modal,
+.search-box,
+.ws-zone {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.modal,
+.search-box,
+.tip-bubble {
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+}
+.toast {
+  border-radius: var(--r);
+  box-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.7);
+}
+/* panels sit slightly above the film */
+.bf-panel,
+.esc-v2 .ev-stage,
+.bf-tun .tun-top,
+.ws-zone {
+  box-shadow: var(--lift);
+}
+
+/* ---------- pills: chips, tags, badges, status, mode switch ---------- */
+.pt-screen .pt-chip,
+.esc-v2 .ev-chip,
+.esc-v2 .ev-tag,
+.bf-osd-chip,
+.nav .badge,
+.st,
+.mode-sw,
+.mode-thumb {
+  border-radius: var(--r-pill);
+}
+.mode-sw {
+  padding: 2px;
+  border-color: var(--bar-line);
+  background: var(--film);
+}
+.mode-thumb {
+  inset: 2px 50% 2px 2px;
+}
+.mode-sw[data-on='expert'] .mode-thumb {
+  transform: translateX(calc(100% - 4px));
+}
+
+/* ---------- segmented controls (profiles, sub-tabs) ---------- */
+.bf-tuning-seg,
+.bf-tun .bf-tuning-seg {
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+/* ---------- switches: pill track, round knob ---------- */
+.bf-sw i,
+.esc-sw i,
+.esc-v2 .ev-sw {
+  border-radius: var(--r-pill);
+}
+.bf-sw i::after,
+.esc-sw i::after,
+.esc-v2 .ev-sw i {
+  border-radius: 50%;
+}
+.bf-sw i::after {
+  transition: transform 0.18s var(--ease-out), background-color 0.18s ease;
+}
+.bf-sw.on i {
+  background: rgba(224, 168, 46, 0.18);
+  border-color: var(--amber);
+}
+.bf-sw.on i::after {
+  background: var(--amber);
+}
+
+/* ---------- sidebar: rounded items and indicator ---------- */
+.nav a,
+.nav-ind,
+.search-res li {
+  border-radius: var(--r-sm);
+}
+.nav-ind {
+  border-left: 0;
+  background: rgba(224, 168, 46, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(224, 168, 46, 0.22);
+}
+.nav a.on {
+  color: var(--amber);
+}
+
+/* ---------- sliders: rounded track with amber fill, round thumb ---------- */
+:root input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+:root input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--r-pill);
+}
+:root input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: var(--r-pill);
+}
+:root input[type='range']::-moz-range-progress {
+  height: 4px;
+  border-radius: var(--r-pill);
+}
+/* PID / rates sliders (the mockup's look) */
+:root .bf-tun .bf-tuning-rng::-webkit-slider-runnable-track,
+:root .bf-tuning-rng::-webkit-slider-runnable-track {
+  height: 4px;
+  background: linear-gradient(to right, var(--amber) var(--p, 0%), rgba(220, 239, 248, 0.16) var(--p, 0%));
+}
+:root .bf-tun .bf-tuning-rng::-webkit-slider-thumb,
+:root .bf-tuning-rng::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: var(--amber);
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 1px rgba(224, 168, 46, 0.5);
+  transition: transform 0.16s var(--ease-out);
+}
+:root .bf-tun .bf-tuning-rng::-moz-range-thumb,
+:root .bf-tuning-rng::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--amber);
+  border: 3px solid var(--bg);
+}
+:root .bf-tun .bf-tuning-f.chg .bf-tuning-rng::-webkit-slider-thumb,
+:root .bf-tuning-f.chg .bf-tuning-rng::-webkit-slider-thumb {
+  background: var(--hot);
+  box-shadow: 0 0 0 1px rgba(255, 74, 46, 0.6);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root .bf-tuning-rng:hover::-webkit-slider-thumb {
+    transform: scale(1.12);
+  }
+}
+:root .bf-tun .bf-tuning-rng:active::-webkit-slider-thumb,
+:root .bf-tuning-rng:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+/* mode ranges: pill handles */
+:root .bf-modes-track input[type='range']::-webkit-slider-thumb {
+  width: 12px;
+  border-radius: var(--r-pill);
+}
+.bf-modes-track,
+.bf-modes-track * {
+  border-radius: var(--r-pill);
+}
+/* motor test sliders: rounded handle */
+:root .esc-range::-webkit-slider-runnable-track {
+  border-radius: var(--r-pill);
+}
+:root .esc-range::-webkit-slider-thumb {
+  border-radius: 6px;
+}
+/* bars that show values (receiver channels, blackbox, motor outputs) */
+.bf-receiver-ch .bar,
+.bf-blackbox-meter,
+.bf-blackbox-bar,
+.bf-progress,
+.bf-progress b {
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+/* ---------- drawer ---------- */
+.drawer .btns .btn,
+.drawer .qa button {
+  border-radius: var(--r-sm);
+}
+.attach .att {
+  border-radius: var(--r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root .bf-tuning-rng::-webkit-slider-thumb {
+    transition: none;
+  }
+  :root .bf-tuning-rng:hover::-webkit-slider-thumb,
+  :root .bf-tuning-rng:active::-webkit-slider-thumb {
+    transform: none;
+  }
+}
+
+.esc-stop,
+.esc-v2 .esc-stop {
+  border-radius: var(--r);
+}

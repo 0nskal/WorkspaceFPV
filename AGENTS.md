@@ -16,10 +16,10 @@ WorkspaceFPV is a public, free, hobby project that makes our work in the FPV hob
 5. **Releases:** bump version in `package.json`, update `CHANGELOG.md` (English first, Polish below), tag `vX.Y.Z`; the Release workflow builds `WorkspaceFPV-Setup.exe` and `latest.yml` for in-app updates; deploy the site (`workspacefpv.pages.dev`) after the build. Release only when the maintainer asks.
 6. **Before every PR:** `npm run typecheck`, `npm run build`, `npm test` all pass. CI runs the same.
 7. **Two languages:** every user-facing text exists in `en` and `pl` (`app/src/i18n`); README, CHANGELOG, CONTRIBUTING stay bilingual.
-8. **Safety:** nothing is written to the flight controller without an explicit user action and never while armed; ESC access is read-only; motor tests need the props-removed lock, STOP and auto-stop on disconnect.
+8. **Safety:** nothing is written to the flight controller without an explicit user action and never while armed; ESC access is read-only, with one exception: the per-motor spin direction (DShot command through the FC, explicit click + confirmation, props-off lock, battery, disarmed); motor tests need the props-removed lock, STOP and auto-stop on disconnect.
 9. **Privacy:** API keys stay local and go only to their own provider; never log or commit secrets, tokens, or personal data (no emails, phone numbers, drone/car dumps). No new dependency or network host without a reason in the PR.
 10. **Demo mode** (`?demo=1`) must keep working: new MSP commands get a simulated reply in `app/src/serial/demo*.ts`.
 
 ## Ustalenia po polsku (skrót)
 
-Repo publiczne; zmiany tylko przez PR z forka ze zrzutami ekranu (jak w Burn); tytuł PR w formacie Conventional Commits; zrzuty trzymamy na gałęzi `pr-screenshots`; przed PR `typecheck` + `build` + `test`; teksty w dwóch językach; bezpieczeństwo kontrolera (brak zapisu bez akcji użytkownika, ESC tylko odczyt); żadnych sekretów ani danych osobistych w repo; wydanie tylko na prośbę opiekuna.
+Repo publiczne; zmiany tylko przez PR z forka ze zrzutami ekranu (jak w Burn); tytuł PR w formacie Conventional Commits; zrzuty trzymamy na gałęzi `pr-screenshots`; przed PR `typecheck` + `build` + `test`; teksty w dwóch językach; bezpieczeństwo kontrolera (brak zapisu bez akcji użytkownika, ESC tylko odczyt poza kierunkiem silnika przez DShot z potwierdzeniem); żadnych sekretów ani danych osobistych w repo; wydanie tylko na prośbę opiekuna.

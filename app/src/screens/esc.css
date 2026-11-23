@@ -136,16 +136,20 @@
   align-items: stretch;
 }
 .mt .mt-graph {
+  position: relative;
   min-height: 210px;
   border: 1px solid var(--mt-line);
   border-radius: 8px;
   background: #081018;
 }
+/* absolutely placed: the canvas size (set in device pixels) must never feed back into the layout; with height:100%
+   of an auto-height box, every redraw at 125-150 % Windows scaling grew the graph until it filled the column */
 .mt .mt-graph canvas {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 210px;
 }
 .mt .mt-gctl {
   display: flex;

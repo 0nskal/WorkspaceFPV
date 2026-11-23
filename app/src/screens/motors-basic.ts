@@ -16,6 +16,7 @@ import { t, type Key } from '../i18n';
 import { icon } from '../ui/icons';
 import { droneArt, MOTORS, spinProps } from '../ui/art-drone';
 import { spinsCw } from './esc-quad';
+import { directionBlock, setMotorDirection } from '../bf/dshot';
 import './motors-basic.css';
 
 const SPIN_PCT = 8;
@@ -43,6 +44,9 @@ export function mountMotorsBasic(el: HTMLElement, ctx: AppContext): () => void {
   const results: Result[] = [0, 1, 2, 3].map(() => ({ which: null, dir: null }));
   let shownConn = '';
   let lastReady = '';
+  // per motor: how many times the direction was changed (odd = REVERSED was sent last, even = NORMAL)
+  const flips = [0, 0, 0, 0];
+  let flipping = false;
 
   const connected = () => ctx.state.get().conn === 'connected';
   const vbat = () => ctx.state.get().telemetry?.vbat ?? 0;
@@ -166,12 +170,20 @@ export function mountMotorsBasic(el: HTMLElement, ctx: AppContext): () => void {
           <button class="w-btn${r.dir === 'ok' ? ' on' : ''}" data-dir="ok">${t('simple.motors.yes')}</button>
           <button class="w-btn${r.dir === 'wrong' ? ' on' : ''}" data-dir="wrong">${t('simple.motors.no')}</button></div></div>`
         : '';
+    const block = directionBlock(ctx);
+    const fix =
+      spunOnce && r.which === 'ok' && r.dir === 'wrong'
+        ? `<div class="mb-q mb-flip"><p>${escapeHtml(t('simple.motors.flipLead'))}</p>
+          ${block && block !== 'notConnected' ? `<p class="w-note warn">${escapeHtml(t(`simple.motors.flipBlock_${block}` as Key))}</p>` : ''}
+          <div class="mb-a"><button class="w-btn primary" data-act="flip" ${block || flipping ? 'disabled' : ''}>${escapeHtml(t(flips[i]! ? 'simple.motors.flipAgain' : 'simple.motors.flip'))}</button>
+          <button class="w-btn quiet" data-act="skip">${t('simple.motors.flipSkip')}</button></div></div>`
+        : '';
     return `<p class="mb-step">${escapeHtml(t('simple.motors.stepOf', { n: i + 1 }))}</p>
       <h2 class="w-h2">${escapeHtml(t('simple.motors.stepHead', { n: i + 1, pos: posName(i) }))}</h2>
       <p class="mb-lead">${escapeHtml(t('simple.motors.stepLead', { dir: dirName(i) }))}</p>
       <div class="mb-spin">${spinBtn}</div>
       ${!ready() && spinning === null ? `<p class="w-note warn">${t('simple.motors.notReady')}</p>` : ''}
-      ${q1}${q2}`;
+      ${q1}${q2}${fix}`;
   }
 
   function doneHtml(): string {
@@ -289,7 +301,34 @@ export function mountMotorsBasic(el: HTMLElement, ctx: AppContext): () => void {
     const dir = tg.closest<HTMLElement>('[data-dir]')?.dataset.dir as Dir | undefined;
     if (dir && typeof step === 'number') {
       results[step]!.dir = dir;
-      return next();
+      // wrong direction: stay on this motor and offer to reverse it in the ESC
+      return dir === 'ok' ? next() : paintPanel();
+    }
+    if (act === 'skip') return next();
+    if (act === 'flip' && typeof step === 'number' && !flipping) {
+      const i = step;
+      const reversed = flips[i]! % 2 === 0;
+      void ctx
+        .confirm({ title: t('simple.motors.flipConfirmTitle', { n: i + 1 }), body: escapeHtml(t('simple.motors.flipConfirmBody')), confirmText: t('simple.motors.flip') })
+        .then(async (ok) => {
+          if (!ok) return;
+          stop();
+          flipping = true;
+          paintPanel();
+          try {
+            await setMotorDirection(ctx, i, reversed);
+            flips[i]!++;
+            results[i]!.dir = null;
+            spunOnce = false;
+            ctx.toast(t('simple.motors.flipDone', { n: i + 1 }), 'ok');
+          } catch (e) {
+            ctx.toast(t('simple.motors.flipFail', { msg: e instanceof Error ? e.message : String(e) }), 'error');
+          } finally {
+            flipping = false;
+            paintPanel();
+          }
+        });
+      return;
     }
   });
 

@@ -3,6 +3,7 @@
  * SET commands write into the stored GET payloads (the demo's "RAM"), so a save + re-read shows the new values.
  * Hooked into DemoLink.request() with one line; returns undefined for commands it does not know.
  */
+import { demoUsbOnly } from './demo-power';
 import { Wr } from '../bf/codec';
 import { C, TEXT } from '../bf/codes';
 import { FEATURE, SERIAL_FN } from '../bf/decode';
@@ -112,11 +113,12 @@ export class DemoBf {
   }
 
   private statusEx(t: number): Uint8Array {
-    const flags = this.armDisabled ? bit(16) | bit(25) : 0; // MSP + ARM_SWITCH (bit 25 on API 1.46)
+    // MSP + ARM_SWITCH (bit 25 on API 1.46); on USB only also RX_FAILSAFE (2) and DSHOT_TELEM (20)
+    const flags = (this.armDisabled ? bit(16) | bit(25) : 0) | (demoUsbOnly() ? bit(2) | bit(20) : 0);
     const m = this.modes?.(t) ?? { modeFlags: 0, pidProfile: 0, rateProfile: 0 };
     return new Wr()
       .u16(125) // cycle time us (8 kHz)
-      .u16(0) // i2c errors
+      .u16(demoUsbOnly() ? 18 : 0) // i2c errors (unpowered external compass on USB)
       .u16(0b101111) // ACC, BARO, MAG, GPS, GYRO
       .u32(m.modeFlags) // active flight modes (first 32 boxes)
       .u8(m.pidProfile) // PID profile
@@ -275,7 +277,7 @@ export class DemoBf {
         return new Uint8Array(0);
       }
       case C.BATTERY_STATE:
-        return new Wr().u8(6).u16(1300).u8(249).u16(0).s16(0).u8(0).u16(2490).done();
+        return demoUsbOnly() ? new Wr().u8(0).u16(1300).u8(0).u16(0).s16(0).u8(0).u16(0).done() : new Wr().u8(6).u16(1300).u8(249).u16(0).s16(0).u8(0).u16(2490).done();
       case C.VOLTAGE_METERS:
         return Uint8Array.of(10, 249);
       case C.CURRENT_METERS:

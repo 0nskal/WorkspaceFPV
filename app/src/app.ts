@@ -24,6 +24,7 @@ import { confirmDialog, toast } from './ui/modal';
 import { applyModeAttrs, currentMode } from './ui/mode';
 import { applyTheme } from './ui/theme';
 import { boardDisplayName } from './fc/board';
+import { splitByPower } from './fc/power';
 import { initTips } from './ui/tip';
 import { openSearch } from './ui/search';
 import { ringElement } from './ui/snip';
@@ -321,8 +322,8 @@ export function createApp(root: HTMLElement): AppContext {
       counts.set(r, e);
     };
     if (store.get().conn === 'connected') {
-      for (const c of diagnose(store.get(), bf.get()).checks) {
-        if (c.severity !== 'fail' && c.severity !== 'warn') continue;
+      // problems a missing battery explains (USB-only) are not counted
+      for (const c of splitByPower(diagnose(store.get(), bf.get()).checks).real) {
         add('warsztat', c.severity === 'fail');
         if (c.part && currentMode(settings) === 'expert') add(PART_ROUTE[c.part], c.severity === 'fail');
       }
@@ -519,7 +520,7 @@ export function createApp(root: HTMLElement): AppContext {
     const v = connEl.querySelector<HTMLElement>('[data-m="vbat"]');
     const r = connEl.querySelector<HTMLElement>('[data-m="rssi"]');
     if (!tel || !v || !r) return;
-    v.textContent = `${tel.vbat.toFixed(1)} V`;
+    v.textContent = tel.vbat < 1 ? 'USB' : `${tel.vbat.toFixed(1)} V`;
     r.textContent = `${rssiPct(tel.rssi)}%`;
   }
 
@@ -621,8 +622,8 @@ export function createApp(root: HTMLElement): AppContext {
   mountScreen();
   window.workspacefpv?.setLanguage?.(getLang());
 
-  // ?demo=1 enters demo mode right away (for screenshots)
-  if (new URLSearchParams(location.search).get('demo') === '1') void connectDemo();
+  // ?demo=1 enters demo mode right away (for screenshots); ?demo=usb is the same quad without a battery
+  if (['1', 'usb'].includes(new URLSearchParams(location.search).get('demo') ?? '')) void connectDemo();
 
   // Updates (Electron only): pass the setting to main and show a quiet toast when a new version is found automatically.
   const upd = updatesApi();

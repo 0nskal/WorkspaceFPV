@@ -459,3 +459,70 @@
     width: 100%;
   }
 }
+
+/* things a missing battery explains: calm, folded, no red */
+.ws2-nobat {
+  border-radius: 14px;
+  background: var(--w-sunk);
+  border: 1px solid var(--w-line);
+}
+.ws2-nobat summary {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 12px;
+  gap: 12px;
+  align-items: start;
+  padding: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.ws2-nobat summary::-webkit-details-marker {
+  display: none;
+}
+.ws2-nobat summary::after {
+  content: '';
+  margin-top: 10px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--w-ink-3);
+  border-bottom: 2px solid var(--w-ink-3);
+  transform: rotate(45deg);
+  transition: transform 0.2s var(--ease-out);
+}
+.ws2-nobat[open] summary::after {
+  transform: rotate(225deg) translate(-3px, -3px);
+}
+.ws2-nobat-i {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--w-surface);
+  color: var(--w-ink-2);
+}
+.ws2-nobat-t b {
+  display: block;
+  padding-top: 7px;
+  font: 600 16px/1.3 var(--sans);
+  color: var(--w-ink);
+}
+.ws2-nobat-t span {
+  display: block;
+  margin-top: 6px;
+  font: 400 14.5px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+.ws2-nobat ul {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  padding: 0 16px 16px 64px;
+}
+.ws2-nobat li b {
+  display: block;
+  font: 500 14.5px/1.4 var(--sans);
+  color: var(--w-ink-2);
+}
+.ws2-nobat .ws2-tech {
+  margin-top: 2px;
+}

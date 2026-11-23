@@ -254,7 +254,10 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         ${sub ? `<p class="ws2-sub">${escapeHtml(sub)}</p>` : ''}
       </header>
       <div class="ws2-grid">
-        <div class="ws2-art ws2-art-scene">${droneArt({ label: t('simple.drone.aria'), states, overlay: co.lines })}${co.pills}</div>
+        <div class="ws2-art-col">
+          <div class="ws2-art ws2-art-scene">${droneArt({ label: t('simple.drone.aria'), states, overlay: co.lines })}${co.pills}</div>
+          <p class="ws2-explain" data-explain aria-live="polite">${t('simple.explain.hint')}</p>
+        </div>
         <section class="ws2-side" aria-live="polite">
           <div class="ws2-verdict ${nFix ? 'bad' : 'good'}">
             <span class="ws2-verdict-i" aria-hidden="true">${icon(nFix ? 'alert' : 'check', 22)}</span>
@@ -303,6 +306,19 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     } else renderScene();
   }
 
+  /** "What does this part do": one sentence under the drawing for the hovered or clicked part. */
+  function explainPart(part: string | null): void {
+    const box = el.querySelector<HTMLElement>('[data-explain]');
+    if (!box) return;
+    if (!part) {
+      box.innerHTML = t('simple.explain.hint');
+      box.classList.remove('on');
+      return;
+    }
+    box.innerHTML = `<b>${escapeHtml(t(`simple.drone.parts.${part}` as Key))}</b> ${escapeHtml(t(`simple.explain.parts.${part}` as Key))}`;
+    box.classList.add('on');
+  }
+
   function focusPart(part: string, on: boolean): void {
     el.querySelectorAll(`.d-ring[data-part="${part}"]`).forEach((g) => g.classList.toggle('focus', on));
     el.querySelector(`[data-line="${part}"]`)?.classList.toggle('on', on);
@@ -326,9 +342,11 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const askId = target.closest<HTMLElement>('[data-ask]')?.dataset.ask;
     if (askId) {
       const i = issues(ctx.diagnosis()).find((x) => x.id === askId);
-      if (i) ctx.askAi(`${i.title}. ${i.tech}. ${i.desc}`);
+      // a plain question; the drone's data and rule results already go to the assistant as context
+      if (i) ctx.askAi(t('simple.drone.askQ', { title: i.title }));
     }
     const pill = target.closest<HTMLElement>('[data-pill]')?.dataset.pill;
+    if (pill) explainPart(pill);
     if (pill) {
       const card = el.querySelector<HTMLElement>(`.ws2-issue[data-part="${pill}"]`);
       if (card) {
@@ -344,6 +362,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const h = (e.target as HTMLElement).closest<HTMLElement>('[data-issue], [data-pill]');
     const part = h?.dataset.part || h?.dataset.pill;
     if (part) focusPart(part, true);
+    if (h?.dataset.pill) explainPart(h.dataset.pill);
   });
   el.addEventListener('pointerout', (e) => {
     const h = (e.target as HTMLElement).closest<HTMLElement>('[data-issue], [data-pill]');

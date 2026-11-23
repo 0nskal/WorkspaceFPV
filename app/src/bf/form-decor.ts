@@ -39,6 +39,11 @@ export function decorateForm(el: HTMLElement, rows: RowRule[], panels: PanelRule
       if (rule.expert) panel.dataset.level = 'expert';
       if (rule.tip && span && !span.querySelector('.tip')) span.insertAdjacentHTML('beforeend', ` ${tip(rule.tip)}`);
     });
+    // a panel whose every row is expert-only would show up empty in Basic mode: hide the whole panel there
+    el.querySelectorAll<HTMLElement>('.bf-panel').forEach((panel) => {
+      const rows = panel.querySelectorAll<HTMLElement>('.bf-row[data-row]');
+      if (rows.length && [...rows].every((r) => r.dataset.level === 'expert')) panel.dataset.level = 'expert';
+    });
   };
   apply();
   const mo = new MutationObserver(apply);

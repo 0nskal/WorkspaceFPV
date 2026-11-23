@@ -14,7 +14,8 @@ import './ui/styles.css';
 import { createApp } from './app';
 import './ui/soft.css'; // after the screens' own stylesheets: rounded panels, pills, round slider thumbs
 import './ui/v1.css'; // 1.0 layout layer: Betaflight-like panels and form rows
-import './ui/theme.css'; // 2.0 design layer: light/dark tokens, shell, new screens (last: wins over the legacy layers)
+import './ui/theme.css'; // 2.0 design layer: light/dark tokens, shell, new screens
+import './ui/legacy-theme.css'; // 2.0 look for the tabs not rebuilt yet (last: wins over the legacy layers)
 import { migrateLegacyStorage } from './migrate-storage';
 
 migrateLegacyStorage(); // before anything reads settings / language

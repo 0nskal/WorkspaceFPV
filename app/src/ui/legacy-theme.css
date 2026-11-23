@@ -1,0 +1,434 @@
+/*
+ * Bridge for the tabs not rebuilt yet: the 1.0 tokens (--bg, --ink, --amber, --v1-*) are re-pointed at the 2.0
+ * tokens (--w-*), so every tab follows the dark / light theme and the AAA text contrast. On top, the shared kit
+ * (page title, panels, rows, switches, buttons, save bar, intro, tips) gets the 2.0 look:
+ *   - panel titles are plain headings inside the card, not amber pills on the border;
+ *   - colour carries meaning only: green = on, white/black = primary action, amber = warning, red = danger;
+ *   - help bulbs stay, but quiet until hovered.
+ * Loaded after theme.css.
+ */
+.w-app .screen.legacy,
+.tip-bubble {
+  --bg: var(--w-bg);
+  --film: var(--w-surface);
+  --ink: var(--w-ink);
+  --text: var(--w-ink);
+  --sub: var(--w-ink-2);
+  --bar-line: var(--w-line);
+  --card: var(--w-surface);
+  --card-edge: var(--w-line-2);
+  --rule: var(--w-line);
+  --surf: var(--w-sunk);
+  --dark: var(--w-ink);
+  --muted: var(--w-ink-3);
+  --ph: var(--w-ink-3);
+  --ok: var(--w-ok);
+  --fail: var(--w-fail);
+  --warn: var(--w-warn);
+  --hot: var(--w-fail);
+  /* the 1.0 "good" green, set directly in several tabs */
+  --ok-green: var(--w-ok);
+  /* "amber" was the 1.0 accent for everything selected; in 2.0 a selection is the live blue */
+  --amber: var(--w-live);
+  --v1-panel: var(--w-surface);
+  --v1-line: var(--w-line);
+  --v1-line-2: var(--w-line);
+  --v1-field: var(--w-bg);
+  --v1-field-line: var(--w-line-2);
+  --v1-ink-2: var(--w-ink-2);
+  --v1-fs: 15px;
+}
+.w-app .screen.legacy {
+  background: var(--w-bg);
+  color: var(--w-ink);
+}
+
+/* ---------- page title ---------- */
+.screen.legacy .bf-head {
+  min-height: 0;
+  padding: 32px 40px 8px;
+  border-bottom: 0;
+  background: none;
+}
+.screen.legacy .bf-head h2 {
+  font: 650 32px/1.15 var(--sans);
+  letter-spacing: -0.025em;
+  color: var(--w-ink);
+}
+.screen.legacy .bf-body {
+  padding: 16px 40px 40px;
+}
+
+/* ---------- panels: heading inside the card ---------- */
+.screen.legacy .bf-panel {
+  margin-top: 0;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--w-line);
+  border-radius: 16px;
+  background: var(--w-surface);
+}
+.screen.legacy .bf-panel > header {
+  margin: 0 0 12px;
+  flex-wrap: wrap;
+}
+.screen.legacy .bf-legend,
+.screen.legacy .bf-panel > header > span:first-child {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--w-ink);
+  font: 650 18px/1.3 var(--sans);
+  letter-spacing: -0.01em;
+  white-space: normal;
+}
+.screen.legacy .bf-panel > header small {
+  padding: 0;
+  background: none;
+  font-size: 13px;
+  color: var(--w-ink-3);
+}
+.screen.legacy .bf-legend .tip .bulb-glass,
+.screen.legacy .bf-legend .tip .bulb-base,
+.screen.legacy .bf-legend .tip .bulb-fil {
+  stroke: currentColor;
+}
+
+/* ---------- rows, fields ---------- */
+.screen.legacy .bf-row {
+  padding: 9px 0 9px 4px;
+}
+.screen.legacy .bf-row .bf-lbl {
+  font-size: 15px;
+  color: var(--w-ink);
+}
+.screen.legacy .bf-ctl input[type='number'],
+.screen.legacy .bf-ctl input[type='text'],
+.screen.legacy .bf-ctl select,
+.screen.legacy .v1-in,
+.screen.legacy select,
+.screen.legacy input[type='number'],
+.screen.legacy input[type='text'] {
+  height: 36px;
+  border: 1px solid var(--w-line-2);
+  border-radius: 10px;
+  background-color: var(--w-bg);
+  color: var(--w-ink);
+}
+.screen.legacy .bf-ctl input:hover:not(:disabled),
+.screen.legacy .bf-ctl select:hover:not(:disabled) {
+  border-color: var(--w-ink-3);
+}
+.screen.legacy .bf-ctl input:focus-visible,
+.screen.legacy .bf-ctl select:focus-visible {
+  outline: 2px solid var(--w-focus);
+  outline-offset: 1px;
+}
+.screen.legacy .bf-unit {
+  color: var(--w-ink-3);
+}
+.screen.legacy .bf-row.chg::before {
+  background: var(--w-live);
+}
+
+/* switches: green when on, like the 2.0 toggle */
+.screen.legacy .bf-sw i {
+  width: 40px;
+  height: 24px;
+  border: 0;
+  background: var(--w-line-2);
+}
+.screen.legacy .bf-sw i::after {
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.screen.legacy .bf-sw.on i,
+.screen.legacy .bf-row.chg .bf-sw.on i {
+  background: var(--w-ok);
+}
+.screen.legacy .bf-sw.on i::after,
+.screen.legacy .bf-row.chg .bf-sw.on i::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+/* ---------- buttons ---------- */
+.screen.legacy .btn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font: 600 14px/1 var(--sans);
+  transition:
+    transform 0.12s var(--ease-out),
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.screen.legacy .btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.screen.legacy .btn.ghost,
+.screen.legacy .btn.s {
+  background: var(--w-surface);
+  border: 1px solid var(--w-line-2);
+  color: var(--w-ink);
+}
+.screen.legacy .btn.ghost:hover:not(:disabled),
+.screen.legacy .btn.s:hover:not(:disabled) {
+  border-color: var(--w-ink-3);
+  background: var(--w-surface);
+}
+.screen.legacy .btn.amber,
+.screen.legacy .btn.p,
+.screen.legacy .btn.light,
+.screen.legacy .bf-save .btn.light,
+.screen.legacy .btn.primary-amber {
+  background: var(--w-btn);
+  border: 1px solid var(--w-btn);
+  color: var(--w-btn-ink);
+}
+.screen.legacy .btn.amber:hover:not(:disabled),
+.screen.legacy .btn.p:hover:not(:disabled),
+.screen.legacy .btn.light:hover:not(:disabled),
+.screen.legacy .bf-save .btn.light:hover:not(:disabled) {
+  background: var(--w-btn);
+  opacity: 0.9;
+}
+.screen.legacy .btn.danger,
+.screen.legacy .btn.p.danger {
+  background: var(--w-fail);
+  border-color: var(--w-fail);
+  color: #fff;
+}
+.screen.legacy .btn:disabled,
+.screen.legacy .bf-save .btn:disabled,
+.screen.legacy .bf-save .btn.light:disabled {
+  opacity: 1;
+  background: var(--w-sunk);
+  border-color: var(--w-line);
+  color: var(--w-ink-3);
+}
+
+/* ---------- save bar ---------- */
+.screen.legacy .bf-save {
+  height: 68px;
+  padding: 0 40px;
+  border-top: 1px solid var(--w-line);
+  background: var(--w-surface);
+  color: var(--w-ink-2);
+  font-size: 14px;
+}
+
+/* ---------- intro, notes, key/value ---------- */
+.screen.legacy .intro {
+  max-width: 860px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--w-sunk);
+  color: var(--w-ink-2);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.screen.legacy .intro .bulb {
+  color: var(--w-ink-2);
+}
+.screen.legacy .v1-note {
+  border: 0;
+  border-radius: 12px;
+  background: var(--w-sunk);
+  color: var(--w-ink-2);
+}
+.screen.legacy .v1-warn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--w-fail-bg);
+  color: var(--w-ink);
+}
+.screen.legacy .v1-warn strong {
+  color: var(--w-fail);
+}
+.screen.legacy .v1-kv {
+  font-size: 14.5px;
+}
+.screen.legacy .v1-kv dt {
+  font-weight: 500;
+  color: var(--w-ink-2);
+}
+.screen.legacy .v1-kv dd {
+  color: var(--w-ink);
+}
+.screen.legacy .v1-kv dd.ok {
+  color: var(--w-ok);
+}
+.screen.legacy .v1-kv dd.warn {
+  color: var(--w-warn);
+}
+.screen.legacy .v1-kv dd.bad {
+  color: var(--w-fail);
+}
+
+/* ---------- help bulbs: quiet until hovered ---------- */
+.screen.legacy .tip {
+  color: var(--w-ink-3);
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.screen.legacy .tip:hover,
+.screen.legacy .tip:focus-visible,
+.screen.legacy .tip.lit {
+  opacity: 1;
+  color: var(--w-ink);
+}
+.tip-bubble {
+  max-width: 360px;
+  padding: 12px 14px;
+  border: 1px solid var(--w-line-2);
+  border-radius: 12px;
+  background: var(--w-surface);
+  color: var(--w-ink);
+  box-shadow: var(--w-shadow);
+  font-size: 14px;
+}
+
+/* ---------- tab content enters like the 2.0 screens (one short move, no per-panel stagger) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .screen.legacy .bf-body {
+    animation: lg-in 0.32s var(--ease-out) both;
+  }
+}
+@keyframes lg-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (max-width: 860px) {
+  .screen.legacy .bf-head {
+    padding: 20px 16px 4px;
+  }
+  .screen.legacy .bf-head h2 {
+    font-size: 26px;
+  }
+  .screen.legacy .bf-body {
+    padding: 12px 16px 32px;
+  }
+  .screen.legacy .bf-save {
+    padding: 0 16px;
+  }
+}
+
+/* ---------- Modes: theme colours instead of the 1.0 navy/amber; AND/OR logic is for experts ---------- */
+.screen.legacy .bf-md {
+  --md-on: var(--w-ok);
+}
+.screen.legacy .bf-md .md-tile {
+  background: var(--w-sunk);
+}
+.screen.legacy .bf-md .md-fill {
+  background: var(--w-ink-3);
+  opacity: 0.6;
+}
+.screen.legacy .bf-md .md-range.hit .md-fill {
+  background: var(--w-ok);
+  opacity: 1;
+}
+.screen.legacy .bf-md .md-range.chg .md-fill {
+  background: var(--w-live);
+  opacity: 1;
+}
+html[data-mode='basic'] .screen.legacy .bf-md .md-logic,
+html[data-mode='basic'] .screen.legacy .bf-md .md-sc-logic {
+  visibility: hidden;
+}
+
+/* ---------- colours the 1.0 tabs set directly (dark-only), mapped to the theme ---------- */
+.screen.legacy .bf-save,
+.screen.legacy .bf-save[class] {
+  border-top: 1px solid var(--w-line);
+  background: var(--w-surface);
+}
+.screen.legacy .bf-md .md-act {
+  background: var(--w-ok);
+  color: var(--w-bg);
+}
+/* Motors */
+.screen.legacy .mt {
+  --mt-line: var(--w-line);
+}
+.screen.legacy .mt .mt-graph {
+  background: var(--w-bg);
+}
+.screen.legacy .mt .mt-tile {
+  background: var(--w-sunk);
+  color: var(--w-ink);
+}
+.screen.legacy .mt .mt-range::-webkit-slider-thumb {
+  border-color: var(--w-ink);
+  background: var(--w-surface);
+}
+.screen.legacy .mt .mt-range::-moz-range-thumb {
+  border-color: var(--w-ink);
+  background: var(--w-surface);
+}
+.screen.legacy .mt .mt-col-m.on .mt-range::-webkit-slider-thumb {
+  background: var(--w-fail);
+  border-color: var(--w-fail);
+}
+/* Tuning (Autotune): panels like the 2.0 cards, picks as plain choice buttons */
+.screen.legacy .pw-panel {
+  margin-top: 0;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--w-line);
+  border-radius: 16px;
+  background: var(--w-surface);
+}
+.screen.legacy .pw-panel > .pw-cap:first-child {
+  margin: 0 0 12px;
+}
+.screen.legacy .pw-panel > .pw-cap:first-child > span:first-child {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--w-ink);
+  font: 650 18px/1.3 var(--sans);
+  letter-spacing: -0.01em;
+  white-space: normal;
+}
+.screen.legacy .pw-panel > .pw-cap:first-child > span:first-child .tip .bulb-glass,
+.screen.legacy .pw-panel > .pw-cap:first-child > span:first-child .tip .bulb-base,
+.screen.legacy .pw-panel > .pw-cap:first-child > span:first-child .tip .bulb-fil {
+  stroke: currentColor;
+}
+.screen.legacy .pw-panel > .pw-cap:first-child > span:last-child:not(:first-child) {
+  background: none;
+}
+.screen.legacy .pw-pick {
+  border: 1px solid var(--w-line-2);
+  border-radius: 12px;
+  background: var(--w-surface);
+  color: var(--w-ink);
+}
+.screen.legacy .pw-pick.on {
+  border-color: var(--w-ink);
+  background: var(--w-btn);
+  color: var(--w-btn-ink);
+}
+.screen.legacy .pw-pick:active {
+  transform: scale(0.97);
+}
+.screen.legacy .mt .mt-tag {
+  background: var(--w-fail);
+  color: var(--w-btn-ink);
+}
+.screen.legacy .bf-tuning-bar {
+  border-top: 1px solid var(--w-line);
+  background: var(--w-surface);
+}
+.screen.legacy .bf-tuning-bar-n {
+  color: var(--w-ink-2);
+}

@@ -162,8 +162,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           </div></section>
         <div class="v1-cols su-cols" data-su-cols>
           <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gSystemInfo')))}</span></header><div data-part="system">${system()}</div></section>
-          <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gSensors')))} ${tip('tips.setup.sensors')}</span></header><div data-part="sensors">${sensors()}</div></section>
-          <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gInfo')))}</span></header><div data-part="info">${info()}</div>
+          <section class="bf-panel" data-level="expert"><header><span class="bf-legend">${escapeHtml(t(K('gSensors')))} ${tip('tips.setup.sensors')}</span></header><div data-part="sensors">${sensors()}</div></section>
+          <section class="bf-panel" data-level="expert"><header><span class="bf-legend">${escapeHtml(t(K('gInfo')))}</span></header><div data-part="info">${info()}</div>
             <div class="su-btns">${btn('dfu', t(K('dfuBtn')), t(K('dfuText')), 'amber', false, 'tips.setup.dfu', true)}${btn('reset', t(K('resetBtn')), t(K('resetText')), 'danger', false, 'tips.setup.reset')}</div></section>
           <section class="bf-panel"><header><span class="bf-legend">${escapeHtml(t(K('gCal')))}</span></header><div class="su-btns">
             ${needsAcc ? `<div class="v1-warn">${escapeHtml(t(K('accNeeds')))}</div>` : ''}

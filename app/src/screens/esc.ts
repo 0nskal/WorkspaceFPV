@@ -426,14 +426,14 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
                 <header><span class="bf-legend">${t('bfMotors.pEsc')}</span></header>
                 <div class="mt-esc-cfg"></div>
               </section>
-              <section class="bf-panel">
+              <section class="bf-panel" data-level="expert">
                 <header><span class="bf-legend">${t('bfMotors.p3d')}</span></header>
                 <div class="mt-3d-cfg"></div>
               </section>
               <div class="mt-escinfo"></div>
             </div>
             <div class="mt-right">
-              <section class="bf-panel mt-live">
+              <section class="bf-panel mt-live" data-level="expert">
                 <header><span class="bf-legend">${t('bfMotors.pLive')} ${tip('tips.motors.liveGraph')}</span></header>
                 <div class="mt-live-grid">
                   <div class="mt-graph"><canvas aria-label="${escapeHtml(t('bfMotors.graphAria'))}" role="img"></canvas></div>

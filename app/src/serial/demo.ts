@@ -28,6 +28,8 @@ function build(write: (dv: DataView) => void, size: number): Uint8Array {
   return buf;
 }
 
+import { demoUsbOnly } from './demo-power';
+
 export class DemoLink implements FcLink {
   readonly kind = 'demo' as const;
   readonly label = 'Demo';
@@ -68,17 +70,17 @@ export class DemoLink implements FcLink {
       case MSP.MOTOR:
         return build((dv) => {
           MOTOR_BASE.forEach((p, i) => {
-            const pct = p + Math.sin(t * 1.7 + i) * 1.4;
+            const pct = demoUsbOnly() ? 0 : p + Math.sin(t * 1.7 + i) * 1.4;
             dv.setUint16(i * 2, Math.round(1000 + pct * 10), true);
           });
         }, 16);
       case MSP.ANALOG:
         return build((dv) => {
-          dv.setUint8(0, 249); // 24.9 V
+          dv.setUint8(0, demoUsbOnly() ? 0 : 249); // 24.9 V (0 = USB only)
           dv.setUint16(1, 0, true);
-          dv.setUint16(3, Math.round(880 + Math.sin(t) * 30), true); // RSSI ~86%
+          dv.setUint16(3, demoUsbOnly() ? 0 : Math.round(880 + Math.sin(t) * 30), true); // RSSI ~86%
           dv.setInt16(5, 0, true);
-          dv.setUint16(7, 2490, true);
+          dv.setUint16(7, demoUsbOnly() ? 0 : 2490, true);
         }, 9);
       case MSP.PID:
         return Uint8Array.from([48, 82, 38, 52, 88, 42, 45, 90, 3, ...new Array<number>(21).fill(0)]);

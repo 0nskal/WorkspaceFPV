@@ -1,0 +1,200 @@
+/* Motors, Basic mode: step-by-step motor check on the render. Tokens from ui/theme.css. */
+.mb-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.mb-art {
+  max-width: 600px;
+  position: sticky;
+  top: 12px;
+}
+.mb-panel {
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+}
+.mb-off-a {
+  margin-top: 24px;
+}
+.mb-step {
+  font: 600 13px/1 var(--sans);
+  color: var(--w-ink-3);
+}
+.mb-lead {
+  font: 400 15.5px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+.mb-note {
+  font: 400 14.5px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+.mb-checks,
+.mb-res {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.mb-checks li,
+.mb-res li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font: 500 15px/1.45 var(--sans);
+}
+.mb-checks li svg,
+.mb-res li svg {
+  flex: none;
+  margin-top: 3px;
+  stroke-width: 2.4;
+}
+.mb-checks li.ok svg,
+.mb-res li.ok svg {
+  color: var(--w-ok);
+}
+.mb-checks li.bad svg,
+.mb-res li.bad svg {
+  color: var(--w-fail);
+}
+.mb-res li b {
+  font-weight: 650;
+}
+.mb-props {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 600 15.5px/1.3 var(--sans);
+  color: var(--w-ink);
+  text-align: left;
+}
+.mb-props[aria-checked='true'] .w-toggle {
+  background: var(--w-ok);
+}
+.mb-props[aria-checked='true'] .w-toggle::after {
+  transform: translateX(16px);
+}
+.mb-spin .w-btn {
+  min-width: 240px;
+}
+.mb .w-btn.mb-stop {
+  background: var(--w-fail);
+  border-color: var(--w-fail);
+  color: #fff;
+}
+.mb .w-btn.mb-stop:hover:not(:disabled) {
+  border-color: var(--w-fail);
+  opacity: 0.92;
+}
+.mb-q {
+  padding-top: 12px;
+  border-top: 1px solid var(--w-line);
+}
+.mb-q p {
+  font: 600 15.5px/1.4 var(--sans);
+}
+.mb-a {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mb-a .w-btn.on {
+  background: var(--w-btn);
+  border-color: var(--w-btn);
+  color: var(--w-btn-ink);
+}
+.mb-fix {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--w-sunk);
+  font: 400 14.5px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+
+/* overlay on the render: motor badges and the expected spin direction */
+.mb-badge circle {
+  fill: rgba(12, 13, 14, 0.55);
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 3;
+  transition:
+    fill 0.2s,
+    stroke 0.2s;
+}
+.mb-badge text {
+  font: 700 32px var(--sans);
+  fill: #fff;
+}
+.mb-badge.cur circle {
+  fill: #7cb1ff;
+  stroke: #fff;
+}
+.mb-badge.cur text {
+  fill: #0c0d0e;
+}
+.mb-badge.good circle {
+  fill: #2fae6a;
+  stroke: #fff;
+}
+.mb-badge.bad circle {
+  fill: #e5483d;
+  stroke: #fff;
+}
+.mb-arrow path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.mb-arrow .mb-head {
+  fill: rgba(255, 255, 255, 0.45);
+  stroke: none;
+}
+.mb-arrow.cur path {
+  stroke: #7cb1ff;
+}
+.mb-arrow.cur .mb-head {
+  fill: #7cb1ff;
+  stroke: none;
+}
+.mb-arrow.good path {
+  stroke: #2fae6a;
+}
+.mb-arrow.good .mb-head {
+  fill: #2fae6a;
+}
+.mb-arrow.bad path {
+  stroke: #e5483d;
+}
+.mb-arrow.bad .mb-head {
+  fill: #e5483d;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mb-badge.cur circle {
+    animation: mb-pulse 1.4s var(--ease-out) infinite;
+  }
+  .mb-panel > * {
+    animation: mb-up 0.3s var(--ease-out) both;
+  }
+}
+@keyframes mb-pulse {
+  50% {
+    stroke-width: 10;
+  }
+}
+@keyframes mb-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (max-width: 1100px) {
+  .mb-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mb-art {
+    position: relative;
+    max-width: 480px;
+  }
+}

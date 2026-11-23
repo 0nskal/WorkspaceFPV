@@ -63,7 +63,7 @@ export const SCREENS: ScreenDef[] = [
   { id: 'osd', titleKey: 'bfOsd.tab', icon: 'monitor', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning', level: 'basic' },
   { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'wave', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
-  { id: 'autotune', titleKey: 'tabs.autotune', icon: 'target', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'basic', simple: 'simple.nav.tune' },
+  { id: 'autotune', titleKey: 'tabs.autotune', icon: 'target', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'expert' },
   { id: 'cli', titleKey: 'bfCli.tab', icon: 'terminal', mount: bfCli.mount, requiresConnection: true, group: 'tools', level: 'expert' },
   { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false, group: 'tools', level: 'basic' },
 ];

@@ -21,6 +21,8 @@ import { intro, tip } from '../ui/tip';
 import { mountMotorConfig, type MotorCfgHandle, type Recommendation } from './bf-motors-cfg';
 import { mountMotorTelemetry, type MotorTelHandle } from './bf-motors-tel';
 import { quadSvg } from './esc-quad';
+import { mountMotorsBasic } from './motors-basic';
+import { currentMode } from '../ui/mode';
 
 const SAFE_MAX = 30;
 const TICK_MS = 100;
@@ -32,6 +34,11 @@ const SCALES: Record<Sensor, number[]> = { gyro: [2000, 1000, 500, 250, 100, 50,
 const RATES = [100, 200, 500];
 
 export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
+  // Basic mode: the step-by-step motor check on the render (motors-basic.ts); Expert keeps this full tab
+  if (currentMode(ctx.settings) === 'basic') {
+    el.classList.replace('legacy', 'modern');
+    return mountMotorsBasic(el, ctx);
+  }
   let view: 'empty' | 'main' | '' = '';
   let propsOut = false;
   let cfgHandle: MotorCfgHandle | null = null;

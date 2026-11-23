@@ -27,7 +27,7 @@
 .su .su-small { font-size: 12.5px; color: var(--sub); }
 .su .su-small:empty { display: none; }
 .su .su-arming { margin-top: 30px; }
-.su .su-ok { font-size: 14px; color: #5fd3a5; margin-bottom: 8px; }
+.su .su-ok { font-size: 14px; color: var(--ok-green, #5fd3a5); margin-bottom: 8px; }
 .su .su-flags { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 4px 28px; }
 .su .su-flags li { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--v1-line-2); font-size: 13.5px; }
 .su .su-flags li.block b { color: var(--hot); }

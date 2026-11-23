@@ -313,7 +313,7 @@
   font-size: 13px;
 }
 .v1-kv dd.ok {
-  color: #5fd3a5;
+  color: var(--ok-green, #5fd3a5);
 }
 .v1-kv dd.warn {
   color: var(--amber);

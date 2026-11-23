@@ -54,7 +54,7 @@
   text-align: center;
 }
 .bf-tab[data-tab='gps'] .gp-badge.ok {
-  background: #5fd3a5;
+  background: var(--ok-green, #5fd3a5);
   color: #08140f;
 }
 .bf-tab[data-tab='gps'] .gp-badge.no {
@@ -71,7 +71,7 @@
   color: #fff;
 }
 .bf-tab[data-tab='gps'] .dop-good {
-  background: #5fd3a5;
+  background: var(--ok-green, #5fd3a5);
   color: #08140f;
 }
 .bf-tab[data-tab='gps'] .dop-mid {
@@ -114,7 +114,7 @@
   text-align: center;
 }
 .bf-tab[data-tab='gps'] .gp-sat.used {
-  background: #5fd3a5;
+  background: var(--ok-green, #5fd3a5);
   color: #08140f;
 }
 .bf-tab[data-tab='gps'] .gp-sat.unused {
@@ -148,7 +148,7 @@
   color: #fff;
 }
 .bf-tab[data-tab='gps'] .gp-q.full {
-  background: #5fd3a5;
+  background: var(--ok-green, #5fd3a5);
   color: #08140f;
 }
 .bf-tab[data-tab='gps'] .gp-empty {
@@ -188,7 +188,7 @@
   font: 600 12px var(--sans);
 }
 .bf-tab[data-tab='gps'] .gp-radar .home {
-  fill: #5fd3a5;
+  fill: var(--ok-green, #5fd3a5);
   stroke: #08140f;
   stroke-width: 2;
 }

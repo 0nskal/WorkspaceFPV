@@ -436,7 +436,7 @@
   font-weight: 600;
 }
 .mt .mt-tel-ok {
-  color: #5fd3a5;
+  color: var(--ok-green, #5fd3a5);
 }
 .mt .mt-tel-hint {
   color: var(--amber);

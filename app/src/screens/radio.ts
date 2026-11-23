@@ -122,7 +122,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
           <div class="rd-art">${radioArt(t('simple.radio.aria'), t('simple.radio.ctlAria'))}</div>
           <p class="rd-learn" data-learn role="status">${learnText()}</p>
           <p class="rd-caption">${t('simple.radio.mode2')} <span data-link></span></p>
-          <p class="w-note fail rd-nosig" data-nosig hidden>${t('simple.radio.noSignal')}</p>
+          <div class="w-note fail rd-nosig" data-nosig hidden><p>${t('simple.radio.noSignal')}</p><button class="w-btn" data-go="ports">${t('simple.ports.checkPort')}${icon('arrowRight', 16)}</button></div>
         </div>
         <div class="rd-side">
           <section class="w-card rd-test">

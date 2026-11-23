@@ -1,0 +1,305 @@
+/* Radio screen. Tokens from ui/theme.css. */
+.rd-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.rd-art {
+  max-width: 680px;
+}
+.rd-art-off {
+  margin: 28px auto 0;
+  max-width: 560px;
+  opacity: 0.9;
+}
+.rd-off-a {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+.rd-caption {
+  margin-top: 14px;
+  font: 400 14px/1.4 var(--sans);
+  color: var(--w-ink-3);
+}
+.rd-caption span {
+  margin-left: 6px;
+  font-family: var(--mono);
+  color: var(--w-ink-2);
+}
+.rd-nosig {
+  margin-top: 12px;
+}
+.rd-side {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.rd-test {
+  padding: 18px;
+}
+.rd-test-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rd-test-h .w-btn {
+  height: 34px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--w-ink-2);
+}
+.rd-test-lead {
+  margin-top: 4px;
+  font: 400 14.5px/1.45 var(--sans);
+  color: var(--w-ink-2);
+}
+.rd-axes {
+  list-style: none;
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+.rd-axes li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 6px;
+  align-items: center;
+}
+.rd-tick {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--w-line-2);
+  color: transparent;
+  transition:
+    background-color 0.25s,
+    border-color 0.25s,
+    color 0.25s,
+    transform 0.25s var(--ease-out);
+}
+.rd-tick svg {
+  stroke-width: 2.6;
+}
+.rd-axes li.done .rd-tick {
+  background: var(--w-ok);
+  border-color: var(--w-ok);
+  color: var(--w-surface);
+  transform: scale(1.06);
+}
+.rd-ax-t {
+  font: 500 15px/1.3 var(--sans);
+  color: var(--w-ink);
+}
+.rd-meter {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--w-sunk);
+}
+.rd-meter::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1.5px;
+  background: var(--w-line-2);
+}
+.rd-meter i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--w-ink-3);
+  opacity: 0.35;
+}
+.rd-meter [data-lo] {
+  right: 50%;
+  border-radius: 4px 0 0 4px;
+}
+.rd-meter [data-hi] {
+  left: 50%;
+  border-radius: 0 4px 4px 0;
+}
+.rd-axes li.done .rd-meter i {
+  background: var(--w-ok);
+  opacity: 0.45;
+}
+.rd-meter b {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--w-live);
+  border: 2px solid var(--w-surface);
+  transition: left 80ms linear;
+}
+.rd-allok {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 15px/1.3 var(--sans);
+  color: var(--w-ok);
+}
+.rd-allok svg {
+  stroke-width: 2.6;
+}
+.rd-hint {
+  margin-top: 12px;
+  font: 400 13.5px/1.45 var(--sans);
+  color: var(--w-ink-3);
+}
+
+.rd-arm {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--w-surface);
+  border: 1px solid var(--w-line);
+}
+.rd-arm-i {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--w-sunk);
+  color: var(--w-ink);
+}
+.rd-arm b {
+  display: block;
+  padding-top: 7px;
+  font: 600 15.5px/1.35 var(--sans);
+}
+.rd-state {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--w-sunk);
+  font: 600 13px/1.3 var(--sans);
+  color: var(--w-ink-2);
+}
+.rd-arm.armed {
+  border-color: var(--w-fail);
+}
+.rd-arm.armed .rd-state {
+  background: var(--w-fail);
+  color: #fff;
+}
+.rd-arm.none {
+  background: var(--w-warn-bg);
+  border-color: transparent;
+}
+.rd-arm.none .rd-arm-i {
+  background: var(--w-warn-dot);
+  color: #1a1000;
+}
+.rd-arm.none .w-btn {
+  margin-top: 10px;
+}
+
+.rd-sw {
+  padding: 18px;
+}
+.rd-sw ul {
+  list-style: none;
+  margin-top: 10px;
+  display: grid;
+}
+.rd-sw li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--w-line);
+}
+.rd-aux {
+  font: 600 14px/1 var(--sans);
+}
+.rd-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rd-modes em {
+  font: 600 12.5px/1 var(--sans);
+  font-style: normal;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--w-sunk);
+  color: var(--w-ink);
+}
+.rd-modes em.arm {
+  background: var(--w-ink);
+  color: var(--w-bg);
+}
+.rd-modes small {
+  font: 400 13.5px/1.2 var(--sans);
+  color: var(--w-ink-3);
+}
+.rd-us {
+  font-size: 13px;
+  color: var(--w-ink-2);
+  min-width: 4ch;
+  text-align: right;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rd .rd-art {
+    animation: ws2-in 0.6s var(--ease-out) both;
+  }
+}
+@media (max-width: 1100px) {
+  .rd-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-tick,
+  .rd-meter b {
+    transition: none;
+  }
+}
+.rd-sw li {
+  transition: background-color 0.15s;
+  margin: 0 -10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 8px;
+}
+.rd-sw li.on {
+  background: var(--w-sunk);
+}
+.rd-sw li.on .rd-aux::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--w-live);
+  vertical-align: middle;
+}
+.rd-sw li.arm-on .rd-aux::after {
+  background: var(--w-fail);
+}
+.rd-sw li.on .rd-modes em {
+  background: var(--w-surface);
+}

@@ -21,6 +21,7 @@ import { plAtFlow } from './pl/autotune-flow';
 import { plAutotune2 } from './pl/autotune2';
 import { plAiProviders } from './pl/ai-providers';
 import { plMode, plNav, plSnip, plTipsUi } from './pl/ui-modes';
+import { plSimple } from './pl/simple';
 import { plTipsCore } from './pl/tips-core';
 import { plTipsFc } from './pl/tips-fc';
 import { plTipsRx } from './pl/tips-rx';
@@ -439,6 +440,7 @@ export const pl: Dict = {
   autotune2: plAutotune2,
   aiProviders: plAiProviders,
   mode: plMode,
+  simple: plSimple,
   nav: plNav,
   snip: plSnip,
   tipsUi: plTipsUi,

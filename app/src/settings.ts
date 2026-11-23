@@ -37,14 +37,18 @@ export interface Settings {
    * The ELRS read never runs automatically on them and the confirmation warns about the replug.
    */
   noDtrReset: string[];
+  /** Colour theme: dark is the default; light is the high-contrast option for direct sunlight; auto follows the system. */
+  theme: ThemePref;
   /** Settings migrations already applied. */
   rev: number;
 }
 
+export type ThemePref = 'light' | 'dark' | 'auto';
+
 export type UiMode = 'basic' | 'expert';
 
 const KEY = 'workspacefpv.settings.v1';
-const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, aiProvider: '', claudeCodeModel: DEFAULT_CLAUDE_CODE_MODEL, geminiKey: '', geminiModel: DEFAULT_GEMINI_MODEL, ollamaUrl: DEFAULT_OLLAMA_URL, ollamaModel: '', checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: false, uiMode: '', expertTips: true, noDtrReset: [], rev: 1 };
+const DEFAULTS: Settings = { apiKey: '', model: MODELS[0].id, aiProvider: '', claudeCodeModel: DEFAULT_CLAUDE_CODE_MODEL, geminiKey: '', geminiModel: DEFAULT_GEMINI_MODEL, ollamaUrl: DEFAULT_OLLAMA_URL, ollamaModel: '', checkUpdates: true, armingDisable: true, autoEscInfo: true, autoElrsInfo: false, uiMode: '', expertTips: true, noDtrReset: [], theme: 'dark', rev: 1 };
 
 export class SettingsStore {
   private s: Settings = { ...DEFAULTS };

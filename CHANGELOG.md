@@ -2,6 +2,15 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 1.1.0 – 2026-11-23
+
+- **Made for beginners first.** The menu now has four items: Drone, Radio, Motors and Tuning. Every Betaflight tab is still there behind the "All Betaflight tabs" switch at the bottom of the menu. The "How much do you know about FPV?" window is gone.
+- **Drone screen (new start screen).** Three steps to connect. Once connected you see a picture of the quad with real data next to its parts (board, ESC protocol, battery, receiver). A part with a problem pulses red. Each problem is described in plain words; where possible a **Fix** button changes the setting for you (with a confirmation and a backup), otherwise a button takes you to the right screen. The props spin when the motors run.
+- **Radio screen (new).** The sticks on the picture move with your radio. A short test ticks off each direction once you push the stick all the way. You see which AUX arms the drone and which modes sit on each switch. Nothing is written to the flight controller here.
+- **Dark and light theme.** Dark is the default. Light has high contrast for reading in the sun. Settings → Appearance, or follow the system.
+- **Works on phones and tablets:** bottom tab bar, no fixed desktop width.
+- **New app icon.**
+
 ## 1.0.0 – 2026-11-18
 
 - **New look, built for reading.** Every flight-controller tab follows the Betaflight App layout with the WorkspaceFPV colours: a page title, panels with amber titles, rows of *control · label · help bulb* (the explanation opens from the bulb instead of sitting under every row), bigger text, and the assistant panel closed by default so the tab gets the full width.
@@ -90,6 +99,15 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 1.1.0 – 2026-11-23
+
+- **Najpierw dla początkujących.** Menu ma teraz cztery pozycje: Dron, Aparatura, Silniki i Strojenie. Wszystkie zakładki Betaflight dalej są, pod przełącznikiem „Wszystkie zakładki Betaflight” na dole menu. Okno „Ile wiesz o FPV?” zniknęło.
+- **Ekran Dron (nowy ekran startowy).** Trzy kroki do połączenia. Po połączeniu widać zdjęcie quada z prawdziwymi danymi przy częściach (płytka, protokół ESC, bateria, odbiornik). Część z problemem pulsuje na czerwono. Każdy problem jest opisany prostymi słowami; jeśli się da, przycisk **Napraw** zmienia ustawienie za Ciebie (z potwierdzeniem i kopią), a jeśli nie, przycisk prowadzi na właściwy ekran. Śmigła kręcą się, gdy pracują silniki.
+- **Ekran Aparatura (nowy).** Drążki na rysunku ruszają się razem z Twoją aparaturą. Krótki test zalicza każdy kierunek, gdy wychylisz drążek do końca. Widać, który AUX uzbraja drona i jakie tryby są na przełącznikach. Ten ekran niczego nie zapisuje do kontrolera.
+- **Motyw ciemny i jasny.** Domyślnie ciemny. Jasny ma wysoki kontrast do czytania w słońcu. Ustawienia → Wygląd albo jak w systemie.
+- **Działa na telefonie i tablecie:** dolny pasek zakładek, bez sztywnej szerokości z komputera.
+- **Nowa ikona aplikacji.**
 
 ## 1.0.0 – 2026-11-18
 

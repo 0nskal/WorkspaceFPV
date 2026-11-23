@@ -33,6 +33,11 @@ const PATHS: Record<string, string> = {
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   gauge: '<path d="M4 18a9 9 0 1 1 16 0"/><path d="m12 14 4-5"/><circle cx="12" cy="15" r="1.3"/>',
   pin: '<path d="M12 21s-6.5-5.7-6.5-11a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/>',
+  drone: '<circle cx="5.5" cy="5.5" r="3"/><circle cx="18.5" cy="5.5" r="3"/><circle cx="5.5" cy="18.5" r="3"/><circle cx="18.5" cy="18.5" r="3"/><path d="m7.6 7.6 2.4 2.4M16.4 7.6 14 10M7.6 16.4l2.4-2.4M16.4 16.4 14 14"/><rect x="9.5" y="9" width="5" height="6" rx="1"/>',
+  gamepad: '<path d="M4.5 9.5C5 7.6 6.3 7 8 7h8c1.7 0 3 .6 3.5 2.5l1.4 6.2c.4 1.9-.6 3.3-2.4 3.3H5.5c-1.8 0-2.8-1.4-2.4-3.3l1.4-6.2Z"/><circle cx="8" cy="13" r="2"/><circle cx="16" cy="13" r="2"/><path d="M9 7V3.5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4V5Z"/>',
   external: '<path d="M14 4h6v6M20 4 10 14M18 14v6H4V6h6"/>',
 };
 

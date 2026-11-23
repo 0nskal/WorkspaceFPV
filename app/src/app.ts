@@ -21,7 +21,9 @@ import { downloadText, escapeHtml, stamp } from './ui/dom';
 import { createDrawer, type Drawer } from './ui/drawer';
 import { icon, logo } from './ui/icons';
 import { confirmDialog, toast } from './ui/modal';
-import { applyModeAttrs, chooseModeDialog, currentMode, modeSwitchHtml } from './ui/mode';
+import { applyModeAttrs, currentMode } from './ui/mode';
+import { applyTheme } from './ui/theme';
+import { boardDisplayName } from './fc/board';
 import { initTips } from './ui/tip';
 import { openSearch } from './ui/search';
 import { ringElement } from './ui/snip';
@@ -283,45 +285,46 @@ export function createApp(root: HTMLElement): AppContext {
   let screenEl!: HTMLElement;
   let bodyEl!: HTMLElement;
   let navEl!: HTMLElement;
-  let stT!: HTMLElement;
-  let stI!: HTMLElement;
-  let dnEl!: HTMLElement;
-  let rssiEl!: HTMLElement;
-  let vbatEl!: HTMLElement;
-  let gyroLine!: SVGPolylineElement;
+  let connEl!: HTMLElement;
 
-  /** Sidebar: tabs grouped into Start / Hardware / Flight / Tuning / Tools, one sliding indicator for the active one. */
+  /** Sidebar: the short beginner list first; Expert adds every Betaflight tab grouped like the Configurator, plus tool links. */
   function navHtml(): string {
     const mode = currentMode(settings);
-    const items = SCREENS.filter((sc) => sc.nav !== false && screenVisible(sc, mode));
-    return (
-      SECTIONS.map((sec) => {
+    const item = (sc: (typeof SCREENS)[number], label: string) =>
+      `<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${icon(sc.icon, 19)}<span>${escapeHtml(label)}</span><b class="badge" hidden></b></a>`;
+    const simple = SCREENS.filter((sc) => sc.simple && sc.nav !== false);
+    let html = `<div class="sgrp">${simple.map((sc) => item(sc, t(sc.simple!))).join('')}</div>`;
+    if (mode === 'expert') {
+      const rest = SCREENS.filter((sc) => !sc.simple && sc.nav !== false && screenVisible(sc, mode));
+      html += SECTIONS.map((sec) => {
         if (sec === 'tools') {
           const link = (l: ToolLink) => `<a class="ext" href="${l.url}" target="_blank" rel="noopener noreferrer" title="${t('nav.links.openExt')}">${icon(l.id === 'cp210x' || l.id === 'zadig' || l.id === 'impulserc' ? 'download' : 'external', 16)}<span>${t(l.labelKey)}</span></a>`;
           const drivers = new Set(['cp210x', 'zadig', 'impulserc']);
           return `<div class="sgrp"><div class="sgrp-h">${t('nav.tools')}</div>${TOOL_LINKS.filter((l) => !drivers.has(l.id)).map(link).join('')}<div class="sgrp-sub">${t('nav.links.driversHead')}</div>${TOOL_LINKS.filter((l) => drivers.has(l.id)).map(link).join('')}</div>`;
         }
-        const list = items.filter((sc) => sectionOf(sc.id) === sec);
+        const list = rest.filter((sc) => sectionOf(sc.id) === sec);
         if (!list.length) return '';
-        return `<div class="sgrp"><div class="sgrp-h">${t(`nav.${sec}`)}</div>${list
-          .map((sc) => `<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${icon(sc.icon, 16)}<span>${t(sc.titleKey)}</span><b class="badge" hidden></b></a>`)
-          .join('')}</div>`;
-      }).join('') + '<span class="nav-ind" aria-hidden="true"></span>'
-    );
+        return `<div class="sgrp"><div class="sgrp-h">${t(`nav.${sec}`)}</div>${list.map((sc) => item(sc, t(sc.titleKey))).join('')}</div>`;
+      }).join('');
+    }
+    return html + '<span class="nav-ind" aria-hidden="true"></span>';
   }
 
-  /** Problem counters next to the tabs, from the rule results (red = failure, amber = warning). */
+  /** Problem counters next to the tabs, from the rule results (red = failure, amber = warning). All of them also count on Drone. */
   const PART_ROUTE: Record<Part, string> = { esc: 'esc', motors: 'esc', rx: 'bf-receiver', battery: 'power', fc: 'setup' };
   function renderBadges(): void {
     const counts = new Map<string, { n: number; fail: boolean }>();
+    const add = (r: string, fail: boolean) => {
+      const e = counts.get(r) ?? { n: 0, fail: false };
+      e.n++;
+      e.fail ||= fail;
+      counts.set(r, e);
+    };
     if (store.get().conn === 'connected') {
       for (const c of diagnose(store.get(), bf.get()).checks) {
-        if (!c.part || (c.severity !== 'fail' && c.severity !== 'warn')) continue;
-        const r = PART_ROUTE[c.part];
-        const e = counts.get(r) ?? { n: 0, fail: false };
-        e.n++;
-        e.fail ||= c.severity === 'fail';
-        counts.set(r, e);
+        if (c.severity !== 'fail' && c.severity !== 'warn') continue;
+        add('warsztat', c.severity === 'fail');
+        if (c.part && currentMode(settings) === 'expert') add(PART_ROUTE[c.part], c.severity === 'fail');
       }
     }
     navEl.querySelectorAll<HTMLElement>('a[data-route]').forEach((a) => {
@@ -335,38 +338,35 @@ export function createApp(root: HTMLElement): AppContext {
     });
   }
 
-  /** (Re)builds the whole shell: top bar, tab bar from the screen registry, empty screen area. Called on start and on language change. */
+  function expertSwitchHtml(): string {
+    const on = currentMode(settings) === 'expert';
+    return `<button type="button" class="w-expert" role="switch" aria-checked="${on}" data-act="expert"><span>${t('simple.nav.expert')}</span><span class="w-toggle" aria-hidden="true"></span></button>`;
+  }
+
+  /** (Re)builds the whole shell: sidebar (bottom tab bar on phones), connection block, empty screen area. Called on start and on language change. */
   function buildShell(): void {
     root.innerHTML = `
-    <header class="bar">
-      <div class="brand">${logo(24)}${t('shell.brand')}</div>
-      <div class="st"><i></i><span class="st-t">${t('shell.disconnected')}</span><span class="dn"></span></div>
-      <span class="dn-sep" hidden></span>
-      <div class="tel">
-        <svg class="gyro" width="98" height="22" viewBox="0 0 98 22" aria-hidden="true"><polyline fill="none" stroke="#CFE6F2" stroke-width="1.1" points=""/></svg>
-        <span class="vbat">VBAT <b>—</b></span>
-        <span class="rssi">RSSI <b>—</b></span>
-        ${modeSwitchHtml(currentMode(settings))}
-        <button class="ib" data-act="settings" title="${t('shell.settings')}" aria-label="${t('shell.settings')}">${icon('settings', 17)}</button>
-        <button class="ib" data-act="drawer" title="${t('shell.drawerToggle')}" aria-label="${t('shell.assistantAria')}">${icon('panel', 17)}</button>
-      </div>
-    </header>
-    <div class="workspace">
-      <aside class="side">
-        <button type="button" class="side-search" data-act="search">${icon('search', 15)}<span>${t('nav.search')}</span><kbd>Ctrl</kbd><kbd>K</kbd></button>
+    <div class="w-app">
+      <aside class="w-rail">
+        <div class="w-top">
+          <div class="w-brand">${logo(26)}<span>${t('shell.brand')}</span></div>
+          <div class="w-conn" aria-live="polite"></div>
+          <button class="w-btn quiet w-top-set" data-act="settings" aria-label="${t('simple.nav.settings')}">${icon('settings', 20)}</button>
+        </div>
         <nav class="nav" aria-label="${t('shell.tabsAria')}">${navHtml()}</nav>
+        <div class="w-rail-foot">
+          <button class="w-btn quiet" data-act="drawer">${icon('chat', 18)}${t('simple.nav.assistant')}</button>
+          <button class="w-btn quiet" data-act="search">${icon('search', 18)}${t('simple.nav.search')}</button>
+          <button class="w-btn quiet" data-act="settings">${icon('settings', 18)}${t('simple.nav.settings')}</button>
+          ${expertSwitchHtml()}
+        </div>
       </aside>
       <div class="body"><main class="screen" id="screen"></main></div>
     </div>`;
     screenEl = root.querySelector<HTMLElement>('#screen') as HTMLElement;
     bodyEl = root.querySelector<HTMLElement>('.body') as HTMLElement;
     navEl = root.querySelector<HTMLElement>('.nav') as HTMLElement;
-    stT = root.querySelector<HTMLElement>('.st-t') as HTMLElement;
-    stI = root.querySelector<HTMLElement>('.st i') as HTMLElement;
-    dnEl = root.querySelector<HTMLElement>('.dn') as HTMLElement;
-    rssiEl = root.querySelector<HTMLElement>('.rssi b') as HTMLElement;
-    vbatEl = root.querySelector<HTMLElement>('.vbat b') as HTMLElement;
-    gyroLine = root.querySelector<SVGPolylineElement>('.gyro polyline') as SVGPolylineElement;
+    connEl = root.querySelector<HTMLElement>('.w-conn') as HTMLElement;
   }
 
   let current: Route = parseRoute();
@@ -428,7 +428,10 @@ export function createApp(root: HTMLElement): AppContext {
     bodyEl.classList.toggle('with-drawer', show);
     // the panel button only makes sense once connected
     const btn = root.querySelector<HTMLElement>('[data-act="drawer"]');
-    if (btn) btn.hidden = store.get().conn === 'disconnected' || current === 'ustawienia';
+    if (btn) {
+      btn.hidden = store.get().conn === 'disconnected' || current === 'ustawienia';
+      btn.setAttribute('aria-pressed', String(show));
+    }
   }
 
   function mountScreen(): void {
@@ -438,11 +441,18 @@ export function createApp(root: HTMLElement): AppContext {
     screenEl.innerHTML = '';
     screenEl.dataset.route = current;
     const def = findScreen(current) ?? findScreen(DEFAULT_SCREEN);
+    screenEl.classList.toggle('modern', !!def?.modern);
+    screenEl.classList.toggle('legacy', !def?.modern);
     if (def && !screenVisible(def, currentMode(settings))) {
       // Expert-only tab opened in Basic mode (old link, AI pointer): say so instead of hiding it silently.
       screenEl.innerHTML = `<div class="expert-only"><p>${t('mode.expertOnly')}</p><button class="btn p" data-act="to-expert">${t('mode.expertOnlyAction')}</button></div>`;
     } else if (def) unmount = def.mount(screenEl, ctx);
-    navEl.querySelectorAll<HTMLElement>('a').forEach((a) => a.classList.toggle('on', a.dataset.route === current));
+    navEl.querySelectorAll<HTMLElement>('a').forEach((a) => {
+      const on = a.dataset.route === current;
+      a.classList.toggle('on', on);
+      if (on) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
     moveIndicator();
     syncLayout();
     enterScreen();
@@ -468,38 +478,49 @@ export function createApp(root: HTMLElement): AppContext {
     screenEl.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   }
 
+  function connHtml(): string {
+    const s = store.get();
+    const on = s.conn === 'connected' || s.conn === 'reconnecting';
+    const dot = s.conn === 'connected' ? 'on' : s.conn === 'disconnected' ? '' : 'wait';
+    const title =
+      s.conn === 'disconnected'
+        ? t('simple.conn.off')
+        : s.conn === 'connecting'
+          ? t('simple.conn.connecting')
+          : s.conn === 'reconnecting'
+            ? t('simple.conn.reconnecting')
+            : s.info?.craftName || boardDisplayName(s.info);
+    const sub = s.conn === 'disconnected' ? t('simple.conn.offSub') : s.mode === 'demo' ? t('simple.conn.demo') : on && s.info ? `Betaflight ${s.info.version}` : '';
+    const meters = on
+      ? `<div class="w-conn-meters"><span><small>${t('simple.conn.battery')}</small><b data-m="vbat">—</b></span><span><small>${t('simple.conn.link')}</small><b data-m="rssi">—</b></span></div>`
+      : '';
+    const btn = on
+      ? `<button class="w-btn" data-act="disconnect">${t('simple.conn.disconnect')}</button>`
+      : `<button class="w-btn primary" data-act="connect" ${s.conn === 'connecting' || !hasWebSerial() ? 'disabled' : ''}>${icon('plug', 16)}${t('simple.conn.connect')}</button>`;
+    return `<div class="w-conn-row"><i class="w-dot ${dot}" aria-hidden="true"></i><div class="w-conn-txt"><div class="w-conn-t">${escapeHtml(title)}</div>${sub ? `<div class="w-conn-sub">${escapeHtml(sub)}</div>` : ''}</div></div>${meters}${btn}`;
+  }
+
+  let connKey = '';
   function renderBar(): void {
     const s = store.get();
-    const text: Record<FcState['conn'], string> = {
-      disconnected: t('shell.disconnected'),
-      connecting: t('shell.connecting'),
-      connected: s.mode === 'demo' ? t('shell.demo') : t('shell.connected', { label: link?.label ?? 'USB' }),
-      reconnecting: t('shell.reconnecting'),
-    };
-    stT.textContent = text[s.conn];
-    stI.className = s.conn === 'connected' ? 'on' : s.conn === 'disconnected' ? '' : 'wait';
-    dnEl.textContent = s.conn === 'connected' || s.conn === 'reconnecting' ? ` · ${s.info?.craftName || t('common.drone')}${s.info ? ` · BF ${s.info.version}` : ''}` : '';
-    (root.querySelector('.dn-sep') as HTMLElement).hidden = !dnEl.textContent;
-    if (s.conn === 'disconnected') {
-      rssiEl.textContent = '—';
-      vbatEl.textContent = '—';
-      gyroLine.setAttribute('points', '');
+    const key = JSON.stringify([s.conn, s.mode, s.info?.craftName, s.info?.boardName, s.info?.version, getLang()]);
+    if (key !== connKey) {
+      connKey = key;
+      connEl.innerHTML = connHtml();
+      renderTelemetry();
     }
     navEl.classList.toggle('offline', s.conn !== 'connected' && s.conn !== 'reconnecting');
     renderBadges();
     syncLayout();
   }
 
-  const gyro: number[] = [];
   function renderTelemetry(): void {
     const tel = store.get().telemetry;
-    if (!tel) return;
-    rssiEl.textContent = `${rssiPct(tel.rssi)}%`;
-    vbatEl.textContent = `${tel.vbat.toFixed(1)} V`;
-    gyro.push(Math.hypot(...tel.gyro));
-    if (gyro.length > 45) gyro.shift();
-    const max = Math.max(20, ...gyro);
-    gyroLine.setAttribute('points', gyro.map((g, i) => `${(i * 2.2).toFixed(1)},${(20.5 - Math.min(19, (g / max) * 19)).toFixed(1)}`).join(' '));
+    const v = connEl.querySelector<HTMLElement>('[data-m="vbat"]');
+    const r = connEl.querySelector<HTMLElement>('[data-m="rssi"]');
+    if (!tel || !v || !r) return;
+    v.textContent = `${tel.vbat.toFixed(1)} V`;
+    r.textContent = `${rssiPct(tel.rssi)}%`;
   }
 
   /** Ctrl+K: find a tab or a setting; a setting opens its tab, scrolls to the bulb, rings it and opens the tip. */
@@ -530,11 +551,7 @@ export function createApp(root: HTMLElement): AppContext {
     if (currentMode(settings) === m && settings.get().uiMode) return;
     settings.set({ uiMode: m });
     navEl.innerHTML = navHtml();
-    const sw = root.querySelector<HTMLElement>('.mode-sw');
-    if (sw) {
-      sw.dataset.on = m;
-      sw.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
-    }
+    root.querySelector('.w-expert')?.setAttribute('aria-checked', String(m === 'expert'));
     renderBar();
     mountScreen();
     toast(t(m === 'basic' ? 'mode.toBasic' : 'mode.toExpert'), 'info');
@@ -548,6 +565,9 @@ export function createApp(root: HTMLElement): AppContext {
     }
     const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'settings') ctx.navigate('ustawienia');
+    else if (act === 'expert') setMode(currentMode(settings) === 'expert' ? 'basic' : 'expert');
+    else if (act === 'connect') void connect();
+    else if (act === 'disconnect') void disconnect();
     else if (act === 'search') search();
     else if (act === 'to-expert') setMode('expert');
     else if (act === 'drawer') {
@@ -579,6 +599,7 @@ export function createApp(root: HTMLElement): AppContext {
       drawer = null;
     }
     buildShell();
+    connKey = '';
     renderBar();
     mountScreen();
     window.workspacefpv?.setLanguage?.(lang);
@@ -588,14 +609,17 @@ export function createApp(root: HTMLElement): AppContext {
   const qMode = new URLSearchParams(location.search).get('mode');
   if (qMode === 'basic' || qMode === 'expert') settings.set({ uiMode: qMode });
   applyModeAttrs(settings);
-  settings.subscribe(() => applyModeAttrs(settings));
+  applyTheme(settings);
+  settings.subscribe(() => {
+    applyModeAttrs(settings);
+    applyTheme(settings);
+  });
   initTips();
 
   buildShell();
   renderBar();
   mountScreen();
   window.workspacefpv?.setLanguage?.(getLang());
-  if (!settings.get().uiMode) void chooseModeDialog().then((m) => setMode(m));
 
   // ?demo=1 enters demo mode right away (for screenshots)
   if (new URLSearchParams(location.search).get('demo') === '1') void connectDemo();

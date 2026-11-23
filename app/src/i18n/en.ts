@@ -26,6 +26,7 @@ import { enAtFlow } from './en/autotune-flow';
 import { enAutotune2 } from './en/autotune2';
 import { enAiProviders } from './en/ai-providers';
 import { enMode, enNav, enSnip, enTipsUi } from './en/ui-modes';
+import { enSimple } from './en/simple';
 import { enTipsCore } from './en/tips-core';
 import { enTipsFc } from './en/tips-fc';
 import { enTipsRx } from './en/tips-rx';
@@ -449,6 +450,7 @@ export const en = {
   autotune2: enAutotune2,
   aiProviders: enAiProviders,
   mode: enMode,
+  simple: enSimple,
   nav: enNav,
   snip: enSnip,
   tipsUi: enTipsUi,

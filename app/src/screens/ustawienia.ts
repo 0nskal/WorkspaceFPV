@@ -18,6 +18,14 @@ export const mount: ScreenMount = (el, ctx) => {
       <h1>${t('settings.title')}</h1>
 
       <section class="card">
+        <div class="ch">${t('simple.theme.label')}</div>
+        <div class="prov-list" role="radiogroup" aria-label="${escapeHtml(t('simple.theme.label'))}">
+          ${(['light', 'dark', 'auto'] as const).map((m) => `<label class="upd-chk"><input type="radio" name="theme" value="${m}" ${(s.theme || 'dark') === m ? 'checked' : ''} /><span>${t(`simple.theme.${m}`)}</span></label>`).join('')}
+        </div>
+        <small>${t('simple.theme.hint')}</small>
+      </section>
+
+      <section class="card">
         <div class="ch">${t('mode.label')} ${tip('tips.settings.interface')}</div>
         <div class="prov-list" role="radiogroup" aria-label="${escapeHtml(t('mode.label'))}">
           ${(['basic', 'expert'] as const).map((m) => `<label class="upd-chk"><input type="radio" name="uiMode" value="${m}" ${mode === m ? 'checked' : ''} /><span>${t(m === 'basic' ? 'mode.basic' : 'mode.expert')} <small class="about">${t(m === 'basic' ? 'mode.basicTitle' : 'mode.expertTitle')}</small></span></label>`).join('')}
@@ -149,9 +157,14 @@ ${aiSettingsHtml(ctx)}
     r.addEventListener('change', () => {
       if (!r.checked) return;
       // the top-bar switch runs the app's own setMode (saves uiMode, rebuilds tabs, re-mounts this screen)
-      const sw = document.querySelector<HTMLElement>(`.mode-sw [data-mode="${r.value}"]`);
-      if (sw) sw.click();
+      const sw = document.querySelector<HTMLElement>('.w-expert');
+      if (sw && (sw.getAttribute('aria-checked') === 'true') !== (r.value === 'expert')) sw.click();
       else ctx.settings.set({ uiMode: r.value as 'basic' | 'expert' });
+    }),
+  );
+  el.querySelectorAll<HTMLInputElement>('input[name="theme"]').forEach((r) =>
+    r.addEventListener('change', () => {
+      if (r.checked) ctx.settings.set({ theme: r.value as 'light' | 'dark' | 'auto' });
     }),
   );
   el.querySelector<HTMLInputElement>('input[name="expertTips"]')?.addEventListener('change', (e) => {

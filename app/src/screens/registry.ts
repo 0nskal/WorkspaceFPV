@@ -24,6 +24,7 @@ import * as elrs from './elrs';
 import * as esc from './esc';
 import * as ustawienia from './ustawienia';
 import * as warsztat from './warsztat';
+import * as radio from './radio';
 
 export interface ScreenDef {
   /** Route id (location.hash). */
@@ -39,16 +40,21 @@ export interface ScreenDef {
   group: 'overview' | 'fc' | 'tuning' | 'tools';
   /** 'basic' = shown in both modes, 'expert' = only in expert mode (like Betaflight's expert-only tabs). */
   level: 'basic' | 'expert';
+  /** Beginner nav item (the short list shown in both modes) and its short label. */
+  simple?: Key;
+  /** Drawn with the new light/dark design layer (ui/theme.css); others render in the legacy dark panel. */
+  modern?: boolean;
 }
 
 export const SCREENS: ScreenDef[] = [
-  { id: 'warsztat', titleKey: 'tabs.warsztat', icon: 'home', mount: warsztat.mount, requiresConnection: false, group: 'overview', level: 'basic' },
+  { id: 'warsztat', titleKey: 'simple.nav.drone', icon: 'drone', mount: warsztat.mount, requiresConnection: false, group: 'overview', level: 'basic', simple: 'simple.nav.drone', modern: true },
+  { id: 'radio', titleKey: 'simple.nav.radio', icon: 'gamepad', mount: radio.mount, requiresConnection: true, group: 'overview', level: 'basic', simple: 'simple.nav.radio', modern: true },
   { id: 'setup', titleKey: 'bfSetup.tab', icon: 'chip', mount: bfSetup.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'expert' },
   { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'power', titleKey: 'bfPower.tab', icon: 'battery', mount: bfPower.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'esc', titleKey: 'tabs.esc', icon: 'fan', mount: esc.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'esc', titleKey: 'tabs.esc', icon: 'fan', mount: esc.mount, requiresConnection: true, group: 'fc', level: 'basic', simple: 'simple.nav.motors' },
   { id: 'sensors', titleKey: 'sensors.tab', icon: 'gauge', mount: bfSensors.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'shield', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc', level: 'expert' },
   { id: 'gps', titleKey: 'gps.tab', icon: 'pin', mount: bfGps.mount, requiresConnection: true, group: 'fc', level: 'expert' },
@@ -57,7 +63,7 @@ export const SCREENS: ScreenDef[] = [
   { id: 'osd', titleKey: 'bfOsd.tab', icon: 'monitor', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning', level: 'basic' },
   { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'wave', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
-  { id: 'autotune', titleKey: 'tabs.autotune', icon: 'target', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'basic' },
+  { id: 'autotune', titleKey: 'tabs.autotune', icon: 'target', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'basic', simple: 'simple.nav.tune' },
   { id: 'cli', titleKey: 'bfCli.tab', icon: 'terminal', mount: bfCli.mount, requiresConnection: true, group: 'tools', level: 'expert' },
   { id: 'ustawienia', titleKey: 'tabs.ustawienia', icon: 'settings', mount: ustawienia.mount, requiresConnection: false, nav: false, group: 'tools', level: 'basic' },
 ];

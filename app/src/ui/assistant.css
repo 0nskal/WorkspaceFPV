@@ -339,3 +339,35 @@
     display: none;
   }
 }
+
+/* answers in normal weight; only the bold parts of the answer stand out */
+.w-app .drawer .ai-b .tx,
+.w-app .drawer .ai-b p,
+.w-app .drawer .ai-b ul,
+.w-app .drawer .ai-b ol,
+.w-app .drawer .ai-b li {
+  font-size: 15.5px;
+  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.w-app .drawer .ai-b strong,
+.w-app .drawer .ai-b b {
+  font-weight: 650;
+}
+
+/* below 1500 px the panel floats over the screen instead of squeezing it (tables and two-column tabs stay usable) */
+@media (min-width: 861px) and (max-width: 1500px) {
+  .w-app .body.with-drawer {
+    position: relative;
+  }
+  .w-app .body.with-drawer .drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    max-width: calc(100% - 24px);
+    box-shadow: -16px 0 40px -12px rgba(0, 0, 0, 0.45);
+  }
+}

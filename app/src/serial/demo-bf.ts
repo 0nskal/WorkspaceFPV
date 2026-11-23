@@ -199,6 +199,8 @@ export class DemoBf {
       return new Uint8Array(0);
     }
     switch (cmd) {
+      case 0x3003: // MSP2_SEND_DSHOT_COMMAND (motor direction): accepted, nothing to simulate
+        return new Uint8Array(0);
       case C.BUILD_INFO:
         return new Wr().bytes([...'Jan  8 2025'].map((c) => c.charCodeAt(0))).bytes([...'10:23:01'].map((c) => c.charCodeAt(0))).bytes([...'77d01ba'].map((c) => c.charCodeAt(0))).u16(5).u16(7).u16(0).done();
       case C.BOARD_INFO:

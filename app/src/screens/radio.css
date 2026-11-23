@@ -422,3 +422,8 @@
 .rd-learn[data-state='done'] svg {
   stroke-width: 2.6;
 }
+
+/* mode hints must not widen the page: clip them sideways inside the switches card */
+.rd-sw {
+  overflow-x: clip;
+}

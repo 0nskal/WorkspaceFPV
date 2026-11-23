@@ -341,9 +341,12 @@
   background: var(--w-live);
   opacity: 1;
 }
+html[data-mode='basic'] .screen.legacy .bf-md {
+  --md-logic: 0px;
+}
 html[data-mode='basic'] .screen.legacy .bf-md .md-logic,
 html[data-mode='basic'] .screen.legacy .bf-md .md-sc-logic {
-  visibility: hidden;
+  display: none;
 }
 
 /* ---------- colours the 1.0 tabs set directly (dark-only), mapped to the theme ---------- */
@@ -482,4 +485,105 @@ html[data-mode='basic'] .screen.legacy .bf-md .md-sc-logic {
 }
 .rd-nosig .w-btn {
   margin-top: 10px;
+}
+
+/* phones: wide 1.0 tables scroll inside their panel instead of being cut off */
+@media (max-width: 860px) {
+  .screen.legacy .bf-panel,
+  .screen.legacy .pw-panel {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .screen.legacy .bf-grid,
+  .screen.legacy .v1-cols,
+  .screen.legacy .mt-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Modes on phones: the name above its ranges, each range row wraps (AUX + remove, slider, values) */
+@media (max-width: 860px) {
+  .screen.legacy .bf-md {
+    padding: 0 16px;
+  }
+  .screen.legacy .bf-md .md-scale {
+    display: none;
+  }
+  .screen.legacy .bf-md .md-mode {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .screen.legacy .bf-md .md-tile {
+    border-right: 0;
+    border-bottom: 1px solid var(--w-line);
+  }
+  .screen.legacy .bf-md .md-range {
+    grid-template-columns: minmax(0, 1fr) var(--md-x);
+    row-gap: 10px;
+  }
+  .screen.legacy .bf-md .md-range > * {
+    grid-column: 1 / -1;
+  }
+  .screen.legacy .bf-md .md-range > :first-child {
+    grid-column: 1;
+  }
+  .screen.legacy .bf-md .md-range > .md-x {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+/* save bars on phones: status on its own line, buttons wrap and stay on screen */
+@media (max-width: 860px) {
+  .screen.legacy .bf-save,
+  .screen.legacy .bf-tuning-bar {
+    height: auto;
+    min-height: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 16px;
+  }
+  .screen.legacy .bf-save > :first-child,
+  .screen.legacy .bf-tuning-bar > :first-child {
+    flex: 1 0 100%;
+  }
+  .screen.legacy .bf-save .btn,
+  .screen.legacy .bf-tuning-bar .btn {
+    height: 40px;
+    padding: 0 12px;
+  }
+}
+@media (max-width: 860px) {
+  .screen.legacy .bf-tuning-bar {
+    margin-left: 0;
+    margin-right: 0;
+    width: auto;
+    max-width: 100%;
+  }
+}
+
+/* single motor direction (DShot) */
+.screen.legacy .mt-dir-lead,
+.screen.legacy .mt-dir-msg {
+  font: 400 14px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+.screen.legacy .mt-dir-msg:empty {
+  display: none;
+}
+.screen.legacy .mt-dir-rows {
+  margin: 12px 0 4px;
+  display: grid;
+  gap: 8px;
+}
+.screen.legacy .mt-dir-row {
+  display: grid;
+  grid-template-columns: 90px auto auto;
+  justify-content: start;
+  align-items: center;
+  gap: 8px;
+}
+.screen.legacy .mt-dir-row b {
+  font: 600 14.5px var(--sans);
 }

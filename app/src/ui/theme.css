@@ -746,3 +746,21 @@ body {
 :root[data-theme='light'] .w-rail .nav .badge.fail {
   color: #fff;
 }
+
+/* phones in Expert mode: every tab is in the bottom bar, so it scrolls sideways instead of squeezing */
+@media (max-width: 860px) {
+  html[data-mode='expert'] .w-rail .nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  html[data-mode='expert'] .w-rail .nav::-webkit-scrollbar {
+    display: none;
+  }
+  html[data-mode='expert'] .w-rail .nav a {
+    flex: 0 0 auto;
+    min-width: 76px;
+    padding: 0 8px;
+  }
+}

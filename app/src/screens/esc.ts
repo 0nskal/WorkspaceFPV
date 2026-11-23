@@ -22,6 +22,8 @@ import { mountMotorConfig, type MotorCfgHandle, type Recommendation } from './bf
 import { mountMotorTelemetry, type MotorTelHandle } from './bf-motors-tel';
 import { quadSvg } from './esc-quad';
 import { mountMotorsBasic } from './motors-basic';
+import { directionBlock, setMotorDirection } from '../bf/dshot';
+import type { Key } from '../i18n';
 import { currentMode } from '../ui/mode';
 
 const SAFE_MAX = 30;
@@ -429,6 +431,17 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
                 <div class="mt-quad"></div>
                 <p class="mt-quad-cap">${t('bfMotors.numbering')} ${tip('tips.motors.numbering')}</p>
               </section>
+              <section class="bf-panel mt-dir">
+                <header><span class="bf-legend">${t('simple.motorDir.title')}</span><small>DShot</small></header>
+                <p class="mt-dir-lead">${t('simple.motorDir.lead')}</p>
+                <div class="mt-dir-rows">${[0, 1, 2, 3]
+                  .map(
+                    (i) =>
+                      `<div class="mt-dir-row"><b>${escapeHtml(t('simple.motors.motorN', { n: i + 1 }))}</b><button type="button" class="btn ghost" data-dir-m="${i}" data-dir-v="0">${t('simple.motorDir.normal')}</button><button type="button" class="btn ghost" data-dir-m="${i}" data-dir-v="1">${t('simple.motorDir.reversed')}</button></div>`,
+                  )
+                  .join('')}</div>
+                <p class="mt-dir-msg" data-dir-msg></p>
+              </section>
               <section class="bf-panel">
                 <header><span class="bf-legend">${t('bfMotors.pEsc')}</span></header>
                 <div class="mt-esc-cfg"></div>
@@ -536,7 +549,31 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     if (act === 'demo') return void ctx.connectDemo();
     if (act === 'greset') return resetGraph();
     if (tg.closest('.mt-stop')) return stopTest();
+    const db = tg.closest<HTMLElement>('[data-dir-m]');
+    if (db) return void changeDirection(Number(db.dataset.dirM), db.dataset.dirV === '1');
   });
+
+  /** Per-motor spin direction written into the ESC (DShot command), gated by the "I understand the risks" switch. */
+  async function changeDirection(motor: number, reversed: boolean): Promise<void> {
+    const msg = q<HTMLElement>('[data-dir-msg]');
+    const block = directionBlock(ctx);
+    if (!propsOff || block) {
+      if (msg) msg.textContent = !propsOff ? t('simple.motorDir.needRisk') : t(`simple.motors.flipBlock_${block}` as Key);
+      return;
+    }
+    const ok = await ctx.confirm({
+      title: t('simple.motorDir.confirm', { n: motor + 1, dir: t(reversed ? 'simple.motorDir.reversed' : 'simple.motorDir.normal') }),
+      body: escapeHtml(t('simple.motors.flipConfirmBody')),
+    });
+    if (!ok) return;
+    stopTest();
+    try {
+      await setMotorDirection(ctx, motor, reversed);
+      if (msg) msg.textContent = t('simple.motors.flipDone', { n: motor + 1 });
+    } catch (e) {
+      if (msg) msg.textContent = t('simple.motors.flipFail', { msg: e instanceof Error ? e.message : String(e) });
+    }
+  }
 
   el.addEventListener('change', (e) => {
     const tg = e.target as HTMLInputElement | HTMLSelectElement;

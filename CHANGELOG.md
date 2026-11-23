@@ -2,6 +2,17 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 1.2.0 – 2026-11-23
+
+- **Shorter beginner menu: Drone, Radio, Motors.** Tuning and every other Betaflight tab stay behind the "All Betaflight tabs" switch.
+- **Motors: a step-by-step check.** Props off, battery connected and the drone disarmed, then motors 1 to 4 one at a time on the drone picture. Each spins slowly for 2 seconds; you answer whether the right motor spun and in the right direction, and get a short list of what to fix. STOP, Space, switching windows and disconnecting stop the motor at once.
+- **Radio: learn your switches.** Click a switch on the picture and flip the same one on your radio: the app remembers which AUX it is and labels it, with its flight mode, on the picture. Hover a mode (ANGLE, AIR MODE, …) to see what it does.
+- **Drone: no false alarms on USB.** Without a battery the receiver, the ESCs and some sensors are off; those messages now sit in a calm "check with a battery" group instead of the red list. Hover a part of the drone to see what it does.
+- **Assistant: short answers.** It answers first, in a few sentences or at most 5 steps, and suggests three beginner questions to start with. The panel has the same look as the rest of the app.
+- **Ports for beginners: one question,** which UART the receiver is on, with a clickable board. The Radio screen links to it when there is no signal.
+- **Configuration: buzzer presets** (Only important, Everything, Only when I lose the drone).
+- **The remaining tabs follow the dark and light theme,** and Basic mode hides what a new pilot does not need (3D, gyro graphs, firmware info, LED, AND/OR mode logic).
+
 ## 1.1.0 – 2026-11-23
 
 - **Made for beginners first.** The menu now has four items: Drone, Radio, Motors and Tuning. Every Betaflight tab is still there behind the "All Betaflight tabs" switch at the bottom of the menu. The "How much do you know about FPV?" window is gone.
@@ -99,6 +110,17 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 1.2.0 – 2026-11-23
+
+- **Krótsze menu dla początkujących: Dron, Aparatura, Silniki.** Strojenie i pozostałe zakładki Betaflight są pod przełącznikiem „Wszystkie zakładki Betaflight”.
+- **Silniki: sprawdzanie krok po kroku.** Śmigła zdjęte, bateria podłączona, dron rozbrojony, potem silniki 1–4 po kolei na zdjęciu drona. Każdy kręci się wolno przez 2 sekundy; odpowiadasz, czy zakręcił się właściwy i w dobrą stronę, i dostajesz krótką listę, co poprawić. STOP, spacja, zmiana okna i rozłączenie od razu zatrzymują silnik.
+- **Aparatura: nauka przełączników.** Klikasz przełącznik na rysunku i przestawiasz ten sam w aparaturze: aplikacja zapamiętuje, który to AUX, i podpisuje go na rysunku razem z trybem. Najechanie na tryb (ANGLE, AIR MODE…) mówi, co robi.
+- **Dron: bez fałszywych alarmów na USB.** Bez baterii odbiornik, ESC i część czujników nie mają prądu; te komunikaty trafiają do spokojnej grupy „sprawdzimy z baterią” zamiast na czerwoną listę. Najechanie na część drona mówi, do czego służy.
+- **Asystent: krótkie odpowiedzi.** Najpierw odpowiedź, kilka zdań albo najwyżej 5 kroków, a na start trzy pytania dla początkujących. Panel wygląda jak reszta aplikacji.
+- **Porty dla początkujących: jedno pytanie,** na którym UART jest odbiornik, z klikalną płytką. Aparatura prowadzi tu, gdy nie ma sygnału.
+- **Konfiguracja: gotowe zestawy brzęczyka** (Tylko ważne, Wszystko, Tylko gdy zgubię drona).
+- **Pozostałe zakładki mają ciemny i jasny motyw,** a tryb podstawowy chowa to, czego nowa osoba nie potrzebuje (3D, wykresy żyroskopu, informacje o firmware, LED, logika I/LUB w trybach).
 
 ## 1.1.0 – 2026-11-23
 

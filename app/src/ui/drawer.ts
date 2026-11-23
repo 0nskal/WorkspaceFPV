@@ -144,20 +144,18 @@ export function createDrawer(ctx: AppContext): Drawer {
   el.className = 'drawer';
   el.setAttribute('aria-label', t('shell.assistantAria'));
   el.innerHTML = `
-    <div class="tab" aria-hidden="true"></div>
-    <div class="dh"><i></i><span class="dh-t">${t('drawer.title')}</span><span class="r">${t('drawer.r')}</span></div>
+    <header class="dw-h"><h2>${t('simple.ai.title')}</h2><button type="button" class="dw-x" data-act="drawer" aria-label="${t('simple.ai.close')}">${icon('x', 18)}</button></header>
     <div class="scroll">
-      <div class="health" hidden></div>
+      <div class="health" hidden data-level="expert"></div>
       <div class="chat"></div>
-      <div class="chk"></div>
+      <div class="chk" data-level="expert"></div>
     </div>
     <div class="bottom">
-      <div class="qa">
+      <div class="qa" data-level="expert">
         <button data-nav="elrs">${icon('download')}${t('drawer.updateElrs')}</button>
         <button data-nav="esc">${icon('chip')}${t('drawer.escProtocol')}</button>
         <button data-nav="autotune">${icon('sliders')}${t('drawer.autotune')}</button>
       </div>
-      <div class="snip-line" data-only="basic">${icon('scissors', 13)}<span>${t('snip.button')}</span>${tip('tips.drawer.snip', t('snip.button'))}</div>
       <div class="attach" hidden></div>
       <form class="in">
         <button type="button" class="clip" title="${t('drawer.attachTitle')}" aria-label="${t('drawer.attachAria')}">${icon('paperclip', 18)}</button>
@@ -193,8 +191,18 @@ export function createDrawer(ctx: AppContext): Drawer {
     attachEl.innerHTML = file + frag;
   }
 
+  /** Basic mode, empty chat: one line and three questions a new pilot actually asks. No rule card: the Drone screen has it. */
+  function renderStart(): string {
+    const hint = ctx.ai.ready() ? '' : `<p class="dw-hint">${t('drawer.keyHint')}</p>`;
+    const qs = (['q1', 'q2', 'q3'] as const).map((k) => `<button type="button" class="dw-q" data-q="${escapeHtml(t(`simple.ai.${k}`))}">${escapeHtml(t(`simple.ai.${k}`))}</button>`).join('');
+    return `<div class="dw-start"><p>${t('simple.ai.lead')}</p><div class="dw-qs">${qs}</div>${hint}</div>`;
+  }
+
+  const expert = () => ctx.settings.get().uiMode === 'expert';
+
   function renderRulesCard(): string {
     const s = ctx.state.get();
+    if (!expert()) return ctx.ai.history.length ? '' : renderStart();
     if (s.conn !== 'connected' && s.conn !== 'reconnecting') return '';
     const d = ctx.diagnosis();
     let body: string;
@@ -208,7 +216,7 @@ export function createDrawer(ctx: AppContext): Drawer {
       body = `<div class="tx">${t('drawer.rulesCardOk')}</div>`;
     }
     const hint = ctx.ai.ready() ? '' : `<div class="hint">${t('drawer.keyHint')}</div>`;
-    return `<div class="ai">${AV}<div class="ai-b">${body}${hint}</div></div>`;
+    return `<div class="ai"><div class="ai-b">${body}${hint}</div></div>`;
   }
 
   function renderChat() {
@@ -224,7 +232,7 @@ export function createDrawer(ctx: AppContext): Drawer {
         const inner = m.text ? renderMessageBody(m.text, streaming) : '';
         const think = streaming && ctx.ai.thinking ? `<div class="thinking"><span></span><span></span><span></span>${t('drawer.thinking')}</div>` : '';
         const via = m.provider && m.text && !streaming ? `<div class="via">${escapeHtml(t('aiProviders.via', { provider: providerName(m.provider) }))}</div>` : '';
-        parts.push(`<div class="ai${m.note ? ' note' : ''}">${AV}<div class="ai-b">${inner}${think}${via}</div></div>`);
+        parts.push(`<div class="ai${m.note ? ' note' : ''}"><div class="ai-b">${inner}${think}${via}</div></div>`);
       }
     });
     const nearBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
@@ -271,17 +279,7 @@ export function createDrawer(ctx: AppContext): Drawer {
   }
 
   function renderHeader() {
-    const s = ctx.state.get();
-    const d = s.conn === 'connected' ? ctx.diagnosis() : null;
-    const title = $('.dh-t');
-    const dot = $('.dh i');
-    if (d?.focus) {
-      title.textContent = partLabel(d.focus);
-      dot.className = 'hot';
-    } else {
-      title.textContent = d ? t('drawer.allOk') : t('drawer.title');
-      dot.className = '';
-    }
+    /* the title stays "Assistant": the drone's state is on the Drone screen */
   }
 
   function renderNav() {
@@ -303,6 +301,11 @@ export function createDrawer(ctx: AppContext): Drawer {
     const nav = tg.closest<HTMLElement>('[data-nav]')?.dataset.nav;
     if (nav) {
       ctx.navigate(nav as never);
+      return;
+    }
+    const q = tg.closest<HTMLElement>('[data-q]')?.dataset.q;
+    if (q) {
+      void ctx.ai.ask(q);
       return;
     }
     const btn = tg.closest<HTMLElement>('[data-act]');

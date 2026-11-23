@@ -1,0 +1,341 @@
+/*
+ * Assistant panel in the 2.0 look: same tokens as the rest of the app (dark/light), a plain header with a close
+ * button, answers as plain text (no avatar), the user's question in a soft bubble, sans input. It slides in from the
+ * right once; messages fade up. Loaded after legacy-theme.css.
+ */
+.w-app .drawer {
+  --card: var(--w-surface);
+  --dark: var(--w-ink);
+  --ink: var(--w-ink);
+  --text: var(--w-ink);
+  --sub: var(--w-ink-2);
+  --surf: var(--w-sunk);
+  --card-edge: var(--w-line);
+  --rule: var(--w-line);
+  --muted: var(--w-ink-2);
+  --ph: var(--w-ink-3);
+  --amber: var(--w-live);
+  --hot: var(--w-fail);
+  --ok: var(--w-ok);
+  --fail: var(--w-fail);
+  --warn: var(--w-warn);
+  width: 420px;
+  background: var(--w-surface);
+  color: var(--w-ink);
+  border-left: 1px solid var(--w-line);
+}
+.w-app .drawer .tab {
+  display: none;
+}
+.dw-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px 14px 24px;
+  border-bottom: 1px solid var(--w-line);
+}
+.dw-h h2 {
+  font: 650 18px/1.2 var(--sans);
+  letter-spacing: -0.01em;
+}
+.dw-x {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--w-ink-2);
+  transition:
+    background-color 0.15s,
+    transform 0.12s var(--ease-out);
+}
+.dw-x:hover {
+  background: var(--w-sunk);
+  color: var(--w-ink);
+}
+.dw-x:active {
+  transform: scale(0.94);
+}
+
+/* empty chat: one line, three questions */
+.dw-start p {
+  font: 400 15.5px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+.dw-qs {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+.dw-q {
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--w-line-2);
+  border-radius: 12px;
+  background: var(--w-bg);
+  color: var(--w-ink);
+  font: 500 15px/1.35 var(--sans);
+  transition:
+    border-color 0.15s,
+    transform 0.12s var(--ease-out);
+}
+.dw-q:hover {
+  border-color: var(--w-ink-3);
+}
+.dw-q:active {
+  transform: scale(0.98);
+}
+.w-app .drawer .dw-hint,
+.w-app .drawer .hint {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--w-sunk);
+  font: 400 14px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+.w-app .drawer .hint a,
+.w-app .drawer .dw-hint a {
+  color: var(--w-ink);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+/* messages */
+.w-app .drawer .chat {
+  padding: 22px 24px 0;
+}
+.w-app .drawer .user {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--w-sunk);
+  color: var(--w-ink);
+  font: 500 15px/1.45 var(--sans);
+}
+.w-app .drawer .ai {
+  margin-top: 18px;
+}
+.w-app .drawer .ai-b {
+  font: 400 15.5px/1.6 var(--sans);
+  color: var(--w-ink);
+}
+.w-app .drawer .ai-b p + p,
+.w-app .drawer .ai-b ul,
+.w-app .drawer .ai-b ol {
+  margin-top: 8px;
+}
+.w-app .drawer .ai-b strong {
+  font-weight: 650;
+}
+.w-app .drawer .ai-b code {
+  font: 500 13.5px var(--mono);
+  background: var(--w-sunk);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.w-app .drawer .code {
+  margin-top: 10px;
+  border-radius: 12px;
+  background: var(--w-bg);
+  border: 1px solid var(--w-line);
+  color: var(--w-ink);
+}
+.w-app .drawer .code .k {
+  color: var(--w-ink-2);
+}
+.w-app .drawer .code .v {
+  color: var(--w-live);
+}
+.w-app .drawer .caveat {
+  font: 400 13.5px/1.5 var(--sans);
+  color: var(--w-ink-3);
+}
+.w-app .drawer .btns .btn {
+  height: 38px;
+  border-radius: 10px;
+  font: 600 14px/1 var(--sans);
+}
+.w-app .drawer .btns .btn.p {
+  background: var(--w-btn);
+  border: 1px solid var(--w-btn);
+  color: var(--w-btn-ink);
+}
+.w-app .drawer .btns .btn.s {
+  background: var(--w-surface);
+  border: 1px solid var(--w-line-2);
+  color: var(--w-ink);
+}
+.w-app .drawer .via {
+  margin-top: 6px;
+  font: 400 12.5px var(--sans);
+  color: var(--w-ink-3);
+}
+.w-app .drawer .thinking {
+  color: var(--w-ink-3);
+  font-family: var(--sans);
+}
+
+/* input */
+.w-app .drawer .bottom {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--w-line);
+  background: var(--w-surface);
+}
+.w-app .drawer .in {
+  border: 1px solid var(--w-line-2);
+  border-radius: 14px;
+  background: var(--w-bg);
+  overflow: hidden;
+}
+.w-app .drawer .in:focus-within {
+  border-color: var(--w-ink-3);
+}
+.w-app .drawer .in input[type='text'] {
+  font: 400 15px var(--sans);
+  color: var(--w-ink);
+  background: transparent;
+}
+.w-app .drawer .in input::placeholder {
+  color: var(--w-ink-3);
+  font-family: var(--sans);
+}
+.w-app .drawer .in .send {
+  margin: 5px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--w-btn);
+  color: var(--w-btn-ink);
+}
+.w-app .drawer .in .clip,
+.w-app .drawer .in .snipb {
+  color: var(--w-ink-3);
+}
+.w-app .drawer .attach .att {
+  border-radius: 10px;
+  background: var(--w-sunk);
+  color: var(--w-ink);
+}
+
+/* motion: the panel slides in once, answers fade up */
+@media (prefers-reduced-motion: no-preference) {
+  .w-app .drawer {
+    animation: dw-in 0.32s var(--ease-drawer) both;
+  }
+  .w-app .drawer .chat > .ai:last-child,
+  .w-app .drawer .chat > .user:last-child,
+  .w-app .drawer .dw-start {
+    animation: dw-up 0.28s var(--ease-out) both;
+  }
+}
+@keyframes dw-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes dw-up {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+/* phones: the panel covers the screen, above the bottom tab bar */
+@media (max-width: 860px) {
+  .w-app .drawer {
+    position: fixed;
+    inset: 0 0 0 0;
+    z-index: 60;
+    width: auto;
+    border-left: 0;
+  }
+}
+
+/* ---------- "what does it do": Drone screen line under the drawing, mode chips on the Radio screen ---------- */
+.ws2-art-col {
+  position: sticky;
+  top: 12px;
+  margin-top: 12px;
+}
+.ws2-art-col .ws2-art-scene {
+  position: relative;
+  top: 0;
+  margin-top: 0;
+}
+.ws2-explain {
+  max-width: 600px;
+  margin: 10px auto 0;
+  min-height: 48px;
+  font: 400 14.5px/1.5 var(--sans);
+  color: var(--w-ink-3);
+  text-align: center;
+  transition: color 0.2s;
+}
+.ws2-explain.on {
+  color: var(--w-ink-2);
+}
+.ws2-explain b {
+  color: var(--w-ink);
+  font-weight: 600;
+}
+@media (max-width: 1180px) {
+  .ws2-art-col {
+    position: relative;
+    top: 0;
+  }
+}
+.rd-modes em.has-x {
+  position: relative;
+  cursor: help;
+  text-decoration: underline dotted var(--w-ink-3);
+  text-underline-offset: 3px;
+}
+.rd-modes em.has-x::after {
+  content: attr(data-x);
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  bottom: calc(100% + 8px);
+  width: max-content;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--w-line-2);
+  background: var(--w-surface);
+  box-shadow: var(--w-shadow);
+  font: 400 13.5px/1.45 var(--sans);
+  letter-spacing: 0;
+  color: var(--w-ink);
+  white-space: normal;
+  text-transform: none;
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
+  transform-origin: bottom left;
+  pointer-events: none;
+  transition:
+    opacity 0.12s,
+    transform 0.12s var(--ease-out);
+}
+.rd-modes em.has-x:hover::after,
+.rd-modes em.has-x:focus-visible::after {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-modes em.has-x::after {
+    transition: none;
+  }
+}
+
+/* a narrow drawing (assistant open, small window) shows part names only, values come back when there is room */
+.ws2-art-scene {
+  container-type: inline-size;
+}
+@container (max-width: 520px) {
+  .ws2-pill span {
+    display: none;
+  }
+}

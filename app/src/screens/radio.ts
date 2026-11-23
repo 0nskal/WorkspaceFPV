@@ -90,8 +90,16 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     return Array.from({ length: n }, (_, k) => {
       const mine = ranges.filter((r) => r.aux === k);
       const labels = [...new Set(mine.map((r) => name(r.id)))];
-      return `<li data-aux="${k}"><span class="rd-aux">AUX${k + 1}</span><span class="rd-modes">${labels.length ? labels.map((l) => `<em${l === 'ARM' ? ' class="arm"' : ''}>${escapeHtml(l)}</em>`).join('') : `<small>${t('simple.radio.noModes')}</small>`}</span><span class="rd-us w-mono" data-us="${k}">—</span></li>`;
+      return `<li data-aux="${k}"><span class="rd-aux">AUX${k + 1}</span><span class="rd-modes">${labels.length ? labels.map((l) => modeChip(l)).join('') : `<small>${t('simple.radio.noModes')}</small>`}</span><span class="rd-us w-mono" data-us="${k}">—</span></li>`;
     }).join('');
+  }
+
+  /** Mode name chip with a one-sentence "what it does" bubble on hover / focus (known modes only). */
+  function modeChip(name: string): string {
+    const key = `simple.explain.modes.${name.replace(/ /g, '_')}` as Key;
+    const txt = t(key);
+    const has = txt !== key;
+    return `<em class="${name === 'ARM' ? 'arm' : ''}${has ? ' has-x' : ''}"${has ? ` tabindex="0" data-x="${escapeHtml(txt)}" aria-label="${escapeHtml(`${name}: ${txt}`)}"` : ''}>${escapeHtml(name)}</em>`;
   }
 
   function renderOff(): void {

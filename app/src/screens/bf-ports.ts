@@ -2,12 +2,13 @@
 import './bf-ports.css';
 import { C } from '../bf/codes';
 import * as D from '../bf/decode';
-import { bareHtml, mountFormTab, type Draft, type FieldDef, type Group, type TabSpec, type Val } from '../bf/form';
+import { bareHtml, fieldHtml, mountFormTab, type Draft, type FieldDef, type Group, type TabSpec, type Val } from '../bf/form';
 import type { BfData, MspWrite } from '../bf/store';
 import type { ScreenMount } from '../context';
 import { t, type Key } from '../i18n';
 import { escapeHtml } from '../ui/dom';
 import { intro, tip, type TipKey } from '../ui/tip';
+import { currentMode } from '../ui/mode';
 
 const K = (k: string) => `bfPorts.${k}` as Key;
 const F = D.SERIAL_FN;
@@ -110,7 +111,9 @@ function boardSvg(bf: BfData, r: Draft): string {
         const edge = right ? bx + bw + 36 : bx - 36;
         const tx = right ? edge + 8 : edge - 8;
         const from = right ? px + 11 : px - 3;
-        return `<g class="pt-pad pt-c-${lb.cls}"><line class="pt-lead" x1="${from}" y1="${y}" x2="${edge}" y2="${y}"/><rect class="pt-frame" x="${px - 3}" y="${y - 13}" width="14" height="26"/><rect class="pt-pin" x="${px}" y="${y - 10}" width="8" height="8"/><rect class="pt-pin" x="${px}" y="${y + 2}" width="8" height="8"/><text class="pt-lbl" x="${tx}" y="${y + 4}" text-anchor="${right ? 'start' : 'end'}">${escapeHtml(lb.text)}</text></g>`;
+        // invisible hit area over the pad, its lead and its label (a click picks the port in Basic mode)
+        const hx = right ? px - 6 : edge - 150;
+        return `<g class="pt-pad pt-c-${lb.cls}" data-pad="${i}"><rect class="pt-hit" x="${hx}" y="${y - 16}" width="${right ? edge + 150 - hx : px + 14 - hx}" height="32" fill="transparent"/><line class="pt-lead" x1="${from}" y1="${y}" x2="${edge}" y2="${y}"/><rect class="pt-frame" x="${px - 3}" y="${y - 13}" width="14" height="26"/><rect class="pt-pin" x="${px}" y="${y - 10}" width="8" height="8"/><rect class="pt-pin" x="${px}" y="${y + 2}" width="8" height="8"/><text class="pt-lbl" x="${tx}" y="${y + 4}" text-anchor="${right ? 'start' : 'end'}">${escapeHtml(lb.text)}</text></g>`;
       })
       .join('');
   };
@@ -230,4 +233,94 @@ const spec: TabSpec = {
   },
 };
 
-export const mount: ScreenMount = (el, ctx) => mountFormTab(el, ctx, { ...spec, title: t(K('title')) });
+/* ---------------- Basic mode: one question, "which port is the receiver on?" ---------------- */
+// The draft is the full Expert draft plus `rxPort`; writes expand rxPort back into the per-port RX flags, so every
+// other function on every port is sent exactly as it was read.
+const SK = (k: string) => `simple.ports.${k}` as Key;
+
+function toDraftBasic(bf: BfData): Draft {
+  const d = toDraft(bf);
+  d.rxPort = (bf.serial?.ports ?? []).findIndex((p, i) => p.id !== 20 && d[`p${i}.rx`]);
+  return d;
+}
+function expand(d: Draft, bf: BfData): Draft {
+  const out: Draft = { ...d };
+  const base = toDraft(bf);
+  const rx = Number(d.rxPort);
+  (bf.serial?.ports ?? []).forEach((p, i) => {
+    if (p.id === 20) return;
+    out[`p${i}.rx`] = rx === i;
+    // a serial receiver needs the UART to itself: moving it onto a port switches that port's other functions off
+    if (rx === i && !base[`p${i}.rx`]) {
+      out[`p${i}.msp`] = false;
+      out[`p${i}.telem`] = 0;
+      out[`p${i}.sensor`] = 0;
+      out[`p${i}.periph`] = 0;
+    }
+  });
+  delete out.rxPort;
+  return out;
+}
+/** What else a port carries, in a few words: "VTX (DisplayPort)", "GPS", "MSP". */
+function usesOf(d: Draft, i: number): string {
+  const a: string[] = [];
+  if (Number(d[`p${i}.periph`])) a.push(labelOf(periphOpts(), d[`p${i}.periph`]));
+  if (Number(d[`p${i}.sensor`])) a.push(labelOf(sensorOpts(), d[`p${i}.sensor`]));
+  if (Number(d[`p${i}.telem`])) a.push(labelOf(telemOpts(), d[`p${i}.telem`]));
+  return a.join(', ');
+}
+function groupsBasic(bf: BfData, draft: Draft): Group[] {
+  const ports = (bf.serial?.ports ?? []).map((p, i) => ({ p, i })).filter((x) => x.p.id !== 20);
+  const field: FieldDef = {
+    key: 'rxPort',
+    type: 'select',
+    label: t(SK('rxField')),
+    options: [opt(-1, t(SK('rxNone'))), ...ports.map(({ p, i }) => opt(i, `${D.serialPortName(p.id)}${usesOf(draft, i) ? ` (${usesOf(draft, i)})` : ''}`))],
+  };
+  const none = Number(draft.rxPort) < 0;
+  const base = toDraft(bf);
+  const rx = Number(draft.rxPort);
+  const replaced = rx >= 0 && !base[`p${rx}.rx`] ? [base[`p${rx}.msp`] ? 'MSP' : '', usesOf(base, rx)].filter(Boolean).join(', ') : '';
+  const used = ports.filter(({ i }) => usesOf(draft, i));
+  return [
+    {
+      title: t(SK('rxTitle')),
+      fields: [field],
+      render: (r, b) =>
+        `<div class="ptb">${fieldHtml(field, r, b)}
+          <p class="ptb-help">${escapeHtml(t(SK('rxHelp')))}</p>
+          ${none ? `<p class="w-note warn">${escapeHtml(t(SK('rxMissing')))}</p>` : ''}
+          ${replaced ? `<p class="w-note warn">${escapeHtml(t(SK('replaces'), { what: replaced }))}</p>` : ''}
+          ${used.length ? `<p class="ptb-used">${escapeHtml(t(SK('others')))} ${used.map(({ p, i }) => `<b>${escapeHtml(D.serialPortName(p.id))}</b> ${escapeHtml(usesOf(r, i))}`).join(' · ')}</p>` : ''}
+        </div>`,
+    },
+    { title: t(SK('boardTitle')), hint: t(SK('boardHint')), wide: true, fields: [], render: (r) => boardBody(bf, expand(r, bf)) },
+  ];
+}
+const specBasic: TabSpec = {
+  ...spec,
+  toDraft: toDraftBasic,
+  groups: groupsBasic,
+  toWrites: (d, bf) => toWrites(expand(d, bf), bf),
+  validate: (d, bf) => spec.validate!(expand(d, bf), bf),
+  dynamic: (k) => k === 'rxPort',
+  top: () => '',
+};
+
+export const mount: ScreenMount = (el, ctx) => {
+  if (currentMode(ctx.settings) !== 'basic') return mountFormTab(el, ctx, { ...spec, title: t(K('title')) });
+  const off = mountFormTab(el, ctx, { ...specBasic, title: t(SK('title')) });
+  // a pad on the board picks that port for the receiver (same as choosing it in the list)
+  const onClick = (e: Event) => {
+    const pad = (e.target as Element).closest<SVGGElement>('[data-pad]');
+    const sel = el.querySelector<HTMLSelectElement>('select[data-k="rxPort"]');
+    if (!pad || !sel) return;
+    sel.value = pad.dataset.pad ?? '-1';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  el.addEventListener('click', onClick);
+  return () => {
+    el.removeEventListener('click', onClick);
+    off();
+  };
+};

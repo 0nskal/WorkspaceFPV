@@ -432,3 +432,54 @@ html[data-mode='basic'] .screen.legacy .bf-md .md-sc-logic {
 .screen.legacy .bf-tuning-bar-n {
   color: var(--w-ink-2);
 }
+
+/* ---------- Basic Ports (receiver port) and Configuration buzzer presets ---------- */
+.screen.legacy .ptb {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+}
+.screen.legacy .ptb-help,
+.screen.legacy .ptb-used,
+.screen.legacy .cfg-beep-lead {
+  font: 400 14.5px/1.5 var(--sans);
+  color: var(--w-ink-2);
+}
+.screen.legacy .ptb-used b {
+  color: var(--w-ink);
+  font-weight: 600;
+}
+.screen.legacy .pt-svg,
+.screen.legacy .pt-svg .pt-pad {
+  pointer-events: auto;
+}
+.screen.legacy .pt-pad {
+  cursor: pointer;
+  pointer-events: bounding-box;
+}
+.screen.legacy .pt-pad:hover .pt-frame {
+  stroke: var(--w-live);
+  stroke-width: 2;
+}
+.screen.legacy .cfg-beep {
+  margin-bottom: 20px;
+  max-width: 860px;
+}
+.screen.legacy .cfg-beep-a {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.screen.legacy .cfg-beep-a .btn.on,
+.screen.legacy .cfg-beep-a .btn.on:hover:not(:disabled) {
+  background: var(--w-btn);
+  border-color: var(--w-btn);
+  color: var(--w-btn-ink);
+}
+.screen.legacy .rd-nosig p + .w-btn {
+  margin-top: 10px;
+}
+.rd-nosig .w-btn {
+  margin-top: 10px;
+}

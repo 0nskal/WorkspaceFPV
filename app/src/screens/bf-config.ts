@@ -8,6 +8,7 @@ import type { ScreenMount } from '../context';
 import { t, type Key } from '../i18n';
 import { protocolName } from '../fc/state';
 import { intro } from '../ui/tip';
+import { escapeHtml } from '../ui/dom';
 
 /** Features shown here (receiver features belong to the Receiver tab). Order = display order. */
 const FEATURES: Array<keyof typeof D.FEATURE> = ['MOTOR_STOP', 'AIRMODE', 'ANTI_GRAVITY', 'TELEMETRY', 'ESC_SENSOR', 'LED_STRIP', 'OSD', 'SOFTSERIAL', 'RANGEFINDER', 'THREE_D', 'TRANSPONDER', 'CHANNEL_FORWARDING', 'RSSI_ADC', 'INFLIGHT_ACC_CAL', 'DASHBOARD'];
@@ -177,11 +178,36 @@ const ROWS: RowRule[] = [
   { key: 'pilot', tip: 'tips.config.pilot', expert: true },
 ];
 
+/** Buzzer presets for Basic mode: they tick the beeper boxes of the form; Save writes them like any edit. */
+const BEEP_PRESETS: Record<'important' | 'all' | 'lost', (name: string) => boolean> = {
+  important: (n) => ['RX_LOST', 'RX_LOST_LANDING', 'BAT_CRIT_LOW', 'BAT_LOW', 'ARMING', 'DISARMING', 'DISARM_REPEAT', 'SYSTEM_INIT', 'GYRO_CALIBRATED'].includes(n),
+  all: () => true,
+  lost: (n) => n === 'RX_LOST' || n === 'RX_LOST_LANDING',
+};
+const beepHtml = () =>
+  `<section class="bf-panel cfg-beep" data-only="basic"><header><span class="bf-legend">${escapeHtml(t('simple.config.beepTitle'))}</span></header>
+    <p class="cfg-beep-lead">${escapeHtml(t('simple.config.beepLead'))}</p>
+    <div class="cfg-beep-a">${(['important', 'all', 'lost'] as const).map((k) => `<button type="button" class="btn ghost" data-beep="${k}">${escapeHtml(t(`simple.config.beep_${k}`))}</button>`).join('')}</div></section>`;
+
 export const mount: ScreenMount = (el, ctx) => {
-  const off = mountFormTab(el, ctx, { ...spec, title: t(K('title')), top: () => intro('tips.config.intro') });
+  const off = mountFormTab(el, ctx, { ...spec, title: t(K('title')), top: () => intro('tips.config.intro') + beepHtml() });
+  const onBeep = (e: Event) => {
+    const k = (e.target as Element).closest<HTMLElement>('[data-beep]')?.dataset.beep as keyof typeof BEEP_PRESETS | undefined;
+    if (!k) return;
+    el.querySelectorAll<HTMLInputElement>('input[data-k^="b."]').forEach((box) => {
+      const want = BEEP_PRESETS[k](box.dataset.k!.slice(2));
+      if (box.checked !== want) {
+        box.checked = want;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    el.querySelectorAll('[data-beep]').forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.beep === k));
+  };
+  el.addEventListener('click', onBeep);
   const panels: PanelRule[] = [{ title: t(K('gLoop')), expert: true }];
   const stop = decorateForm(el, ROWS, panels);
   return () => {
+    el.removeEventListener('click', onBeep);
     stop();
     off();
   };

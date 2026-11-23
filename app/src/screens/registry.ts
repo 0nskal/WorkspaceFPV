@@ -50,7 +50,7 @@ export const SCREENS: ScreenDef[] = [
   { id: 'warsztat', titleKey: 'simple.nav.drone', icon: 'drone', mount: warsztat.mount, requiresConnection: false, group: 'overview', level: 'basic', simple: 'simple.nav.drone', modern: true },
   { id: 'radio', titleKey: 'simple.nav.radio', icon: 'gamepad', mount: radio.mount, requiresConnection: true, group: 'overview', level: 'basic', simple: 'simple.nav.radio', modern: true },
   { id: 'setup', titleKey: 'bfSetup.tab', icon: 'chip', mount: bfSetup.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'expert' },
+  { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'power', titleKey: 'bfPower.tab', icon: 'battery', mount: bfPower.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true, group: 'fc', level: 'basic' },

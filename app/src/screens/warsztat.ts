@@ -14,6 +14,7 @@ import { fmtDate, fmtNum, t, tn, type Key } from '../i18n';
 import { ANCHORS, ART_H, ART_W, droneArt, spinProps, type DronePart, type PartState } from '../ui/art-drone';
 import { icon } from '../ui/icons';
 import { loadBackup } from '../settings';
+import { isUsbOnly, powerCaused } from '../fc/power';
 import { TOOL_LINKS } from './registry';
 import './warsztat.css';
 
@@ -133,9 +134,17 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   }
 
   /* ---------------- connected ---------------- */
+  /** All tasks, failures first. */
   function issues(d: Diagnosis): Issue[] {
     const list = d.checks.map((c) => toIssue(c, d)).filter((x): x is Issue => !!x);
     return list.sort((a, b) => (a.sev === b.sev ? 0 : a.sev === 'fail' ? -1 : 1));
+  }
+  /** With USB-only power, the tasks a missing battery explains go to `noBattery` (shown calm, not counted). */
+  function grouped(d: Diagnosis): { real: Issue[]; noBattery: Issue[] } {
+    const all = issues(d);
+    if (!isUsbOnly(d.checks)) return { real: all, noBattery: [] };
+    const waits = new Set(d.checks.filter(powerCaused).map((c) => c.id));
+    return { real: all.filter((i) => !waits.has(i.id)), noBattery: all.filter((i) => waits.has(i.id)) };
   }
 
   function partStates(list: Issue[]): Partial<Record<DronePart, PartState>> {
@@ -211,14 +220,22 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     </li>`;
   }
 
+  /** Calm group for what a missing battery explains: one sentence why, the items folded, no red. */
+  function noBatteryHtml(list: Issue[]): string {
+    return `<details class="ws2-nobat">
+      <summary><span class="ws2-nobat-i" aria-hidden="true">${icon('battery', 18)}</span><span class="ws2-nobat-t"><b>${tn('simple.drone.noBatHead', list.length)}</b><span>${t('simple.drone.noBatLead')}</span></span></summary>
+      <ul>${list.map((i) => `<li><b>${escapeHtml(i.title)}</b><code class="ws2-tech">${escapeHtml(i.tech)}</code></li>`).join('')}</ul>
+    </details>`;
+  }
+
   function renderScene(): void {
     const s = ctx.state.get();
     const d = ctx.diagnosis();
-    const list = issues(d);
+    const { real: list, noBattery } = grouped(d);
     const states = partStates(list);
     const oks = d.checks.filter((c) => c.severity === 'ok' || (c.severity === 'info' && c.id !== 'vbat'));
-    const usbOnly = d.checks.some((c) => c.id === 'vbat' && c.severity === 'info');
-    const key = JSON.stringify([s.conn, list.map((i) => i.id + i.sev), oks.map((c) => c.label), usbOnly, s.info?.craftName, s.info?.boardName]);
+    const usbOnly = isUsbOnly(d.checks);
+    const key = JSON.stringify([s.conn, list.map((i) => i.id + i.sev), noBattery.map((i) => i.id), oks.map((c) => c.label), usbOnly, s.info?.craftName, s.info?.boardName]);
     if (view === 'scene' && key === sceneKey) {
       updateLive();
       return;
@@ -241,11 +258,12 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         <section class="ws2-side" aria-live="polite">
           <div class="ws2-verdict ${nFix ? 'bad' : 'good'}">
             <span class="ws2-verdict-i" aria-hidden="true">${icon(nFix ? 'alert' : 'check', 22)}</span>
-            <div><h2>${nFix ? tn('simple.drone.problems', nFix) : t('simple.drone.ready')}</h2><p>${nFix ? t('simple.drone.problemsLead') : t('simple.drone.readyLead')}</p></div>
+            <div><h2>${nFix ? tn('simple.drone.problems', nFix) : usbOnly ? t('simple.drone.usbOkTitle') : t('simple.drone.ready')}</h2><p>${nFix ? t('simple.drone.problemsLead') : usbOnly ? t('simple.drone.usbOkLead') : t('simple.drone.readyLead')}</p></div>
           </div>
           ${s.conn === 'reconnecting' ? `<p class="w-note warn" role="status">${t('simple.drone.reconnecting')}</p>` : ''}
-          ${usbOnly ? `<p class="w-note">${icon('battery', 16)} ${t('simple.drone.usbOnly')}</p>` : ''}
+          ${usbOnly && !noBattery.length ? `<p class="w-note">${icon('battery', 16)} ${t('simple.drone.usbOnly')}</p>` : ''}
           ${nFix ? `<ol class="ws2-issues">${list.map(issueHtml).join('')}</ol>` : ''}
+          ${noBattery.length ? noBatteryHtml(noBattery) : ''}
           ${
             oks.length
               ? `<details class="ws2-oks"><summary>${t('simple.drone.okHead')} <span>${oks.length}</span></summary><ul>${oks

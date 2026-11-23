@@ -2,6 +2,13 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 1.2.1 – 2026-11-24
+
+- **Reverse a single motor, like in Betaflight.** In the beginner motor check, answer "wrong direction" and the app offers *Reverse direction*; the full Motors tab has Normal / Reversed for each motor. The direction is saved in the ESC with a DShot command. Needs a battery, DShot, Betaflight 4.3 or newer, props off and a confirmation.
+- **Motors: the gyro graph no longer grows** until it fills the column on Windows with 125–150 % scaling.
+- **Assistant:** answers are in normal weight, and in windows narrower than 1500 px the panel opens over the tab instead of squeezing it.
+- **Phones:** Modes, save bars and wide tables fit the screen; Save stays visible.
+
 ## 1.2.0 – 2026-11-23
 
 - **Shorter beginner menu: Drone, Radio, Motors.** Tuning and every other Betaflight tab stay behind the "All Betaflight tabs" switch.
@@ -110,6 +117,13 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 1.2.1 – 2026-11-24
+
+- **Odwracanie pojedynczego silnika, jak w Betaflight.** W kreatorze testu silników po odpowiedzi „zły kierunek” pojawia się *Odwróć kierunek*; w pełnej zakładce Silniki jest Normalny / Odwrócony dla każdego silnika. Kierunek zapisuje się w ESC komendą DShot. Potrzebna bateria, DShot, Betaflight 4.3 lub nowszy, zdjęte śmigła i potwierdzenie.
+- **Silniki: wykres żyroskopu już nie rośnie** bez końca na Windows ze skalowaniem 125–150%.
+- **Asystent:** odpowiedzi nie są całe pogrubione, a w oknie węższym niż 1500 px panel otwiera się nad zakładką zamiast ją ściskać.
+- **Telefon:** Tryby, paski zapisu i szerokie tabele mieszczą się na ekranie, przycisk Zapisz jest widoczny.
 
 ## 1.2.0 – 2026-11-23
 

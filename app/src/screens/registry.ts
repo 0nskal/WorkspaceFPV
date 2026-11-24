@@ -44,23 +44,25 @@ export interface ScreenDef {
   simple?: Key;
   /** Drawn with the new light/dark design layer (ui/theme.css); others render in the legacy dark panel. */
   modern?: boolean;
+  /** Beginner menu, below the main three: 'setup' (drone settings) or 'tools' (ELRS next to the external tools). */
+  beginner?: 'setup' | 'tools';
 }
 
 export const SCREENS: ScreenDef[] = [
   { id: 'warsztat', titleKey: 'simple.nav.drone', icon: 'drone', mount: warsztat.mount, requiresConnection: false, group: 'overview', level: 'basic', simple: 'simple.nav.drone', modern: true },
   { id: 'radio', titleKey: 'simple.nav.radio', icon: 'gamepad', mount: radio.mount, requiresConnection: true, group: 'overview', level: 'basic', simple: 'simple.nav.radio', modern: true },
   { id: 'setup', titleKey: 'bfSetup.tab', icon: 'chip', mount: bfSetup.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'ports', titleKey: 'bfPorts.tab', icon: 'plug', mount: bfPorts.mount, requiresConnection: true, group: 'fc', level: 'basic', beginner: 'setup' },
+  { id: 'config', titleKey: 'bfConfig.tab', icon: 'sliders', mount: bfConfig.mount, requiresConnection: true, group: 'fc', level: 'basic', beginner: 'setup' },
   { id: 'power', titleKey: 'bfPower.tab', icon: 'battery', mount: bfPower.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'bf-receiver', titleKey: 'bfReceiver.tab', icon: 'radio', mount: bfReceiver.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'esc', titleKey: 'tabs.esc', icon: 'fan', mount: esc.mount, requiresConnection: true, group: 'fc', level: 'basic', simple: 'simple.nav.motors' },
   { id: 'sensors', titleKey: 'sensors.tab', icon: 'gauge', mount: bfSensors.mount, requiresConnection: true, group: 'fc', level: 'basic' },
   { id: 'failsafe', titleKey: 'bfFailsafe.tab', icon: 'shield', mount: bfFailsafe.mount, requiresConnection: true, group: 'fc', level: 'expert' },
-  { id: 'gps', titleKey: 'gps.tab', icon: 'pin', mount: bfGps.mount, requiresConnection: true, group: 'fc', level: 'expert' },
-  { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools', level: 'basic' },
-  { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true, group: 'fc', level: 'basic' },
-  { id: 'osd', titleKey: 'bfOsd.tab', icon: 'monitor', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic' },
+  { id: 'gps', titleKey: 'gps.tab', icon: 'pin', mount: bfGps.mount, requiresConnection: true, group: 'fc', level: 'basic', beginner: 'setup' },
+  { id: 'elrs', titleKey: 'tabs.elrs', icon: 'radio', mount: elrs.mount, requiresConnection: false, group: 'tools', level: 'basic', beginner: 'tools' },
+  { id: 'bf-modes', titleKey: 'bfModes.tab', icon: 'panel', mount: bfModes.mount, requiresConnection: true, group: 'fc', level: 'basic', beginner: 'setup' },
+  { id: 'osd', titleKey: 'bfOsd.tab', icon: 'monitor', mount: bfOsd.mount, requiresConnection: true, group: 'fc', level: 'basic', beginner: 'setup' },
   { id: 'bf-tuning', titleKey: 'bfTuning.tab', icon: 'sliders', mount: bfTuning.mount, requiresConnection: true, group: 'tuning', level: 'basic' },
   { id: 'blackbox', titleKey: 'bfBlackbox.tab', icon: 'wave', mount: bfBlackbox.mount, requiresConnection: true, group: 'tuning', level: 'expert' },
   { id: 'autotune', titleKey: 'tabs.autotune', icon: 'target', mount: autotune.mount, requiresConnection: false, group: 'tuning', level: 'expert' },

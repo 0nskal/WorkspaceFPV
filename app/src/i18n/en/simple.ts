@@ -1,6 +1,12 @@
 /** WorkspaceFPV 2: simplified shell, Drone screen and Radio screen. */
 export const enSimple = {
   nav: {
+    setupHead: 'Drone settings',
+    tab_bf_modes: 'Flight modes',
+    tab_ports: 'Ports',
+    tab_config: 'Configuration',
+    tab_osd: 'OSD',
+    tab_gps: 'GPS',
     drone: 'Drone',
     radio: 'Radio',
     motors: 'Motors',

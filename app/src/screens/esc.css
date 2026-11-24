@@ -104,22 +104,33 @@
   justify-content: center;
   padding: 6px 0 0;
 }
-.mt .mt-quad-svg {
+.mt .mt-quad-art {
   width: 100%;
-  max-width: 300px;
-  height: auto;
+  max-width: 340px;
 }
-.mt .mt-q-n {
-  font: 700 19px var(--mono);
-  fill: #0b141c;
+.mt .q-badge text {
+  font-size: 46px;
 }
-.mt .mt-q-dir {
-  font: 600 11px var(--mono);
-  fill: var(--sub);
+.mt .q-dir {
+  font: 700 34px var(--mono);
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.75);
+  stroke-width: 8px;
 }
-.mt .mt-q-front {
-  font: 600 11.5px var(--sans);
+.mt .q-front {
+  font: 700 34px var(--sans);
   letter-spacing: 0.08em;
+  fill: #fff;
+}
+.mt .mb-arrow path {
+  stroke-width: 9;
+}
+.mt .mb-arrow.idle path {
+  stroke: rgba(255, 255, 255, 0.8);
+}
+.mt .mb-arrow.idle .mb-head {
+  fill: rgba(255, 255, 255, 0.8);
 }
 .mt .mt-quad-cap {
   margin: 4px 0 2px;

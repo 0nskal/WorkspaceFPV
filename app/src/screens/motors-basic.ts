@@ -15,7 +15,7 @@ import { escapeHtml } from '../ui/dom';
 import { t, type Key } from '../i18n';
 import { icon } from '../ui/icons';
 import { droneArt, MOTORS, spinProps } from '../ui/art-drone';
-import { spinsCw } from './esc-quad';
+import { motorArrow, spinsCw } from './esc-quad';
 import { directionBlock, setMotorDirection } from '../bf/dshot';
 import './motors-basic.css';
 
@@ -23,8 +23,6 @@ const SPIN_PCT = 8;
 const SPIN_MS = 2500;
 const TICK_MS = 100;
 /** Angle pointing away from the frame centre, per BF motor (SVG degrees, y down). */
-const OUT = [45, -45, 135, -135];
-
 type Which = 'ok' | 'other' | 'none';
 type Dir = 'ok' | 'wrong';
 interface Result {
@@ -100,26 +98,7 @@ export function mountMotorsBasic(el: HTMLElement, ctx: AppContext): () => void {
   }
 
   /* ---------------- drawing ---------------- */
-  function arrowSvg(i: number, cls: string): string {
-    const m = MOTORS[i]!;
-    const cw = spinsCw(i, propsOut());
-    const r = 118;
-    const rad = (d: number) => (d * Math.PI) / 180;
-    const a0 = rad(OUT[i]! - 55);
-    const a1 = rad(OUT[i]! + 55);
-    const pt = (a: number) => [m.x + r * Math.cos(a), m.y + r * Math.sin(a)];
-    const [sx, sy] = pt(cw ? a0 : a1);
-    const [ex, ey] = pt(cw ? a1 : a0);
-    const end = cw ? a1 : a0;
-    // arrowhead: tangent at the end point
-    const tx = -Math.sin(end) * (cw ? 1 : -1);
-    const ty = Math.cos(end) * (cw ? 1 : -1);
-    const nx = Math.cos(end);
-    const ny = Math.sin(end);
-    const h = 18;
-    const head = `M${(ex! + tx * h).toFixed(1)} ${(ey! + ty * h).toFixed(1)} L${(ex! + nx * h * 0.6).toFixed(1)} ${(ey! + ny * h * 0.6).toFixed(1)} L${(ex! - nx * h * 0.6).toFixed(1)} ${(ey! - ny * h * 0.6).toFixed(1)} Z`;
-    return `<g class="mb-arrow ${cls}"><path d="M${sx!.toFixed(1)} ${sy!.toFixed(1)} A${r} ${r} 0 0 ${cw ? 1 : 0} ${ex!.toFixed(1)} ${ey!.toFixed(1)}" /><path class="mb-head" d="${head}"/></g>`;
-  }
+  const arrowSvg = (i: number, cls: string) => motorArrow(i, propsOut(), cls);
 
   function overlay(): string {
     return MOTORS.map((m, i) => {

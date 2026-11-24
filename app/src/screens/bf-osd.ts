@@ -217,7 +217,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
         <div class="bf-osd-cols">
           <div class="bf-osd-colL">${elementsPanel()}</div>
           <div class="bf-osd-stage"><section class="bf-panel"><header><span class="bf-legend">${t('bfOsd.previewHead')}</span></header>
-            <div class="bf-osd-frame"><div class="bf-osd-grid" style="aspect-ratio:${g.cols * 12} / ${g.rows * 18};--cols:${g.cols};--rows:${g.rows}">${chips()}</div></div>
+            <div class="bf-osd-frame"><div class="bf-osd-grid" style="aspect-ratio:${(edit?.video ?? 1) === 3 ? '16 / 9' : '4 / 3'};--cols:${g.cols};--rows:${g.rows}">${chips()}</div></div>
             <p class="bf-osd-note">${t('bfOsd.dragNote')}</p></section></div>
           <div class="bf-osd-colR">${settingsPanels()}${warningsPanel()}${statsPanel()}</div>
         </div>

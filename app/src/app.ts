@@ -15,6 +15,7 @@ import { hasWebSerial } from './serial/port';
 import type { CliEntry, FcLink } from './serial/types';
 import { SettingsStore, loadBackup, saveBackup } from './settings';
 import { getLang, onLanguageChange, t } from './i18n';
+import type { Key } from './i18n';
 import { DEFAULT_SCREEN, SCREENS, SECTIONS, TOOL_LINKS, findScreen, screenVisible, sectionOf, type ToolLink } from './screens/registry';
 import type { Part } from './fc/diagnose';
 import { downloadText, escapeHtml, stamp } from './ui/dom';
@@ -295,14 +296,20 @@ export function createApp(root: HTMLElement): AppContext {
       `<a href="#${sc.id}" data-route="${sc.id}" data-needs-fc="${sc.requiresConnection}">${icon(sc.icon, 19)}<span>${escapeHtml(label)}</span><b class="badge" hidden></b></a>`;
     const simple = SCREENS.filter((sc) => sc.simple && sc.nav !== false);
     let html = `<div class="sgrp">${simple.map((sc) => item(sc, t(sc.simple!))).join('')}</div>`;
+    const link = (l: ToolLink) => `<a class="ext" href="${l.url}" target="_blank" rel="noopener noreferrer" title="${t('nav.links.openExt')}">${icon(l.id === 'cp210x' || l.id === 'zadig' || l.id === 'impulserc' ? 'download' : 'external', 16)}<span>${t(l.labelKey)}</span></a>`;
+    const drivers = new Set(['cp210x', 'zadig', 'impulserc']);
+    const toolsHtml = (extra: string) =>
+      `<div class="sgrp"><div class="sgrp-h">${t('nav.tools')}</div>${extra}${TOOL_LINKS.filter((l) => !drivers.has(l.id)).map(link).join('')}<div class="sgrp-sub">${t('nav.links.driversHead')}</div>${TOOL_LINKS.filter((l) => drivers.has(l.id)).map(link).join('')}</div>`;
+    if (mode === 'basic') {
+      const setup = SCREENS.filter((sc) => sc.beginner === 'setup');
+      const tools = SCREENS.filter((sc) => sc.beginner === 'tools');
+      html += `<div class="sgrp"><div class="sgrp-h">${t('simple.nav.setupHead')}</div>${setup.map((sc) => item(sc, t(`simple.nav.tab_${sc.id.replace('-', '_')}` as Key))).join('')}</div>`;
+      html += toolsHtml(tools.map((sc) => item(sc, t(sc.titleKey))).join(''));
+    }
     if (mode === 'expert') {
       const rest = SCREENS.filter((sc) => !sc.simple && sc.nav !== false && screenVisible(sc, mode));
       html += SECTIONS.map((sec) => {
-        if (sec === 'tools') {
-          const link = (l: ToolLink) => `<a class="ext" href="${l.url}" target="_blank" rel="noopener noreferrer" title="${t('nav.links.openExt')}">${icon(l.id === 'cp210x' || l.id === 'zadig' || l.id === 'impulserc' ? 'download' : 'external', 16)}<span>${t(l.labelKey)}</span></a>`;
-          const drivers = new Set(['cp210x', 'zadig', 'impulserc']);
-          return `<div class="sgrp"><div class="sgrp-h">${t('nav.tools')}</div>${TOOL_LINKS.filter((l) => !drivers.has(l.id)).map(link).join('')}<div class="sgrp-sub">${t('nav.links.driversHead')}</div>${TOOL_LINKS.filter((l) => drivers.has(l.id)).map(link).join('')}</div>`;
-        }
+        if (sec === 'tools') return toolsHtml('');
         const list = rest.filter((sc) => sectionOf(sc.id) === sec);
         if (!list.length) return '';
         return `<div class="sgrp"><div class="sgrp-h">${t(`nav.${sec}`)}</div>${list.map((sc) => item(sc, t(sc.titleKey))).join('')}</div>`;

@@ -587,3 +587,12 @@ html[data-mode='basic'] .screen.legacy .bf-md .md-sc-logic {
 .screen.legacy .mt-dir-row b {
   font: 600 14.5px var(--sans);
 }
+
+/* renders placed inside legacy panels (dark theme): fade the image edges into the panel instead of showing its dark square */
+:root[data-theme='dark'] .screen.legacy .r-stage,
+:root[data-theme='dark'] .screen.legacy .d-stage {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent);
+  mask-composite: intersect;
+}

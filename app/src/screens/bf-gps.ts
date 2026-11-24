@@ -1,7 +1,7 @@
 /**
  * GPS tab (like Betaflight's): GPS feature, provider, auto config, Galileo, home point, SBAS (editable through the form engine),
- * plus live satellite signal table, position facts and a schematic radar. No map tiles are loaded: the radar is drawn
- * from the distance and direction to home, and a link opens the position in OpenStreetMap in the system browser.
+ * plus live satellite signal table, position facts and a satellite / street map (Esri tiles, ui/tile-map.ts) with the
+ * home point and the quad. A link opens the position in OpenStreetMap in the system browser.
  */
 import './bf-gps.css';
 import { C } from '../bf/codes';
@@ -13,6 +13,7 @@ import type { AppContext, ScreenMount } from '../context';
 import { fmtNum, t, type Key } from '../i18n';
 import { escapeHtml } from '../ui/dom';
 import { intro, tip } from '../ui/tip';
+import { mountTileMap, type MapPoint } from '../ui/tile-map';
 
 const K = (k: string) => `gps.${k}` as Key;
 const RAW_GPS: BfCommand<D.RawGps> = { code: C.RAW_GPS, decode: (p) => D.decodeRawGps(p) };
@@ -86,7 +87,7 @@ function groups(bf: BfData, draft: Draft): Group[] {
         ${row(t(K('fix')), '<span class="gp-badge">—</span>')}${row(t(K('sats')), '—')}${row(t(K('alt')), '—')}${row(t(K('speed')), '—')}${row(t(K('heading')), '—')}
         ${row(t(K('lat')), '—')}${row(t(K('lon')), '—')}${row(t(K('dist')), '—')}${row(t(K('dop')), '—', ` ${tip('tips.gps.dop')}`)}${row(t(K('decl')), '—', ` ${tip('tips.gps.declination')}`)}</dl>`,
     },
-    { title: t(K('gLocation')), fields: [], render: () => `<div class="gp-loc" data-gp="location"></div>` },
+    { title: t(K('gLocation')), fields: [], render: () => `<div class="gp-loc"><div class="gp-map" data-gp="map"></div><div class="gp-loc-foot"><small>${escapeHtml(t(K('mapNote')))}</small><span data-gp="osm"></span></div></div>` },
   ];
 }
 
@@ -123,35 +124,19 @@ function dopBadge(dop: number): string {
   return `<span class="gp-stars">${stars}</span><span class="gp-badge dop-${cls}">${fmtNum(dop, 2)}</span>`;
 }
 
-const niceRange = (m: number) => [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000].find((r) => r >= m * 1.15) ?? 100000;
-
-function radarHtml(gps: D.RawGps | null, comp: D.CompGps | null, headingDeg: number): string {
-  const S = 300;
-  const c = S / 2;
-  const R = 132;
-  const hasPos = !!gps && gps.fix > 0 && (gps.lat !== 0 || gps.lon !== 0);
-  const off = hasPos && comp ? D.offsetFromHome(comp) : { east: 0, north: 0 };
-  const range = niceRange(Math.hypot(off.east, off.north));
-  const px = c + (off.east / range) * R;
-  const py = c - (off.north / range) * R;
-  const rings = [1 / 2, 1].map((f) => `<circle cx="${c}" cy="${c}" r="${(R * f).toFixed(1)}" class="ring"/>`).join('');
-  const label = (f: number) => `<text x="${c + 4}" y="${(c - R * f + 12).toFixed(1)}" class="lbl">${fmtNum(range * f, 0)} m</text>`;
-  const quad = hasPos
-    ? `<g transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${headingDeg.toFixed(0)})"><path d="M0 -13 L9 10 L0 5 L-9 10 Z" class="quad"/></g>`
+function osmLink(gps: D.RawGps | null): string {
+  const has = !!gps && gps.fix > 0 && (gps.lat !== 0 || gps.lon !== 0);
+  return has && gps
+    ? `<a class="btn ghost gp-osm" href="https://www.openstreetmap.org/?mlat=${gps.lat.toFixed(6)}&mlon=${gps.lon.toFixed(6)}#map=17/${gps.lat.toFixed(6)}/${gps.lon.toFixed(6)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(K('osm')))}</a>`
     : '';
-  const trail = hasPos ? `<line x1="${c}" y1="${c}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" class="trail"/>` : '';
-  const link =
-    hasPos && gps
-      ? `<a class="btn ghost gp-osm" href="https://www.openstreetmap.org/?mlat=${gps.lat.toFixed(6)}&mlon=${gps.lon.toFixed(6)}#map=17/${gps.lat.toFixed(6)}/${gps.lon.toFixed(6)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(K('osm')))}</a>`
-      : '';
-  return `<div class="gp-radar-wrap"><svg class="gp-radar" viewBox="0 0 ${S} ${S}" role="img" aria-label="${escapeHtml(t(K('gLocation')))}">
-      ${rings}<line x1="${c}" y1="${c - R}" x2="${c}" y2="${c + R}" class="axis"/><line x1="${c - R}" y1="${c}" x2="${c + R}" y2="${c}" class="axis"/>
-      ${label(1 / 2)}${label(1)}
-      <text x="${c}" y="14" text-anchor="middle" class="north">${escapeHtml(t(K('north')))}</text>
-      ${trail}<circle cx="${c}" cy="${c}" r="6" class="home"/><text x="${c + 10}" y="${c + 4}" class="homel">${escapeHtml(t(K('radarHome')))}</text>${quad}
-    </svg>
-    ${hasPos ? '' : `<p class="gp-wait">${escapeHtml(t(K('waiting')))}</p>`}</div>
-    <div class="gp-loc-foot"><small>${escapeHtml(t(K('radarNote')))}</small>${link}</div>`;
+}
+
+/** Home point from the quad position and its offset from home. */
+function homeOf(gps: D.RawGps, comp: D.CompGps | null): MapPoint | null {
+  if (!comp) return null;
+  const off = D.offsetFromHome(comp);
+  const lat = gps.lat - off.north / 111320;
+  return { lat, lon: gps.lon - off.east / (111320 * Math.cos((gps.lat * Math.PI) / 180)) };
 }
 
 /* ---------------- mount ---------------- */
@@ -196,7 +181,7 @@ function startLive(el: HTMLElement, ctx: AppContext): () => void {
   let dead = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
-  // Betaflight layout: configuration + signal table on the left, facts + location on the right
+  // Betaflight layout: configuration + signal table on the left, facts on the right, the map across the full width
   const grid = el.querySelector<HTMLElement>('.bf-grid');
   if (grid && grid.children.length === 4) {
     const [a, b, c, d] = [...grid.children] as HTMLElement[];
@@ -204,8 +189,9 @@ function startLive(el: HTMLElement, ctx: AppContext): () => void {
     const right = document.createElement('div');
     left.className = right.className = 'gp-col';
     left.append(a!, b!);
-    right.append(c!, d!);
-    grid.append(left, right);
+    right.append(c!);
+    d!.classList.add('gp-wide');
+    grid.append(left, right, d!);
   }
 
   const q = <T extends Element>(s: string) => el.querySelector<T>(s);
@@ -214,6 +200,21 @@ function startLive(el: HTMLElement, ctx: AppContext): () => void {
   let sv: D.SvChannel[] | null = null;
   let heading = 0;
   let decl: number | null = null;
+  const mapHost = q<HTMLElement>('[data-gp="map"]');
+  const map = mapHost
+    ? mountTileMap(mapHost, {
+        sat: t(K('mapSat')),
+        hybrid: t(K('mapHybrid')),
+        road: t(K('mapRoad')),
+        zoomIn: t(K('mapIn')),
+        zoomOut: t(K('mapOut')),
+        full: t(K('mapFull')),
+        home: t(K('radarHome')),
+        waiting: t(K('waiting')),
+        offline: t(K('mapOffline')),
+        aria: t(K('gLocation')),
+      })
+    : null;
   const hasMag = () => ((ctx.bf.get().status?.sensors ?? 0) >> 2) & 1;
 
   const paint = () => {
@@ -236,8 +237,14 @@ function startLive(el: HTMLElement, ctx: AppContext): () => void {
         row(t(K('decl')), hasMag() && decl !== null ? `${fmtNum(decl, 1)} ${escapeHtml(t(K('deg')))}` : '—', ` ${tip('tips.gps.declination')}`),
       ].join('');
     }
-    const loc = q<HTMLElement>('[data-gp="location"]');
-    if (loc) loc.innerHTML = radarHtml(gps, comp, heading);
+    const hasPos = !!gps && gps.fix > 0 && (gps.lat !== 0 || gps.lon !== 0);
+    map?.update({ quad: hasPos ? { lat: gps!.lat, lon: gps!.lon } : null, home: hasPos ? homeOf(gps!, comp) : null, headingDeg: heading < 0 ? heading + 360 : heading });
+    const osm = q<HTMLElement>('[data-gp="osm"]');
+    const link = osmLink(gps);
+    if (osm && osm.dataset.has !== String(!!link)) {
+      osm.innerHTML = link;
+      osm.dataset.has = String(!!link);
+    } else if (osm && link) osm.querySelector('a')?.setAttribute('href', link.match(/href="([^"]+)"/)![1]!.replace(/&amp;/g, '&'));
   };
 
   let n = 0;
@@ -261,6 +268,7 @@ function startLive(el: HTMLElement, ctx: AppContext): () => void {
 
   return () => {
     dead = true;
+    map?.destroy();
     if (timer) clearTimeout(timer);
   };
 }

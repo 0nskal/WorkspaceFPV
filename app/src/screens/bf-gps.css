@@ -156,63 +156,10 @@
   color: var(--sub);
 }
 
-/* radar */
-.bf-tab[data-tab='gps'] .gp-radar-wrap {
-  position: relative;
-  max-width: 380px;
-  margin: 4px auto 0;
-}
-.bf-tab[data-tab='gps'] .gp-radar {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: 10px;
-  background: #080e14;
-  border: 1px solid var(--v1-line-2, #1a2834);
-}
-.bf-tab[data-tab='gps'] .gp-radar .ring {
-  fill: none;
-  stroke: #263848;
-  stroke-width: 1;
-}
-.bf-tab[data-tab='gps'] .gp-radar .axis {
-  stroke: #1a2834;
-  stroke-width: 1;
-}
-.bf-tab[data-tab='gps'] .gp-radar .lbl {
-  fill: var(--sub);
-  font: 10px var(--mono);
-}
-.bf-tab[data-tab='gps'] .gp-radar .north {
-  fill: var(--hot);
-  font: 600 12px var(--sans);
-}
-.bf-tab[data-tab='gps'] .gp-radar .home {
-  fill: var(--ok-green, #5fd3a5);
-  stroke: #08140f;
-  stroke-width: 2;
-}
-.bf-tab[data-tab='gps'] .gp-radar .homel {
-  fill: var(--ink);
-  font: 11px var(--sans);
-}
-.bf-tab[data-tab='gps'] .gp-radar .trail {
-  stroke: var(--sub);
-  stroke-width: 1;
-  stroke-dasharray: 3 3;
-}
-.bf-tab[data-tab='gps'] .gp-radar .quad {
-  fill: var(--amber);
-  stroke: #15110a;
-  stroke-width: 1.5;
-  stroke-linejoin: round;
-}
-.bf-tab[data-tab='gps'] .gp-wait {
-  position: absolute;
-  inset: auto 0 14px;
-  margin: 0;
-  text-align: center;
-  color: var(--sub);
+/* location: a real map in the full width of the tab */
+.bf-tab[data-tab='gps'] .gp-map {
+  height: clamp(320px, 52vh, 560px);
+  margin-top: 4px;
 }
 .bf-tab[data-tab='gps'] .gp-loc-foot {
   display: flex;
@@ -231,4 +178,8 @@
 .bf-tab[data-tab='gps'] .gp-osm {
   text-decoration: none;
   white-space: nowrap;
+}
+
+.bf-tab[data-tab='gps'] .gp-wide {
+  grid-column: 1 / -1;
 }

@@ -58,32 +58,52 @@
   border: 1px solid #3a5266;
   border-radius: 6px;
   background-color: #04070a;
-  background-image: linear-gradient(to right, rgba(207, 230, 242, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(207, 230, 242, 0.06) 1px, transparent 1px);
-  background-size: calc(100% / var(--cols)) calc(100% / var(--rows));
+  /* a goggles-like feed behind the grid (generated image, src/assets/img/osd-bg.webp), dimmed so white OSD text reads */
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.22)),
+    url('../assets/img/osd-bg.webp');
+  background-size:
+    calc(100% / var(--cols)) calc(100% / var(--rows)),
+    calc(100% / var(--cols)) calc(100% / var(--rows)),
+    100% 100%,
+    cover;
+  background-position: 0 0, 0 0, 0 0, center;
+  overflow: hidden;
   container-type: size;
   touch-action: none;
 }
 .bf-osd .bf-osd-chip {
   position: absolute;
   white-space: nowrap;
-  font-size: clamp(8px, 4.4cqh, 15px);
+  /* one character per grid cell, as in the goggles: SD is shown 4:3, HD 16:9 (the grid sets aspect-ratio) */
+  font-size: max(7px, calc(100cqh / var(--rows) * 0.78));
+  letter-spacing: max(0px, calc(100cqw / var(--cols) - 0.6em));
+  font-weight: 700;
   line-height: 1;
   padding: 1px 3px;
-  color: var(--ink);
-  background: rgba(207, 230, 242, 0.1);
-  border: 1px solid rgba(207, 230, 242, 0.35);
+  /* like the OSD font in goggles: white with a black outline */
+  color: #fff;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 3px #000;
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 3px;
   cursor: grab;
   user-select: none;
 }
+.bf-osd .bf-osd-chip:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.35);
+}
 .bf-osd .bf-osd-chip.sel {
   border-color: var(--amber);
-  background: rgba(224, 168, 46, 0.22);
+  background: rgba(0, 0, 0, 0.45);
 }
 .bf-osd .bf-osd-chip.chg {
   border-color: var(--hot);
   color: #fff;
-  background: rgba(255, 74, 46, 0.18);
+  background: rgba(0, 0, 0, 0.45);
 }
 .bf-osd .bf-osd-chip.off {
   outline: 1px dashed var(--hot);

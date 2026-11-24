@@ -2,10 +2,9 @@
 .rx .rx-cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 30px 22px; align-items: start; }
 .rx .rx-side { display: grid; gap: 30px; min-width: 0; }
 .rx .rx-top { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; padding: 4px 0 16px; border-bottom: 1px solid var(--v1-line-2); margin-bottom: 14px; }
-.rx .rx-sticks { display: flex; gap: 14px; }
-.rx .rx-stick { width: 128px; margin: 0; }
-.rx .rx-stick svg { display: block; width: 100%; height: auto; }
-.rx .rx-stick figcaption { margin-top: 4px; font-size: 12.5px; color: var(--sub); text-align: center; }
+.rx .rx-sticks { flex: 0 1 380px; min-width: 240px; margin: 0; }
+.rx .rx-sticks .r-stage { max-width: 380px; }
+.rx .rx-sticks figcaption { margin-top: 6px; font-size: 13px; color: var(--sub); text-align: center; }
 .rx .rx-lqbox { flex: 1; min-width: 200px; }
 .rx .rx-lqkv { margin: 0; grid-template-columns: minmax(0, 1fr) auto; }
 .rx .rx-lqkv dd { margin: 0; text-align: right; font-size: 18px; }

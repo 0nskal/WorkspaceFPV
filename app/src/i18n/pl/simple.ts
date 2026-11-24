@@ -3,6 +3,12 @@ import type { enSimple } from '../en/simple';
 /** WorkspaceFPV 2: uproszczona powłoka, ekran Dron i ekran Aparatura. */
 export const plSimple: typeof enSimple = {
   nav: {
+    setupHead: 'Ustawienia drona',
+    tab_bf_modes: 'Tryby lotu',
+    tab_ports: 'Porty',
+    tab_config: 'Konfiguracja',
+    tab_osd: 'OSD',
+    tab_gps: 'GPS',
     drone: 'Dron',
     radio: 'Aparatura',
     motors: 'Silniki',

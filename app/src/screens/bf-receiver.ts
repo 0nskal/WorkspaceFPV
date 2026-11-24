@@ -12,6 +12,7 @@ import {
   mapToString, PROVIDER_CRSF, RX_MAP_PRESETS, RX_PROVIDERS, sticksFromRc, stringToMap,
 } from '../bf/receiver';
 import { escapeHtml } from '../ui/dom';
+import { radioArt, updateRadio } from '../ui/art-radio';
 import { fmtNum, t, type Key } from '../i18n';
 import { intro, tip, type TipKey } from '../ui/tip';
 import { bindForm, disconnectedHtml, errorHtml, Form, updateBar, type FieldSpec } from './bf-tuning-ui';
@@ -162,14 +163,6 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
   /* ---------------- live view ---------------- */
   const norm = (us: number) => Math.max(0, Math.min(1, (us - CH_MIN) / (CH_MAX - CH_MIN)));
 
-  function stickSvg(label: string, xKey: string, yKey: string): string {
-    return `<figure class="rx-stick"><svg viewBox="-60 -60 120 120" role="img" aria-label="${escapeHtml(label)}">
-      <rect x="-56" y="-56" width="112" height="112" fill="none" stroke="#DCEFF8" stroke-opacity=".5"/>
-      <path d="M-56 0H56M0 -56V56" stroke="#DCEFF8" stroke-opacity=".15"/>
-      <circle cx="0" cy="0" r="28" fill="none" stroke="#DCEFF8" stroke-opacity=".12"/>
-      <circle data-dot="${xKey}${yKey}" cx="0" cy="0" r="5" fill="#FF4A2E"/></svg><figcaption class="mono">${escapeHtml(label)}</figcaption></figure>`;
-  }
-
   const LETTER: Record<string, string> = { Roll: 'A', Pitch: 'E', Yaw: 'R', Throttle: 'T' };
   function barsHtml(): string {
     const m = map();
@@ -199,13 +192,8 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const m = map();
     const mid = form.get('rx', 'midRc') || 1500;
     const sticks = sticksFromRc(rc, m, mid);
-    const dot = (id: string, x: number, y: number) => {
-      const d = root.querySelector<SVGCircleElement>(`[data-dot="${id}"]`);
-      d?.setAttribute('cx', String(Math.round(x * 52)));
-      d?.setAttribute('cy', String(Math.round(-y * 52)));
-    };
-    dot('yawthr', sticks.yaw, sticks.throttle * 2 - 1);
-    dot('rollpitch', sticks.roll, sticks.pitch);
+    const art = root.querySelector('.rx-sticks');
+    if (art) updateRadio(art, sticks);
     const bars = root.querySelectorAll<HTMLElement>('[data-ch]');
     if (bars.length !== rc.length) {
       const wrap = root.querySelector('[data-bars]');
@@ -286,7 +274,7 @@ export const mount: ScreenMount = (el: HTMLElement, ctx: AppContext) => {
     const reboot = needsReboot();
     const live = panel(
       t('bfReceiver.capLive'),
-      `<div class="rx-top"><div class="rx-sticks">${stickSvg(`${t('bfReceiver.yaw')} / ${t('bfReceiver.throttle')}`, 'yaw', 'thr')}${stickSvg(`${t('bfReceiver.roll')} / ${t('bfReceiver.pitch')}`, 'roll', 'pitch')}</div><div class="rx-lqbox" data-link>${linkHtml()}</div></div><div class="rx-bars" data-bars>${barsHtml()}</div>`,
+      `<div class="rx-top"><figure class="rx-sticks">${radioArt(escapeHtml(`${t('bfReceiver.yaw')} / ${t('bfReceiver.throttle')} · ${t('bfReceiver.roll')} / ${t('bfReceiver.pitch')}`))}<figcaption>${escapeHtml(t('bfReceiver.sticksCap'))}</figcaption></figure><div class="rx-lqbox" data-link>${linkHtml()}</div></div><div class="rx-bars" data-bars>${barsHtml()}</div>`,
       { tip: 'tips.receiver.live', tip2: 'tips.receiver.failsafe', hint: t('bfReceiver.live10'), cls: 'rx-live' },
     );
     const side = [

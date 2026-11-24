@@ -35,6 +35,7 @@ export const enBfReceiver = {
   pitch: 'Pitch',
   lq: 'LINK QUALITY',
   rssiDbm: 'RSSI',
+  sticksCap: 'The sticks on the picture move with your radio.',
   lqNotCrsf: 'Link quality is shown for ELRS/CRSF receivers.',
   lqNone: 'No link quality channels (needs 16 channels with ELRS on channels 15 and 16, and a live link).',
   lqNote: 'From ELRS channels 15 and 16. The dBm value is approximate (assumes a -120 to -50 dBm span).',

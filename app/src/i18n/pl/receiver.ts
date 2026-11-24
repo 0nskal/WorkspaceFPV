@@ -37,6 +37,7 @@ export const plBfReceiver: typeof enBfReceiver = {
   pitch: 'Pitch',
   lq: 'JAKOŚĆ ŁĄCZA',
   rssiDbm: 'RSSI',
+  sticksCap: 'Drążki na rysunku ruszają się razem z Twoją aparaturą.',
   lqNotCrsf: 'Jakość łącza jest pokazywana dla odbiorników ELRS/CRSF.',
   lqNone: 'Brak kanałów jakości łącza (potrzebnych 16 kanałów z ELRS na kanałach 15 i 16 oraz aktywne łącze).',
   lqNote: 'Z kanałów 15 i 16 ELRS. Wartość dBm jest przybliżona (zakłada zakres od -120 do -50 dBm).',

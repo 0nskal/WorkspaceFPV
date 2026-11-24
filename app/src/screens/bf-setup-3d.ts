@@ -1,6 +1,6 @@
 /**
  * Live attitude model for the Setup tab: a generic 5-inch freestyle quad built from primitives in three.js
- * (no third-party model files), lit in the app's X-ray palette. three.js is loaded on demand, only here.
+ * (no third-party model files), in the colours of the drone render: black carbon, teal props, purple nuts. three.js is loaded on demand, only here.
  *
  * Telemetry arrives every ~150 ms; drawing every sample as-is looks like a slideshow. Each frame the model
  * slerps from its current orientation towards the latest sample (critically damped, ~70 ms), so it moves
@@ -14,17 +14,45 @@ export interface AttitudeModel {
   destroy(): void;
 }
 
+// colours of the drone render on the Drone screen (assets/img/drone-top.webp): black carbon, teal props, purple nuts
 const C = {
   ink: 0xdceff8,
-  sub: 0x8fa9b8,
-  carbon: 0x24323f,
-  carbonEdge: 0x2b3a47,
-  metal: 0x9fb2bf,
-  bell: 0x2a3640,
-  amber: 0xe0a82e,
+  carbon: 0x2a2c30,
+  metal: 0xb8bcc2,
+  bell: 0x1d1f22,
+  copper: 0xb5652b,
+  teal: 0x2fc4c4,
+  purple: 0x8a4fd8,
+  xt60: 0xf2b52a,
   hot: 0xff4a2e,
-  board: 0x0f2a22,
+  board: 0x101418,
+  battery: 0x454950,
+  strap: 0x111214,
 };
+
+/** Carbon twill as a small canvas texture, so the plates read as carbon fibre instead of flat grey. */
+function carbonTexture(THREE: typeof THREE_NS): THREE_NS.Texture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const x = c.getContext('2d')!;
+  x.fillStyle = '#34373c';
+  x.fillRect(0, 0, 64, 64);
+  for (let i = 0; i < 8; i++)
+    for (let j = 0; j < 8; j++) {
+      const on = (i + j) % 2 === 0;
+      const g = x.createLinearGradient(i * 8, j * 8, i * 8 + (on ? 8 : 0), j * 8 + (on ? 0 : 8));
+      g.addColorStop(0, '#2b2e32');
+      g.addColorStop(0.5, '#565a61');
+      g.addColorStop(1, '#2b2e32');
+      x.fillStyle = g;
+      x.fillRect(i * 8 + 0.5, j * 8 + 0.5, 7, 7);
+    }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(4, 4);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 
 export async function mountAttitudeModel(host: HTMLElement): Promise<AttitudeModel | null> {
   // No WebGL (old GPU, disabled acceleration): the caller keeps the SVG drawing.
@@ -43,7 +71,7 @@ export async function mountAttitudeModel(host: HTMLElement): Promise<AttitudeMod
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.3;
   const canvas = renderer.domElement;
   canvas.className = 'bf-su-3d';
   canvas.setAttribute('aria-hidden', 'true');
@@ -55,11 +83,11 @@ export async function mountAttitudeModel(host: HTMLElement): Promise<AttitudeMod
   camera.lookAt(0, 6, 0);
 
   // light: soft sky/ground fill, a key light from the front-left, a cool rim from behind
-  scene.add(new THREE.HemisphereLight(0xcfe6f2, 0x070b10, 1.1));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x0a0b0c, 1.25));
   const key = new THREE.DirectionalLight(0xffffff, 2.2);
   key.position.set(-200, 400, 250);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x8fc4e6, 1.4);
+  const rim = new THREE.DirectionalLight(0xdfe8ff, 1.6);
   rim.position.set(250, 150, -350);
   scene.add(rim);
 
@@ -157,13 +185,15 @@ export async function mountAttitudeModel(host: HTMLElement): Promise<AttitudeMod
 /** A generic 5" freestyle quad (225 mm wheelbase, X frame, 3-blade 5" props). Nose = +Z. Units ~ mm. */
 function buildQuad(THREE: typeof THREE_NS): THREE_NS.Group {
   const g = new THREE.Group();
-  const carbon = new THREE.MeshStandardMaterial({ color: C.carbon, roughness: 0.55, metalness: 0.25 });
-  const metal = new THREE.MeshStandardMaterial({ color: C.metal, roughness: 0.3, metalness: 0.85 });
+  const carbon = new THREE.MeshStandardMaterial({ color: 0xffffff, map: carbonTexture(THREE), roughness: 0.42, metalness: 0.2 });
+  const metal = new THREE.MeshStandardMaterial({ color: C.metal, roughness: 0.28, metalness: 0.9 });
   const bellMat = new THREE.MeshStandardMaterial({ color: C.bell, roughness: 0.35, metalness: 0.7 });
-  const amber = new THREE.MeshStandardMaterial({ color: C.amber, roughness: 0.4, metalness: 0.2, emissive: C.amber, emissiveIntensity: 0.15 });
+  const copper = new THREE.MeshStandardMaterial({ color: C.copper, roughness: 0.35, metalness: 0.8 });
+  const purple = new THREE.MeshStandardMaterial({ color: C.purple, roughness: 0.3, metalness: 0.6 });
+  const teal = new THREE.MeshStandardMaterial({ color: C.teal, roughness: 0.35, metalness: 0 });
   const hot = new THREE.MeshStandardMaterial({ color: C.hot, roughness: 0.4, emissive: C.hot, emissiveIntensity: 0.35 });
-  const propMat = new THREE.MeshStandardMaterial({ color: C.ink, roughness: 0.25, metalness: 0, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false });
-  const edgeMat = new THREE.LineBasicMaterial({ color: C.ink, transparent: true, opacity: 0.35 });
+  const propMat = new THREE.MeshStandardMaterial({ color: C.teal, roughness: 0.2, metalness: 0, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false });
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5 });
   const outlined = (mesh: THREE_NS.Mesh) => {
     mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 25), edgeMat));
     return mesh;
@@ -182,10 +212,13 @@ function buildQuad(THREE: typeof THREE_NS): THREE_NS.Group {
     const s = cyl(1.6, 1.6, 25, metal, 10);
     s.position.set(x, 14, z);
     g.add(s);
+    const nut = cyl(3.2, 3.2, 2.4, purple, 6);
+    nut.position.set(x, 29, z);
+    g.add(nut);
   }
   // FC / ESC stack with a status LED
   g.add(outlined(box(30, 5, 30, new THREE.MeshStandardMaterial({ color: C.board, roughness: 0.6 }), 0, 6, -2)));
-  g.add(outlined(box(30, 4, 30, new THREE.MeshStandardMaterial({ color: 0x11202c, roughness: 0.6 }), 0, 14, -2)));
+  g.add(outlined(box(30, 4, 30, new THREE.MeshStandardMaterial({ color: C.board, roughness: 0.6 }), 0, 14, -2)));
   const led = box(3, 1.5, 3, hot, 10, 16.8, 8);
   g.add(led);
 
@@ -215,9 +248,12 @@ function buildQuad(THREE: typeof THREE_NS): THREE_NS.Group {
     const bell = outlined(cyl(14, 14, 11, bellMat, 32));
     bell.position.set(mx, 14, mz);
     g.add(bell);
-    const ringTop = cyl(14.2, 14.2, 1.6, amber, 32);
-    ringTop.position.set(mx, 19.5, mz);
-    g.add(ringTop);
+    const windings = cyl(12.6, 12.6, 4, copper, 24); // copper shows between the bell spokes
+    windings.position.set(mx, 9.5, mz);
+    g.add(windings);
+    const nutM = cyl(4, 4, 3, metal, 6);
+    nutM.position.set(mx, 27.5, mz);
+    g.add(nutM);
     const shaft = cyl(2.5, 2.5, 8, metal, 12);
     shaft.position.set(mx, 23, mz);
     g.add(shaft);
@@ -246,7 +282,7 @@ function buildQuad(THREE: typeof THREE_NS): THREE_NS.Group {
   }
 
   // FPV camera up front with a red lens ring (marks the nose)
-  const camBody = outlined(box(20, 19, 18, new THREE.MeshStandardMaterial({ color: 0x1c2833, roughness: 0.5 }), 0, 13, 44));
+  const camBody = outlined(box(20, 19, 18, new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.7 }), 0, 13, 44));
   camBody.rotation.x = -0.35;
   g.add(camBody);
   const lens = cyl(7, 7, 10, new THREE.MeshStandardMaterial({ color: 0x05080b, roughness: 0.15, metalness: 0.6 }), 24);
@@ -258,19 +294,25 @@ function buildQuad(THREE: typeof THREE_NS): THREE_NS.Group {
   lensRing.position.set(0, 17.5, 59);
   g.add(lensRing);
 
-  // battery on top with an amber strap
-  g.add(outlined(box(34, 30, 74, new THREE.MeshStandardMaterial({ color: 0x223140, roughness: 0.7 }), 0, 44, -6)));
-  g.add(box(35.6, 31.6, 10, amber, 0, 44, -6)); // the strap: a band slightly wider than the pack
+  // battery on top with a black strap, XT60 lead out the back
+  g.add(outlined(box(34, 30, 74, new THREE.MeshStandardMaterial({ color: C.battery, roughness: 0.75 }), 0, 44, -6)));
+  g.add(box(35.6, 31.6, 10, new THREE.MeshStandardMaterial({ color: C.strap, roughness: 0.9 }), 0, 44, -6));
+  g.add(box(16, 8, 10, new THREE.MeshStandardMaterial({ color: C.xt60, roughness: 0.5 }), 0, 8, -66));
 
-  // ELRS antenna at the back (T-shape, angled up)
-  const mast = cyl(1.2, 1.2, 34, new THREE.MeshStandardMaterial({ color: 0x0b0f13, roughness: 0.6 }), 8);
-  mast.position.set(0, 40, -58);
-  mast.rotation.x = -0.6;
-  g.add(mast);
-  const tee = cyl(1.4, 1.4, 26, amber, 8);
-  tee.rotation.z = Math.PI / 2;
-  tee.position.set(0, 54, -68);
-  g.add(tee);
+  // ELRS antennas at the back
+  for (const sx of [-1, 1]) {
+    // two receiver antennas with teal tips, like the render
+    const ant = cyl(1.1, 1.1, 30, new THREE.MeshStandardMaterial({ color: 0x0b0d0f, roughness: 0.6 }), 8);
+    ant.position.set(sx * 9, 8, -62);
+    ant.rotation.x = -1.1;
+    ant.rotation.z = sx * 0.35;
+    g.add(ant);
+    const tip = cyl(2, 2, 7, teal, 10);
+    tip.position.set(sx * 13.5, 1, -75);
+    tip.rotation.x = -1.1;
+    tip.rotation.z = sx * 0.35;
+    g.add(tip);
+  }
 
   // centre the model around its body and lower it a touch (props sit above the arms)
   g.position.y = -10;

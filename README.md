@@ -20,6 +20,8 @@
   &nbsp;·&nbsp;
   <a href="https://workspacefpv.pages.dev/app/"><b>Open in the browser</b></a>
   &nbsp;·&nbsp;
+  <a href="https://workspacefpv.pages.dev/app/?demo=1"><b>Try the demo (no drone needed)</b></a>
+  &nbsp;·&nbsp;
   <a href="https://workspacefpv.pages.dev"><b>Website</b></a>
 </p>
 

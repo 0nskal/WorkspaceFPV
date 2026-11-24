@@ -2,6 +2,13 @@
 
 English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 
+## 1.3.0 – 2026-11-24
+
+- **More in the beginner menu.** Under Drone, Radio and Motors there are now *Drone settings* (Ports, Configuration, GPS, Flight modes, OSD) and *Tools* (ELRS, the official configurators and the USB drivers).
+- **GPS: a real map.** Satellite, satellite with labels or road map, zoom and full screen. It shows the home point and the drone with its heading, and follows the drone. The tiles come from Esri (no key, no cookies) and need an internet connection.
+- **OSD: a camera image behind the layout,** and the right proportions: PAL and NTSC are shown 4:3, HD 16:9, one character per grid cell. Elements look like in the goggles: white with a black outline.
+- **Pictures that match the rest of the app:** the radio with moving sticks in Receiver, the drone render with motor numbers and spin arrows in Motors → Model type, and the 3D model in Setup in the same colours as the drone.
+
 ## 1.2.1 – 2026-11-24
 
 - **Reverse a single motor, like in Betaflight.** In the beginner motor check, answer "wrong direction" and the app offers *Reverse direction*; the full Motors tab has Normal / Reversed for each motor. The direction is saved in the ESC with a DShot command. Needs a battery, DShot, Betaflight 4.3 or newer, props off and a confirmation.
@@ -117,6 +124,13 @@ English first, Polish below. / Najpierw po angielsku, niżej po polsku.
 ## Niewydane
 
 - **Dostawcy AI.** Asystent nie wymaga już płatnego Anthropic API. Wybierasz w Ustawienia → Asystent AI: **Claude Code** (Twój zainstalowany i zalogowany CLI, tylko aplikacja desktopowa, liczy się do limitów planu), **Google Gemini** (darmowy klucz API, domyślny model gemini-2.5-flash), **Model lokalny (Ollama)** (lista modeli z `/api/tags`) albo **Anthropic API** jak dotąd. Każda karta pokazuje status i przycisk Test; w czacie widać, kto odpowiedział. W aplikacji desktopowej domyślnie działa Claude Code, gdy jest wykryty i nie ma klucza Anthropic.
+
+## 1.3.0 – 2026-11-24
+
+- **Więcej w menu dla początkujących.** Pod Dron, Aparatura i Silniki są teraz *Ustawienia drona* (Porty, Konfiguracja, GPS, Tryby lotu, OSD) i *Narzędzia* (ELRS, oficjalne konfiguratory i sterowniki USB).
+- **GPS: prawdziwa mapa.** Satelita, satelita z nazwami albo mapa drogowa, zoom i pełny ekran. Widać punkt domowy i drona z kierunkiem lotu, a mapa podąża za dronem. Kafelki pochodzą z Esri (bez klucza i ciasteczek) i potrzebują internetu.
+- **OSD: obraz z kamery pod układem** i właściwe proporcje: PAL i NTSC jako 4:3, HD jako 16:9, jeden znak na pole siatki. Elementy wyglądają jak w goglach: białe z czarną obwódką.
+- **Grafiki pasujące do reszty aplikacji:** aparatura z ruchomymi drążkami w Odbiorniku, render drona z numerami silników i strzałkami obrotu w Silniki → Typ modelu, a model 3D w Setup w kolorach drona.
 
 ## 1.2.1 – 2026-11-24
 

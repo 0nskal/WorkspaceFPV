@@ -55,7 +55,6 @@
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/tuning.png" alt="PID Tuning: PID, D Max and feedforward per profile"><br><sub><b>PID Tuning.</b> PID, D Max, feedforward, rates with live curves, filters.</sub></td>
-    <td width="50%"><img src="docs/screenshots/autotune.png" alt="PID Autotune: verdict, log quality and suggested changes"><br><sub><b>Autotune.</b> A verdict in plain words and a CLI preview you can apply or copy.</sub></td>
   </tr>
 </table>
 
@@ -211,7 +210,7 @@ Older README versions and screenshots are kept in [docs/archive](docs/archive).
 
 ### Zrzuty ekranu
 
-Zrzuty są wyżej, w sekcji [Screenshots](#screenshots): Radio, OSD, Strojenie PID i Autotune.
+Zrzuty są wyżej, w sekcji [Screenshots](#screenshots): Radio, OSD i Strojenie PID.
 
 ### Asystent AI: wybierz dostawcę
 
